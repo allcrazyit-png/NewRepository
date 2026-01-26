@@ -47,6 +47,18 @@ st.markdown("""
         font-weight: bold;
         margin-bottom: 10px;
     }
+    /* Mobile Optimization: Larger Inputs */
+    .stNumberInput input, .stTextInput input, .stTextArea textarea {
+        font-size: 1.5rem !important; 
+        min-height: 3rem;
+    }
+    div[data-baseweb="select"] > div {
+        font-size: 1.2rem !important;
+        min-height: 3rem;
+    }
+    p {
+        font-size: 1.1rem !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
