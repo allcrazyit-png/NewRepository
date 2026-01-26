@@ -26,7 +26,8 @@ def get_secret(key, default):
 DRIVE_FOLDER_ID = get_secret("drive_folder_id", "root")
 
 # Get Spreadsheet ID
-SPREADSHEET_ID = get_secret("spreadsheet_id", "YOUR_SPREADSHEET_ID")
+# We set the default to the user's provided ID to ensure it works even if secrets fallback is weird
+SPREADSHEET_ID = get_secret("spreadsheet_id", "1SXhH4aY7w0O4Usp35OaG7mJZqFZek3G8-lDaWX3Uk2o")
 
 def get_services():
     creds = None
