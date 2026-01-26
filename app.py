@@ -258,8 +258,12 @@ with st.sidebar:
             # 2. Check Drive Folder Access
             try:
                 folder_id = drive_integration.DRIVE_FOLDER_ID
-                # Try to get folder metadata
-                f_meta = drive_service.files().get(fileId=folder_id, fields="name").execute()
+                # Try to get folder metadata (Support Shared Drives)
+                f_meta = drive_service.files().get(
+                    fileId=folder_id, 
+                    fields="name", 
+                    supportsAllDrives=True
+                ).execute()
                 st.success(f"✅ 能夠存取照片資料夾: `{f_meta.get('name')}` (ID: {folder_id})")
             except Exception as e:
                 st.error(f"❌ 無法存取照片資料夾 (ID: {drive_integration.DRIVE_FOLDER_ID})")

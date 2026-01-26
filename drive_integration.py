@@ -99,7 +99,12 @@ def upload_to_drive(image_file, filename):
         }
         media = MediaIoBaseUpload(compressed_io, mimetype='image/jpeg', resumable=True)
         
-        file = drive_service.files().create(body=file_metadata, media_body=media, fields='id, webViewLink').execute()
+        file = drive_service.files().create(
+            body=file_metadata, 
+            media_body=media, 
+            fields='id, webViewLink',
+            supportsAllDrives=True  # Important for Shared Drives
+        ).execute()
         
         # Make it readable to anyone with link (Optional, usually good for sharing)
         # drive_service.permissions().create(fileId=file.get('id'), body={'role': 'reader', 'type': 'anyone'}).execute()
