@@ -11,9 +11,22 @@ from PIL import Image
 SCOPES = ['https://www.googleapis.com/auth/drive.file', 'https://www.googleapis.com/auth/spreadsheets']
 # If you have a service account file, name it credentials.json in the project root
 CREDENTIALS_FILE = 'credentials.json'
-DRIVE_FOLDER_ID = 'root' # Change this to the specific folder ID
-# Try to get Spreadsheet ID from secrets, else default (User should replace this default if running locally without secrets.toml)
-SPREADSHEET_ID = st.secrets.get("spreadsheet_id", "YOUR_SPREADSHEET_ID") 
+
+# Helper to get secret from root or inside gcp_service_account
+def get_secret(key, default):
+    # 1. Try Root
+    if key in st.secrets:
+        return st.secrets[key]
+    # 2. Try inside gcp_service_account (because generated script puts them there)
+    if "gcp_service_account" in st.secrets and key in st.secrets["gcp_service_account"]:
+        return st.secrets["gcp_service_account"][key]
+    return default
+
+# Get Folder ID
+DRIVE_FOLDER_ID = get_secret("drive_folder_id", "root")
+
+# Get Spreadsheet ID
+SPREADSHEET_ID = get_secret("spreadsheet_id", "YOUR_SPREADSHEET_ID")
 
 def get_services():
     creds = None
