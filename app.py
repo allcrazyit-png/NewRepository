@@ -229,6 +229,53 @@ img_file = st.camera_input("拍照記錄")
 
 import drive_integration
 
+# --- Sidebar: System Diagnostics ---
+with st.sidebar:
+    st.header("🔧 系統診斷")
+    if st.button("測試雲端連線"):
+        st.info("正在檢查設定...")
+        
+        # 1. Check Credentials
+        # Get services using existing logic
+        try:
+            drive_service, sheets_service = drive_integration.get_services()
+        except Exception as e:
+            drive_service = None
+            st.error(f"❌ 初始化發生錯誤: {e}")
+        
+        if not drive_service:
+            st.error("❌ 無法載入 Google 憑證 (Secrets/JSON)")
+        else:
+            # Get Service Account Email
+            try:
+                about = drive_service.about().get(fields="user").execute()
+                email = about['user']['emailAddress']
+                st.success(f"✅ 憑證讀取成功\n\n機器人 Email: `{email}`")
+                st.write("⚠️ 請確認此 Email 已加入 Google Drive 資料夾與 Sheet 的「編輯者」。")
+            except Exception as e:
+                st.error(f"❌ 查無機器人資訊 (API 未開通?): {e}")
+
+            # 2. Check Drive Folder Access
+            try:
+                folder_id = drive_integration.DRIVE_FOLDER_ID
+                # Try to get folder metadata
+                f_meta = drive_service.files().get(fileId=folder_id, fields="name").execute()
+                st.success(f"✅ 能夠存取照片資料夾: `{f_meta.get('name')}` (ID: {folder_id})")
+            except Exception as e:
+                st.error(f"❌ 無法存取照片資料夾 (ID: {drive_integration.DRIVE_FOLDER_ID})")
+                st.error(f"詳細錯誤: {e}")
+                st.warning("請確認 secrets 的 `drive_folder_id` 正確，且已共用給機器人。")
+                
+            # 3. Check Spreadsheet Access
+            try:
+                sheet_id = drive_integration.SPREADSHEET_ID
+                s_meta = sheets_service.spreadsheets().get(spreadsheetId=sheet_id).execute()
+                st.success(f"✅ 能夠存取 Google Sheet: `{s_meta.get('properties', {}).get('title')}`")
+            except Exception as e:
+                st.error(f"❌ 無法存取 Google Sheet (ID: {drive_integration.SPREADSHEET_ID})")
+                st.error(f"詳細錯誤: {e}")
+
+
 # --- Submit ---
 if st.button("提交巡檢數據"):
     if measured_weight == 0:
