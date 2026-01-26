@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.venv/
+.env
+
+# Streamlit
+.streamlit/secrets.toml
+
+# Project Secrets
+credentials.json
+secrets.json
+client_secrets.json
+
+# IDE
+.DS_Store
+.vscode/
+.idea/
