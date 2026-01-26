@@ -13,53 +13,138 @@ st.set_page_config(
 
 # Custom CSS for Mobile Optimization / Aesthetics
 st.markdown("""
-<style>
-    .bigger-font { font-size: 1.2rem !important; }
-    .stRadio > label { font-size: 1.2rem; font-weight: bold; }
+    /* --- 1. Global Reset & Dark Mode Base --- */
+    .stApp {
+        background-color: #0e1117; /* Dark background */
+        color: #e6e6e6;
+    }
+    
+    /* --- 2. Typography & Headers --- */
+    h1, h2, h3 {
+        color: #ffffff !important;
+        font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        font-weight: 700;
+        text-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
+    }
+    .stMarkdown p {
+        font-size: 1.2rem !important;
+        color: #d0d0d0;
+    }
+
+    /* --- 3. Glassmorphism Cards for Metrics --- */
+    div[data-testid="stMetric"] {
+        background: rgba(255, 255, 255, 0.05);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        padding: 15px;
+        border-radius: 15px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        text-align: center;
+        transition: transform 0.2s;
+    }
+    div[data-testid="stMetric"]:hover {
+        transform: translateY(-5px);
+        border-color: #00d4ff; /* Tech Blue Glow */
+        box-shadow: 0 0 15px rgba(0, 212, 255, 0.3);
+    }
+    div[data-testid="stMetricLabel"] {
+        font-size: 1.1rem !important;
+        color: #a0a0a0 !important;
+    }
+    div[data-testid="stMetricValue"] {
+        font-size: 2rem !important;
+        color: #00d4ff !important; /* Tech Blue */
+        font-weight: bold;
+    }
+
+    /* --- 4. Modern Input Fields (Mobile Friendly) --- */
+    .stTextInput input, .stNumberInput input, .stSelectbox div[data-baseweb="select"] > div {
+        background-color: rgba(255, 255, 255, 0.05) !important;
+        color: #ffffff !important;
+        border: 1px solid rgba(255, 255, 255, 0.2) !important;
+        border-radius: 12px !important;
+        height: 3.5rem !important; /* Larger for touch */
+        font-size: 1.3rem !important;
+    }
+    .stTextInput input:focus, .stNumberInput input:focus {
+        border-color: #00d4ff !important;
+        box-shadow: 0 0 10px rgba(0, 212, 255, 0.3) !important;
+    }
+    .stTextArea textarea {
+        background-color: rgba(255, 255, 255, 0.05) !important;
+        color: white !important;
+        border-radius: 12px !important;
+        font-size: 1.2rem !important;
+    }
+
+    /* --- 5. Radio Buttons (Pills Style) --- */
+    .stRadio > label { font-size: 1.3rem !important; color: white !important; margin-bottom: 10px; }
+    .stRadio div[role='radiogroup'] {
+        gap: 10px;
+        display: flex;
+        flex-wrap: wrap;
+    }
     .stRadio div[role='radiogroup'] > label { 
-        background-color: #f0f2f6; 
-        padding: 10px 20px; 
-        border-radius: 8px;
-        margin-right: 10px;
-        border: 1px solid #dcdcdc;
+        background-color: rgba(255, 255, 255, 0.05) !important;
+        padding: 15px 30px !important; 
+        border-radius: 50px !important; /* Rounded Pills */
+        border: 1px solid rgba(255, 255, 255, 0.2) !important;
+        color: #e0e0e0 !important;
+        transition: all 0.3s ease;
+        flex: 1;
+        justify-content: center;
+        text-align: center;
+    }
+    .stRadio div[role='radiogroup'] > label:hover {
+        background-color: rgba(255, 255, 255, 0.15) !important;
+        border-color: #00d4ff !important;
     }
     .stRadio div[role='radiogroup'] > label[data-checked='true'] {
-        background-color: #ff4b4b;
-        color: white;
-        border-color: #ff4b4b;
+        background: linear-gradient(135deg, #00d4ff 0%, #005bea 100%) !important; /* Neon Gradient */
+        color: white !important;
+        border: none !important;
+        box-shadow: 0 0 15px rgba(0, 212, 255, 0.5);
+        font-weight: bold;
     }
+
+    /* --- 6. Submit Button (Big & Glowing) --- */
     div.stButton > button:first-child {
-        background-color: #ff4b4b;
-        color: white;
-        font-size: 1.5rem;
-        height: 3em;
+        background: linear-gradient(90deg, #ff416c 0%, #ff4b2b 100%) !important; /* Warning Red Gradient */
+        color: white !important;
+        font-size: 1.5rem !important;
+        height: 4rem !important;
+        border-radius: 50px !important;
+        border: none !important;
+        box-shadow: 0 5px 15px rgba(255, 75, 43, 0.4);
+        transition: transform 0.2s, box-shadow 0.2s;
         width: 100%;
-        border-radius: 10px;
+        margin-top: 20px;
     }
+    div.stButton > button:first-child:active {
+        transform: scale(0.98);
+        box-shadow: 0 2px 10px rgba(255, 75, 43, 0.4);
+    }
+
+    /* --- 7. Alert Box --- */
     .alert-box {
+        background: rgba(255, 0, 0, 0.1);
+        backdrop-filter: blur(5px);
+        color: #ff4b4b;
+        border: 1px solid #ff4b4b;
         padding: 20px;
-        background-color: #ffe6e6;
-        color: #d8000c;
-        border: 2px solid #d8000c;
-        border-radius: 5px;
+        border-radius: 12px;
         text-align: center;
         font-size: 1.5rem;
         font-weight: bold;
-        margin-bottom: 10px;
+        box-shadow: 0 0 20px rgba(255, 75, 75, 0.2);
+        animation: pulse 2s infinite;
     }
-    /* Mobile Optimization: Larger Inputs */
-    .stNumberInput input, .stTextInput input, .stTextArea textarea {
-        font-size: 1.5rem !important; 
-        min-height: 3rem;
+    @keyframes pulse {
+        0% { box-shadow: 0 0 0 0 rgba(255, 75, 75, 0.4); }
+        70% { box-shadow: 0 0 0 10px rgba(255, 75, 75, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(255, 75, 75, 0); }
     }
-    div[data-baseweb="select"] > div {
-        font-size: 1.2rem !important;
-        min-height: 3rem;
-    }
-    p {
-        font-size: 1.1rem !important;
-    }
-</style>
 """, unsafe_allow_html=True)
 
 # --- Load Data ---
