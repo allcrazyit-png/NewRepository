@@ -149,6 +149,17 @@ st.markdown("""
         70% { box-shadow: 0 0 0 10px rgba(255, 75, 75, 0); }
         100% { box-shadow: 0 0 0 0 rgba(255, 75, 75, 0); }
     }
+    
+    /* ENLARGE INPUTS for Mobile */
+    div[data-testid="stNumberInput"] input {
+        font-size: 24px !important;
+        height: 60px !important;
+        padding: 10px !important;
+        inputmode: decimal !important; /* Force decimal keypad on mobile */
+    }
+    div[data-testid="stNumberInput"] label {
+        font-size: 1.2rem !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -183,8 +194,8 @@ st.divider()
 info_col1, info_col2, info_col3 = st.columns(3)
 # Calculate Tolerance
 w_std = current_part_data['clean_重量']
-w_max = current_part_data['clean_重量上限']
-w_min = current_part_data['clean_重量下限']
+w_max = pd.to_numeric(current_part_data.get('clean_重量上限'), errors='coerce')
+w_min = pd.to_numeric(current_part_data.get('clean_重量下限'), errors='coerce')
 
 tol_str = ""
 if pd.notna(w_std) and pd.notna(w_max) and pd.notna(w_min):
@@ -204,6 +215,69 @@ has_length = False
 if pd.notna(current_part_data['clean_標準長度']) and current_part_data['clean_標準長度'] > 0:
     has_length = True
     info_col3.metric("標準長度", f"{current_part_data['標準長度']}")
+
+# --- History Trend Chart (Moved Up) ---
+# Fetch Data from GAS
+with st.expander(f"📊 歷史重量趨勢: {selected_part_no}", expanded=True):
+    history_data = drive_integration.fetch_history(selected_part_no)
+    
+    if history_data:
+        chart_df = pd.DataFrame(history_data)
+        
+        # Robust Data Cleaning
+        chart_df.replace("", pd.NA, inplace=True)
+        chart_df['timestamp'] = pd.to_datetime(chart_df['timestamp'], errors='coerce')
+        
+        # Convert to Taiwan Time (UTC+8)
+        if chart_df['timestamp'].dt.tz is None:
+             chart_df['timestamp'] = chart_df['timestamp'].dt.tz_localize('UTC')
+        chart_df['timestamp'] = chart_df['timestamp'].dt.tz_convert('Asia/Taipei')
+        
+        chart_df['weight'] = pd.to_numeric(chart_df['weight'], errors='coerce')
+        
+        # Filter: Must have valid timestamp AND numeric weight
+        chart_df = chart_df.dropna(subset=['timestamp', 'weight'])
+        
+        if not chart_df.empty:
+            # Add Limits
+            y_cols = ['weight']
+            
+            if pd.notna(w_max):
+                chart_df['Upper Limit'] = float(w_max)
+                y_cols.append('Upper Limit')
+            
+            if pd.notna(w_min):
+                chart_df['Lower Limit'] = float(w_min)
+                y_cols.append('Lower Limit')
+            
+            # Plot (Altair)
+            chart_long = chart_df.melt('timestamp', value_vars=y_cols, var_name='Type', value_name='Value')
+            
+            y_min_val = chart_long['Value'].min()
+            y_max_val = chart_long['Value'].max()
+            padding = (y_max_val - y_min_val) * 0.1 if y_max_val != y_min_val else 5
+            
+            base = alt.Chart(chart_long).encode(
+                x=alt.X('timestamp', title='時間', axis=alt.Axis(format='%m/%d %H:%M')),
+                y=alt.Y('Value', title='重量 (g)', 
+                        scale=alt.Scale(domain=[y_min_val - padding, y_max_val + padding])),
+                color=alt.Color('Type', title='類別', 
+                                scale=alt.Scale(domain=['weight', 'Upper Limit', 'Lower Limit'],
+                                              range=['#FF6C6C', '#457B9D', '#457B9D'])),
+                tooltip=[
+                    alt.Tooltip('timestamp', title='時間', format='%Y-%m-%d %H:%M'),
+                    alt.Tooltip('Type', title='類別'),
+                    alt.Tooltip('Value', title='數值', format='.1f')
+                ]
+            )
+
+            line_chart = base.mark_line().interactive()
+            st.altair_chart(line_chart, use_container_width=True)
+        else:
+            st.caption("無有效歷史數據")
+    else:
+        st.caption("載入中或無數據...")
+
 
 # --- Key Control Points (重點管制) ---
 control_points = []
@@ -237,13 +311,7 @@ with col_input2:
 # --- Validation Logic (Immediate Feedback) ---
 weight_status = "OK"
 if measured_weight > 0:
-    w_min = current_part_data['clean_重量下限']
-    w_max = current_part_data['clean_重量上限']
-    
-    # If explicit limits exist, use them. Otherwise parse from "2430g±50g" logic? 
-    # Current CSV logic has separate columns for limits, but let's be safe.
-    # If limits are NaN, maybe try to derive from standard if it has ±?
-    # For now, rely on clean_重量上限/下限 existing in CSV.
+    # w_min and w_max are already defined above in "Display Standard Info" section
     
     if pd.notna(w_min) and pd.notna(w_max):
         if not (w_min <= measured_weight <= w_max):
