@@ -247,7 +247,9 @@ if st.button("提交巡檢數據"):
     else:
         with st.spinner("資料上傳中..."):
             # 1. Prepare Filename
-            timestamp = datetime.datetime.now()
+            # Use UTC+8 for Taiwan/Beijing Time
+            tz = datetime.timezone(datetime.timedelta(hours=8))
+            timestamp = datetime.datetime.now(tz)
             ts_str = timestamp.strftime("%Y%m%d_%H%M%S")
             filename = f"{selected_model}_{selected_part_no}_{inspection_type}_{ts_str}.jpg"
             
@@ -310,15 +312,23 @@ with tab1:
         # 2. Render Chart
         if history_data:
             chart_df = pd.DataFrame(history_data)
-            # Convert timestamp to datetime
-            chart_df['timestamp'] = pd.to_datetime(chart_df['timestamp'])
-            # Ensure weight is numeric
+            
+            # Robust Data Cleaning
+            # Convert timestamp to datetime (coerce errors to NaT)
+            chart_df['timestamp'] = pd.to_datetime(chart_df['timestamp'], errors='coerce')
+            # Ensure weight is numeric (coerce errors to NaN)
             chart_df['weight'] = pd.to_numeric(chart_df['weight'], errors='coerce')
             
-            st.line_chart(chart_df, x='timestamp', y='weight')
+            # Drop rows with invalid time or weight (Handles partial rows in Sheet)
+            chart_df = chart_df.dropna(subset=['timestamp', 'weight'])
             
-            # Show simple stats
-            avg_w = chart_df['weight'].mean()
-            st.caption(f"平均重量: {avg_w:.2f} g (樣本數: {len(chart_df)})")
+            if not chart_df.empty:
+                st.line_chart(chart_df, x='timestamp', y='weight')
+                
+                # Show simple stats
+                avg_w = chart_df['weight'].mean()
+                st.caption(f"平均重量: {avg_w:.2f} g (樣本數: {len(chart_df)})")
+            else:
+                st.warning("有找到數據，但格式不完整 (可能是空行)。")
         else:
             st.info("尚無歷史數據，或尚未更新 GAS 腳本。")
