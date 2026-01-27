@@ -310,12 +310,14 @@ if measured_weight > 0:
 
 # 3. Material Check
 st.write(f"**確認原料**: `{current_part_data['原料編號']}`")
-material_ok = st.toggle("現場投料正確?", value=False)
+material_check = st.radio("現場投料正確?", ["OK", "NG"], horizontal=True)
+material_ok = (material_check == "OK")
 
 # --- Key Control Points (Interactive) ---
 st.markdown("### ⚠️ 重點管制項目確認")
 control_points_status = {}
 has_ng_control_point = False
+control_points_log = [] # List to store status for logging
 
 for i in range(1, 4):
     col_name = f"重點管制{i}"
@@ -325,6 +327,7 @@ for i in range(1, 4):
             # Interactive Check
             status = st.radio(f"**{i}. {val}**", ["OK", "NG"], key=f"cp_{i}", horizontal=True)
             control_points_status[val] = status
+            control_points_log.append(f"{i}.{status}")
             if status == "NG":
                 has_ng_control_point = True
 
@@ -350,7 +353,7 @@ if st.button("提交巡檢數據"):
     if measured_weight == 0:
         st.warning("請輸入重量")
     elif not material_ok:
-        st.warning("請確任原料正確")
+        st.warning("原料確認為 NG，請確認正確料號")
     elif img_file is None:
         st.warning("請拍攝照片")
     else:
@@ -363,6 +366,9 @@ if st.button("提交巡檢數據"):
             filename = f"{selected_model}_{selected_part_no}_{inspection_type}_{ts_str}.jpg"
             
             # 2. Prepare Data Row (Dict)
+            # Combine Control Points Status
+            key_control_str = ", ".join(control_points_log) if control_points_log else "N/A"
+            
             row_data = {
                 "timestamp": timestamp.strftime("%Y-%m-%d %H:%M:%S"),
                 "model": selected_model,
@@ -372,7 +378,8 @@ if st.button("提交巡檢數據"):
                 "length": measured_length if has_length else "",
                 "material_ok": "OK" if material_ok else "NG",
                 "change_point": change_point,
-                "result": weight_status
+                "result": weight_status,
+                "key_control_status": key_control_str # New Field
             }
             
             # 3. Call Unified GAS Function
