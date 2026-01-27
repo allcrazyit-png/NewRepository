@@ -331,7 +331,24 @@ with tab1:
                 # chart_df['timestamp'] = chart_df['timestamp'].dt.tz_convert('Asia/Taipei') 
                 # (Assuming browser handles standard ISO Z time, or we just show as is)
                 
-                st.line_chart(chart_df, x='timestamp', y='weight')
+                # 5. Add Limits if available
+                # current_part_data['clean_重量上限'] / ['clean_重量下限']
+                w_max = current_part_data.get('clean_重量上限')
+                w_min = current_part_data.get('clean_重量下限')
+                
+                # Create a list of columns to plot
+                y_cols = ['weight']
+                
+                if pd.notna(w_max):
+                    chart_df['Upper Limit'] = w_max
+                    y_cols.append('Upper Limit')
+                
+                if pd.notna(w_min):
+                    chart_df['Lower Limit'] = w_min
+                    y_cols.append('Lower Limit')
+                
+                # Plot with multiple series
+                st.line_chart(chart_df, x='timestamp', y=y_cols)
                 
                 # Show simple stats
                 avg_w = chart_df['weight'].mean()
