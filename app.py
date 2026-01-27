@@ -303,7 +303,7 @@ with tab1:
         st.write("無相關照片")
 
     with tab2:
-        st.write("歷史重量趨勢 (Real-time)")
+        st.write(f"歷史重量趨勢: {selected_part_no}")
         
         # 1. Fetch Data from GAS
         with st.spinner("載入歷史數據中..."):
