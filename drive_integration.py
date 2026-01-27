@@ -4,7 +4,7 @@ import streamlit as st
 import json
 
 # Google Apps Script Web App URL
-GAS_URL = "https://script.google.com/macros/s/AKfycbwSsRYqPXDRLkm1msFu53WTelmUGEkilpSH5edtww_StxOjyXRQhXMciGmQLyJS3jV0Yg/exec"
+GAS_URL = "https://script.google.com/macros/s/AKfycbwBe1pCD1yudWMojDUI-PqXxn5XueZrq8xBNjWKmE7YAdjkP5t83aWkLrbvnFpnArOJYA/exec"
 
 def upload_and_append(image_file, filename, row_data):
     """
