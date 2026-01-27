@@ -281,6 +281,7 @@ with st.sidebar:
 
 
 # --- Submit ---
+# --- Submit ---
 if st.button("提交巡檢數據"):
     if measured_weight == 0:
         st.warning("請輸入重量")
@@ -295,45 +296,27 @@ if st.button("提交巡檢數據"):
             ts_str = timestamp.strftime("%Y%m%d_%H%M%S")
             filename = f"{selected_model}_{selected_part_no}_{inspection_type}_{ts_str}.jpg"
             
-            # 2. Upload Image
-            img_link = drive_integration.upload_to_drive(img_file, filename)
+            # 2. Prepare Data Row (Dict)
+            row_data = {
+                "timestamp": timestamp.strftime("%Y-%m-%d %H:%M:%S"),
+                "model": selected_model,
+                "part_no": selected_part_no,
+                "inspection_type": inspection_type,
+                "weight": measured_weight,
+                "length": measured_length if has_length else "",
+                "material_ok": "OK" if material_ok else "NG",
+                "change_point": change_point,
+                "result": weight_status
+            }
             
-            # 3. Append to Sheet
-            # Format: [Time, Model, Part, Type, Weight, Length, Material_OK, Note, Status, ImageLink]
-            row_data = [
-                timestamp.strftime("%Y-%m-%d %H:%M:%S"),
-                selected_model,
-                selected_part_no,
-                inspection_type,
-                measured_weight,
-                measured_length if has_length else "",
-                "OK" if material_ok else "NG",
-                change_point,
-                weight_status,
-                img_link
-            ]
-            
-            success = drive_integration.append_to_sheet(row_data)
+            # 3. Call Unified GAS Function
+            success, message = drive_integration.upload_and_append(img_file, filename, row_data)
         
         if success:
             st.success("數據提交成功!")
             st.balloons()
-            st.write(f"圖片連結: {img_link}")
         else:
-            st.error("數據寫入失敗")
-        
-        # Debug info
-        record = {
-            "Time": timestamp.isoformat(),
-            "Model": selected_model,
-            "Part": selected_part_no,
-            "Type": inspection_type,
-            "Weight": measured_weight,
-            "Status": weight_status,
-            "Image": img_link
-        }
-        with st.expander("Debug Details"):
-            st.json(record)
+            st.error(f"提交失敗: {message}")
 
 # --- Bottom Section: History / Alerts / Quality Images ---
 st.divider()
