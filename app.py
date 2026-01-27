@@ -189,34 +189,7 @@ with col_filter2:
 # Get selected row data
 current_part_data = filtered_df[filtered_df['品番'] == selected_part_no].iloc[0]
 
-# --- Display Standard Info ---
-st.divider()
-info_col1, info_col2, info_col3 = st.columns(3)
-# Calculate Tolerance
-w_std = current_part_data['clean_重量']
-w_max = pd.to_numeric(current_part_data.get('clean_重量上限'), errors='coerce')
-w_min = pd.to_numeric(current_part_data.get('clean_重量下限'), errors='coerce')
-
-tol_str = ""
-if pd.notna(w_std) and pd.notna(w_max) and pd.notna(w_min):
-    upper_diff = w_max - w_std
-    lower_diff = w_std - w_min
-    
-    # Check if symmetric (allowing for small float diff)
-    if abs(upper_diff - lower_diff) < 0.001:
-        tol_str = f"±{upper_diff:g}"
-    else:
-        tol_str = f"+{upper_diff:g} / -{lower_diff:g}"
-
-info_col1.metric("標準重量", f"{current_part_data['重量']}", tol_str)
-info_col2.metric("原料編號", f"{current_part_data['原料編號']}")
-
-has_length = False
-if pd.notna(current_part_data['clean_標準長度']) and current_part_data['clean_標準長度'] > 0:
-    has_length = True
-    info_col3.metric("標準長度", f"{current_part_data['標準長度']}")
-
-# --- History Trend Chart (Moved Up) ---
+# --- History Trend Chart (Moved to Top) ---
 # Fetch Data from GAS
 with st.expander(f"📊 歷史重量趨勢: {selected_part_no}", expanded=True):
     history_data = drive_integration.fetch_history(selected_part_no)
@@ -239,15 +212,18 @@ with st.expander(f"📊 歷史重量趨勢: {selected_part_no}", expanded=True):
         chart_df = chart_df.dropna(subset=['timestamp', 'weight'])
         
         if not chart_df.empty:
-            # Add Limits
+            # 5. Add Limits if available
+            w_max_limit = pd.to_numeric(current_part_data.get('clean_重量上限'), errors='coerce')
+            w_min_limit = pd.to_numeric(current_part_data.get('clean_重量下限'), errors='coerce')
+
             y_cols = ['weight']
             
-            if pd.notna(w_max):
-                chart_df['Upper Limit'] = float(w_max)
+            if pd.notna(w_max_limit):
+                chart_df['Upper Limit'] = float(w_max_limit)
                 y_cols.append('Upper Limit')
             
-            if pd.notna(w_min):
-                chart_df['Lower Limit'] = float(w_min)
+            if pd.notna(w_min_limit):
+                chart_df['Lower Limit'] = float(w_min_limit)
                 y_cols.append('Lower Limit')
             
             # Plot (Altair)
@@ -278,18 +254,33 @@ with st.expander(f"📊 歷史重量趨勢: {selected_part_no}", expanded=True):
     else:
         st.caption("載入中或無數據...")
 
+# --- Display Standard Info ---
+st.divider()
+info_col1, info_col2, info_col3 = st.columns(3)
+# Calculate Tolerance
+w_std = current_part_data['clean_重量']
+w_max = pd.to_numeric(current_part_data.get('clean_重量上限'), errors='coerce')
+w_min = pd.to_numeric(current_part_data.get('clean_重量下限'), errors='coerce')
 
-# --- Key Control Points (重點管制) ---
-control_points = []
-for i in range(1, 4):
-    col_name = f"重點管制{i}"
-    if col_name in current_part_data and pd.notna(current_part_data[col_name]):
-        val = str(current_part_data[col_name]).strip()
-        if val:
-            control_points.append(val)
+tol_str = ""
+if pd.notna(w_std) and pd.notna(w_max) and pd.notna(w_min):
+    upper_diff = w_max - w_std
+    lower_diff = w_std - w_min
+    
+    # Check if symmetric (allowing for small float diff)
+    if abs(upper_diff - lower_diff) < 0.001:
+        tol_str = f"±{upper_diff:g}"
+    else:
+        tol_str = f"+{upper_diff:g} / -{lower_diff:g}"
 
-if control_points:
-    st.error(f"⚠️ **重點管制項目**:\n" + "\n".join([f"- {cp}" for cp in control_points]))
+info_col1.metric("標準重量", f"{current_part_data['重量']}", tol_str)
+info_col2.metric("原料編號", f"{current_part_data['原料編號']}")
+
+has_length = False
+if pd.notna(current_part_data['clean_標準長度']) and current_part_data['clean_標準長度'] > 0:
+    has_length = True
+    info_col3.metric("標準長度", f"{current_part_data['標準長度']}")
+
 
 # --- Inspection Form ---
 st.subheader("巡檢輸入")
@@ -311,7 +302,6 @@ with col_input2:
 # --- Validation Logic (Immediate Feedback) ---
 weight_status = "OK"
 if measured_weight > 0:
-    # w_min and w_max are already defined above in "Display Standard Info" section
     
     if pd.notna(w_min) and pd.notna(w_max):
         if not (w_min <= measured_weight <= w_max):
@@ -321,6 +311,25 @@ if measured_weight > 0:
 # 3. Material Check
 st.write(f"**確認原料**: `{current_part_data['原料編號']}`")
 material_ok = st.toggle("現場投料正確?", value=False)
+
+# --- Key Control Points (Interactive) ---
+st.markdown("### ⚠️ 重點管制項目確認")
+control_points_status = {}
+has_ng_control_point = False
+
+for i in range(1, 4):
+    col_name = f"重點管制{i}"
+    if col_name in current_part_data and pd.notna(current_part_data[col_name]):
+        val = str(current_part_data[col_name]).strip()
+        if val:
+            # Interactive Check
+            status = st.radio(f"**{i}. {val}**", ["OK", "NG"], key=f"cp_{i}", horizontal=True)
+            control_points_status[val] = status
+            if status == "NG":
+                has_ng_control_point = True
+
+if has_ng_control_point:
+    st.error("❌ 發現重點管制異常！請修正或記錄。")
 
 # 4. Change Point
 change_point = st.text_area("變化點說明 (選填)", placeholder="如有異常或變更請說明...")
@@ -402,87 +411,6 @@ with tab1:
     else:
         st.write("無相關照片")
 
+    # History Trend moved to top of page as per user request
     with tab2:
-        st.write(f"歷史重量趨勢: {selected_part_no}")
-        
-        # 1. Fetch Data from GAS
-        with st.spinner("載入歷史數據中..."):
-            history_data = drive_integration.fetch_history(selected_part_no)
-        
-        # 2. Render Chart
-        if history_data:
-            chart_df = pd.DataFrame(history_data)
-            
-            # Robust Data Cleaning
-            # 1. Replace empty strings with NaN
-            chart_df.replace("", pd.NA, inplace=True)
-            
-            # 2. Convert timestamp (ISO 8601 from GAS is UTC)
-            chart_df['timestamp'] = pd.to_datetime(chart_df['timestamp'], errors='coerce')
-            
-            # Convert to Taiwan Time (UTC+8)
-            # If naive, assume UTC first (since GAS returns Z)
-            if chart_df['timestamp'].dt.tz is None:
-                 chart_df['timestamp'] = chart_df['timestamp'].dt.tz_localize('UTC')
-            
-            chart_df['timestamp'] = chart_df['timestamp'].dt.tz_convert('Asia/Taipei')
-            
-            
-            # 3. Convert weight
-            chart_df['weight'] = pd.to_numeric(chart_df['weight'], errors='coerce')
-            
-            # 4. Filter: Must have valid timestamp AND numeric weight
-            chart_df = chart_df.dropna(subset=['timestamp', 'weight'])
-            
-            if not chart_df.empty:
-                # Localize timezone to user's local if needed, but plotting UTC is safer for now or +8
-                # chart_df['timestamp'] = chart_df['timestamp'].dt.tz_convert('Asia/Taipei') 
-                # (Assuming browser handles standard ISO Z time, or we just show as is)
-                
-                # 5. Add Limits if available
-                # current_part_data['clean_重量上限'] / ['clean_重量下限']
-                w_max = pd.to_numeric(current_part_data.get('clean_重量上限'), errors='coerce')
-                w_min = pd.to_numeric(current_part_data.get('clean_重量下限'), errors='coerce')
-                
-                # Create a list of columns to plot
-                y_cols = ['weight']
-                
-                if pd.notna(w_max):
-                    chart_df['Upper Limit'] = float(w_max)
-                    y_cols.append('Upper Limit')
-                
-                if pd.notna(w_min):
-                    chart_df['Lower Limit'] = float(w_min)
-                    y_cols.append('Lower Limit')
-                
-                # Plot (Altair for better control over Y-axis scale)
-                # Reshape to long format for Altair
-                # CRITICAL FIX: explicit value_vars to avoid melting non-numeric cols like 'result'
-                chart_long = chart_df.melt('timestamp', value_vars=y_cols, var_name='Type', value_name='Value')
-                
-                # Define dynamic Y-axis domain (min - 5%, max + 5%)
-                y_min = chart_long['Value'].min()
-                y_max = chart_long['Value'].max()
-                padding = (y_max - y_min) * 0.1 if y_max != y_min else 5
-                
-                base = alt.Chart(chart_long).encode(
-                    x=alt.X('timestamp', title='時間'),
-                    y=alt.Y('Value', title='重量 (g)', 
-                            scale=alt.Scale(domain=[y_min - padding, y_max + padding])),
-                    color=alt.Color('Type', title='類別', 
-                                    scale=alt.Scale(domain=['weight', 'Upper Limit', 'Lower Limit'],
-                                                  range=['#FF6C6C', '#457B9D', '#457B9D'])), # Red for weight, Blue for limits
-                    tooltip=['timestamp', 'Type', 'Value']
-                )
-
-                line_chart = base.mark_line().interactive()
-                
-                st.altair_chart(line_chart, use_container_width=True)
-                
-                # Show simple stats
-                avg_w = chart_df['weight'].mean()
-                st.caption(f"平均重量: {avg_w:.2f} g (樣本數: {len(chart_df)})")
-            else:
-                st.warning("有找到數據，但無法解析 (可能格式不符)。請確認 Sheet 欄位內容。")
-        else:
-            st.info("尚無歷史數據，或尚未更新 GAS 腳本。")
+        st.info("歷史趨勢圖已移至頁面頂端 (品番選擇下方)，方便您快速查看。")
