@@ -31,7 +31,8 @@ def upload_and_append(image_file, filename, row_data):
             "length": row_data.get("length"),
             "material_ok": row_data.get("material_ok"),
             "change_point": row_data.get("change_point"),
-            "result": row_data.get("result")
+            "result": row_data.get("result"),
+            "key_control_status": row_data.get("key_control_status") # Add this
         }
         
         # 3. Post to GAS (Use json=payload)
