@@ -258,10 +258,12 @@ material_ok = st.toggle("現場投料正確?", value=False)
 change_point = st.text_area("變化點說明 (選填)", placeholder="如有異常或變更請說明...")
 
 # 5. Image Input (Camera or Upload)
-input_method = st.radio("影像輸入", ["📸 拍照 (Camera)", "📂 上傳照片 (Upload)"], index=1, horizontal=True, label_visibility="collapsed")
+# Note: Streamlit st.camera_input defaults to front camera. 
+# Using file_uploader on mobile allows "Take Photo" which usually defaults to rear.
+input_method = st.radio("影像輸入", ["📸 網頁相機 (Webcam)", "📂 上傳 / 後鏡頭 (Upload/Rear)"], index=1, horizontal=True, label_visibility="collapsed")
 
 img_file = None
-if input_method == "📸 拍照 (Camera)":
+if input_method == "📸 網頁相機 (Webcam)":
     img_file = st.camera_input("拍照記錄")
 else:
     img_file = st.file_uploader("上傳照片", type=["jpg", "jpeg", "png"])
