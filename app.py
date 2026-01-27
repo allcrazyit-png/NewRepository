@@ -181,7 +181,23 @@ current_part_data = filtered_df[filtered_df['品番'] == selected_part_no].iloc[
 # --- Display Standard Info ---
 st.divider()
 info_col1, info_col2, info_col3 = st.columns(3)
-info_col1.metric("標準重量", f"{current_part_data['重量']}")
+# Calculate Tolerance
+w_std = current_part_data['clean_重量']
+w_max = current_part_data['clean_重量上限']
+w_min = current_part_data['clean_重量下限']
+
+tol_str = ""
+if pd.notna(w_std) and pd.notna(w_max) and pd.notna(w_min):
+    upper_diff = w_max - w_std
+    lower_diff = w_std - w_min
+    
+    # Check if symmetric (allowing for small float diff)
+    if abs(upper_diff - lower_diff) < 0.001:
+        tol_str = f"±{upper_diff:g}"
+    else:
+        tol_str = f"+{upper_diff:g} / -{lower_diff:g}"
+
+info_col1.metric("標準重量", f"{current_part_data['重量']}", tol_str)
 info_col2.metric("原料編號", f"{current_part_data['原料編號']}")
 
 has_length = False
