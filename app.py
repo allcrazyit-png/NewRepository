@@ -189,6 +189,18 @@ if pd.notna(current_part_data['clean_標準長度']) and current_part_data['clea
     has_length = True
     info_col3.metric("標準長度", f"{current_part_data['標準長度']}")
 
+# --- Key Control Points (重點管制) ---
+control_points = []
+for i in range(1, 4):
+    col_name = f"重點管制{i}"
+    if col_name in current_part_data and pd.notna(current_part_data[col_name]):
+        val = str(current_part_data[col_name]).strip()
+        if val:
+            control_points.append(val)
+
+if control_points:
+    st.error(f"⚠️ **重點管制項目**:\n" + "\n".join([f"- {cp}" for cp in control_points]))
+
 # --- Inspection Form ---
 st.subheader("巡檢輸入")
 
