@@ -343,18 +343,18 @@ with tab1:
                 
                 # 5. Add Limits if available
                 # current_part_data['clean_重量上限'] / ['clean_重量下限']
-                w_max = current_part_data.get('clean_重量上限')
-                w_min = current_part_data.get('clean_重量下限')
+                w_max = pd.to_numeric(current_part_data.get('clean_重量上限'), errors='coerce')
+                w_min = pd.to_numeric(current_part_data.get('clean_重量下限'), errors='coerce')
                 
                 # Create a list of columns to plot
                 y_cols = ['weight']
                 
                 if pd.notna(w_max):
-                    chart_df['Upper Limit'] = w_max
+                    chart_df['Upper Limit'] = float(w_max)
                     y_cols.append('Upper Limit')
                 
                 if pd.notna(w_min):
-                    chart_df['Lower Limit'] = w_min
+                    chart_df['Lower Limit'] = float(w_min)
                     y_cols.append('Lower Limit')
                 
                 # Plot (Altair for better control over Y-axis scale)
