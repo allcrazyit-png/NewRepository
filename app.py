@@ -314,21 +314,29 @@ with tab1:
             chart_df = pd.DataFrame(history_data)
             
             # Robust Data Cleaning
-            # Convert timestamp to datetime (coerce errors to NaT)
+            # 1. Replace empty strings with NaN
+            chart_df.replace("", pd.NA, inplace=True)
+            
+            # 2. Convert timestamp (ISO 8601 from GAS)
             chart_df['timestamp'] = pd.to_datetime(chart_df['timestamp'], errors='coerce')
-            # Ensure weight is numeric (coerce errors to NaN)
+            
+            # 3. Convert weight
             chart_df['weight'] = pd.to_numeric(chart_df['weight'], errors='coerce')
             
-            # Drop rows with invalid time or weight (Handles partial rows in Sheet)
+            # 4. Filter: Must have valid timestamp AND numeric weight
             chart_df = chart_df.dropna(subset=['timestamp', 'weight'])
             
             if not chart_df.empty:
+                # Localize timezone to user's local if needed, but plotting UTC is safer for now or +8
+                # chart_df['timestamp'] = chart_df['timestamp'].dt.tz_convert('Asia/Taipei') 
+                # (Assuming browser handles standard ISO Z time, or we just show as is)
+                
                 st.line_chart(chart_df, x='timestamp', y='weight')
                 
                 # Show simple stats
                 avg_w = chart_df['weight'].mean()
                 st.caption(f"平均重量: {avg_w:.2f} g (樣本數: {len(chart_df)})")
             else:
-                st.warning("有找到數據，但格式不完整 (可能是空行)。")
+                st.warning("有找到數據，但無法解析 (可能格式不符)。請確認 Sheet 欄位內容。")
         else:
             st.info("尚無歷史數據，或尚未更新 GAS 腳本。")
