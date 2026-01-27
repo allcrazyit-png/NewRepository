@@ -317,8 +317,16 @@ with tab1:
             # 1. Replace empty strings with NaN
             chart_df.replace("", pd.NA, inplace=True)
             
-            # 2. Convert timestamp (ISO 8601 from GAS)
+            # 2. Convert timestamp (ISO 8601 from GAS is UTC)
             chart_df['timestamp'] = pd.to_datetime(chart_df['timestamp'], errors='coerce')
+            
+            # Convert to Taiwan Time (UTC+8)
+            # If naive, assume UTC first (since GAS returns Z)
+            if chart_df['timestamp'].dt.tz is None:
+                 chart_df['timestamp'] = chart_df['timestamp'].dt.tz_localize('UTC')
+            
+            chart_df['timestamp'] = chart_df['timestamp'].dt.tz_convert('Asia/Taipei')
+            
             
             # 3. Convert weight
             chart_df['weight'] = pd.to_numeric(chart_df['weight'], errors='coerce')
