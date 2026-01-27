@@ -2,6 +2,8 @@ import streamlit as st
 import pandas as pd
 import data_manager
 import datetime
+import altair as alt
+import json
 import drive_integration
 
 # --- Page Config ---
@@ -355,8 +357,28 @@ with tab1:
                     chart_df['Lower Limit'] = w_min
                     y_cols.append('Lower Limit')
                 
-                # Plot with multiple series
-                st.line_chart(chart_df, x='timestamp', y=y_cols)
+                # Plot (Altair for better control over Y-axis scale)
+                # Reshape to long format for Altair
+                chart_long = chart_df.melt('timestamp', var_name='Type', value_name='Value')
+                
+                # Define dynamic Y-axis domain (min - 5%, max + 5%)
+                y_min = chart_long['Value'].min()
+                y_max = chart_long['Value'].max()
+                padding = (y_max - y_min) * 0.1 if y_max != y_min else 5
+                
+                base = alt.Chart(chart_long).encode(
+                    x=alt.X('timestamp', title='時間'),
+                    y=alt.Y('Value', title='重量 (g)', 
+                            scale=alt.Scale(domain=[y_min - padding, y_max + padding])),
+                    color=alt.Color('Type', title='類別', 
+                                    scale=alt.Scale(domain=['weight', 'Upper Limit', 'Lower Limit'],
+                                                  range=['#FF6C6C', '#457B9D', '#457B9D'])), # Red for weight, Blue for limits
+                    tooltip=['timestamp', 'Type', 'Value']
+                )
+
+                line_chart = base.mark_line().interactive()
+                
+                st.altair_chart(line_chart, use_container_width=True)
                 
                 # Show simple stats
                 avg_w = chart_df['weight'].mean()
