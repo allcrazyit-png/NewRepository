@@ -359,7 +359,8 @@ with tab1:
                 
                 # Plot (Altair for better control over Y-axis scale)
                 # Reshape to long format for Altair
-                chart_long = chart_df.melt('timestamp', var_name='Type', value_name='Value')
+                # CRITICAL FIX: explicit value_vars to avoid melting non-numeric cols like 'result'
+                chart_long = chart_df.melt('timestamp', value_vars=y_cols, var_name='Type', value_name='Value')
                 
                 # Define dynamic Y-axis domain (min - 5%, max + 5%)
                 y_min = chart_long['Value'].min()
