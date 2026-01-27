@@ -300,12 +300,25 @@ with tab1:
     else:
         st.write("無相關照片")
 
-with tab2:
-    # Placeholder Trend Chart
-    st.write("歷史重量趨勢")
-    # Generate dummy data for visualization
-    chart_data = pd.DataFrame({
-        'Date': pd.date_range(start='1/1/2026', periods=5),
-        'Weight': [current_part_data['clean_重量'] if pd.notna(current_part_data['clean_重量']) else 100] * 5
-    })
-    st.line_chart(chart_data, x='Date', y='Weight')
+    with tab2:
+        st.write("歷史重量趨勢 (Real-time)")
+        
+        # 1. Fetch Data from GAS
+        with st.spinner("載入歷史數據中..."):
+            history_data = drive_integration.fetch_history(selected_part_no)
+        
+        # 2. Render Chart
+        if history_data:
+            chart_df = pd.DataFrame(history_data)
+            # Convert timestamp to datetime
+            chart_df['timestamp'] = pd.to_datetime(chart_df['timestamp'])
+            # Ensure weight is numeric
+            chart_df['weight'] = pd.to_numeric(chart_df['weight'], errors='coerce')
+            
+            st.line_chart(chart_df, x='timestamp', y='weight')
+            
+            # Show simple stats
+            avg_w = chart_df['weight'].mean()
+            st.caption(f"平均重量: {avg_w:.2f} g (樣本數: {len(chart_df)})")
+        else:
+            st.info("尚無歷史數據，或尚未更新 GAS 腳本。")

@@ -45,6 +45,29 @@ def upload_and_append(image_file, filename, row_data):
     except Exception as e:
         return False, str(e)
 
+def fetch_history(part_no):
+    """
+    Fetches history data for a specific part from GAS.
+    Returns: DataFrame-ready list of dicts [{'timestamp':..., 'weight':...}]
+    """
+    try:
+        payload = {
+            "action": "get_history",
+            "part_no": part_no
+        }
+        response = requests.post(GAS_URL, json=payload, timeout=10)
+        
+        if response.status_code == 200:
+            resp_json = response.json()
+            if resp_json.get("status") == "Success":
+                return resp_json.get("data", [])
+            else:
+                return []
+        else:
+            return []
+    except Exception:
+        return []
+
 # --- Deprecated / Unused Legacy Functions (Kept empty/mocked if imports exist somewhere) ---
 # We keep these signatures just in case app.py calls them individually during transition,
 # effectively we should update app.py to call `upload_and_append` instead.
