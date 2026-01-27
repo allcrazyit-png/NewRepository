@@ -228,7 +228,7 @@ material_ok = st.toggle("現場投料正確?", value=False)
 change_point = st.text_area("變化點說明 (選填)", placeholder="如有異常或變更請說明...")
 
 # 5. Image Input (Camera or Upload)
-input_method = st.radio("影像輸入", ["📸 拍照 (Camera)", "📂 上傳照片 (Upload)"], horizontal=True, label_visibility="collapsed")
+input_method = st.radio("影像輸入", ["📸 拍照 (Camera)", "📂 上傳照片 (Upload)"], index=1, horizontal=True, label_visibility="collapsed")
 
 img_file = None
 if input_method == "📸 拍照 (Camera)":
