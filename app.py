@@ -227,8 +227,14 @@ material_ok = st.toggle("現場投料正確?", value=False)
 # 4. Change Point
 change_point = st.text_area("變化點說明 (選填)", placeholder="如有異常或變更請說明...")
 
-# 5. Camera
-img_file = st.camera_input("拍照記錄")
+# 5. Image Input (Camera or Upload)
+input_method = st.radio("影像輸入", ["📸 拍照 (Camera)", "📂 上傳照片 (Upload)"], horizontal=True, label_visibility="collapsed")
+
+img_file = None
+if input_method == "📸 拍照 (Camera)":
+    img_file = st.camera_input("拍照記錄")
+else:
+    img_file = st.file_uploader("上傳照片", type=["jpg", "jpeg", "png"])
 
 # --- Submit ---
 if st.button("提交巡檢數據"):
