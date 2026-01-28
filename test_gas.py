@@ -5,7 +5,7 @@ GAS_URL = "https://script.google.com/macros/s/AKfycbwBe1pCD1yudWMojDUI-PqXxn5Xue
 
 payload = {
     "action": "get_history",
-    "part_no": "841W" # A part number likely to exist or at least trigger a search
+    "part_no": "G92D1-VU010" # Based on user screenshot
 }
 
 try:

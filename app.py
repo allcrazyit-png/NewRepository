@@ -171,7 +171,7 @@ if df.empty:
     st.stop()
 
 # --- Top Navigation / Filter ---
-st.header("瑞全智慧巡檢系統")
+st.header("瑞全智慧巡檢系統 (v3.1 壓縮版)")
 
 col_filter1, col_filter2 = st.columns(2)
 
@@ -400,7 +400,7 @@ tab1, tab2 = st.tabs(["異常圖示", "歷史趨勢"])
 with tab1:
     # Look for images in quality_images/ matching the part number
     # For now, placeholder
-    st.info(f"顯示 {selected_part_no} 的歷史異常照片 (需放置於 quality_images/ 資料夾)")
+    # Look for images in quality_images/ matching the part number
     
     # Example: Check if specific control points have images?
     # prompt said: "從 quality_images/ 資料夾顯示對應品番的歷史異常照片"
@@ -408,16 +408,24 @@ with tab1:
     import os
     img_dir = "quality_images"
     found_imgs = []
+    
     if os.path.exists(img_dir):
-        for f in os.listdir(img_dir):
+        all_files = os.listdir(img_dir)
+        # st.text(f"資料夾內檔案: {all_files}") # Uncomment if really stuck
+        
+        for f in all_files:
+            # Case-insensitive check?
             if selected_part_no in f:
                 found_imgs.append(os.path.join(img_dir, f))
-    
-    if found_imgs:
-        st.image(found_imgs, width=300, caption=[os.path.basename(p) for p in found_imgs])
+                
+        if found_imgs:
+            st.success(f"找到 {len(found_imgs)} 張相關照片")
+            st.image(found_imgs, width=300, caption=[os.path.basename(p) for p in found_imgs])
+        else:
+            st.warning(f"未找到相關照片。資料夾內現有: {all_files[:5]} ...")
     else:
-        st.write("無相關照片")
+        st.error(f"找不到資料夾: {img_dir}。請在桌面上建立此資料夾並放入照片。")
 
     # History Trend moved to top of page as per user request
     with tab2:
-        st.info("歷史趨勢圖已移至頁面頂端 (品番選擇下方)，方便您快速查看。")
+        st.caption("歷史趨勢圖已移至頁面頂端")
