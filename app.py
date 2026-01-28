@@ -386,6 +386,15 @@ elif mode == "📊 數據戰情室":
     else:
         df_dash = pd.DataFrame(raw_data)
         
+        # --- Timezone Fix: Convert UTC to Taiwan Time ---
+        if 'timestamp' in df_dash.columns:
+            df_dash['timestamp'] = pd.to_datetime(df_dash['timestamp'], errors='coerce')
+            # If naive (no timezone), assume UTC because GAS sends ISO/UTC
+            if df_dash['timestamp'].dt.tz is None:
+                 df_dash['timestamp'] = df_dash['timestamp'].dt.tz_localize('UTC')
+            # Convert to Taiwan
+            df_dash['timestamp'] = df_dash['timestamp'].dt.tz_convert('Asia/Taipei')
+        
         # --- Filters ---
         col_d1, col_d2, col_d3 = st.columns(3)
         with col_d1:
