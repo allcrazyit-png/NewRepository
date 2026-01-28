@@ -256,15 +256,7 @@ if mode == "📝 巡檢輸入":
         else:
             st.caption("載入中或無數據...")
 
-    # --- Defect History Image ---
-    defect_img_filename = current_part_data.get('異常履歷寫真')
-    if pd.notna(defect_img_filename) and str(defect_img_filename).strip():
-        img_path = os.path.join("quality_images", str(defect_img_filename).strip())
-        with st.expander("⚠️ 過去異常履歷 (Defect History)", expanded=True):
-             if os.path.exists(img_path):
-                st.image(img_path, caption=f"異常履歷: {defect_img_filename}", use_container_width=True)
-             else:
-                st.caption(f"註記有異常履歷但找不到檔案: {defect_img_filename}")
+
 
     # --- Display Standard Info ---
     st.divider()
@@ -383,20 +375,18 @@ if mode == "📝 巡檢輸入":
                 st.error(f"提交失敗: {message}")
 
     # --- Bottom: Abnormal Images ---
+    # --- Defect History Image (Bottom) ---
     st.divider()
-    st.subheader("異常圖示")
-    import os
-    img_dir = "quality_images"
-    found_imgs = []
-    if os.path.exists(img_dir):
-        all_files = os.listdir(img_dir)
-        for f in all_files:
-            if selected_part_no in f:
-                found_imgs.append(os.path.join(img_dir, f))
-        if found_imgs:
-            st.image(found_imgs, width=300, caption=[os.path.basename(p) for p in found_imgs])
-        else:
-            st.info("尚無異常照片歸檔")
+    defect_img_filename = current_part_data.get('異常履歷寫真')
+    if pd.notna(defect_img_filename) and str(defect_img_filename).strip():
+        img_path = os.path.join("quality_images", str(defect_img_filename).strip())
+        with st.expander("⚠️ 過去異常履歷 (Defect History)", expanded=True):
+             if os.path.exists(img_path):
+                st.image(img_path, caption=f"異常履歷: {defect_img_filename}", use_container_width=True)
+             else:
+                st.caption(f"註記有異常履歷但找不到檔案: {defect_img_filename}")
+    else:
+        st.caption("無異常履歷記錄")
 
 elif mode == "📊 數據戰情室":
     st.header("📊 生產品質戰情室")
