@@ -130,6 +130,29 @@ def fetch_history(part_no):
     except Exception:
         return []
 
+def fetch_all_data():
+    """
+    Fetches ALL data from GAS (Columns A-K) for the Dashboard.
+    Returns: List of dicts.
+    """
+    try:
+        payload = {
+            "action": "get_all_data" # New V4 action
+        }
+        response = requests.post(GAS_URL, json=payload, timeout=15) # Longer timeout for full data
+        
+        if response.status_code == 200:
+            resp_json = response.json()
+            if resp_json.get("status") == "Success":
+                return resp_json.get("data", [])
+            else:
+                return []
+        else:
+            return []
+    except Exception as e:
+        print(f"Error fetching dashboard data: {e}")
+        return []
+
 # --- Deprecated / Unused Legacy Functions (Kept empty/mocked if imports exist somewhere) ---
 # We keep these signatures just in case app.py calls them individually during transition,
 # effectively we should update app.py to call `upload_and_append` instead.

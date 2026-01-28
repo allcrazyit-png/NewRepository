@@ -170,262 +170,326 @@ if df.empty:
     st.error("No data found. Please check parts_data.csv.")
     st.stop()
 
-# --- Top Navigation / Filter ---
-st.header("瑞全智慧巡檢系統 (v3.1 壓縮版)")
+# --- Mode Selection ---
+mode = st.sidebar.radio("模式選擇", ["📝 巡檢輸入", "📊 數據戰情室"], index=0)
 
-col_filter1, col_filter2 = st.columns(2)
+if mode == "📝 巡檢輸入":
+    # --- Top Navigation / Filter ---
+    st.header("瑞全智慧巡檢系統 (v3.1 壓縮版)")
 
-with col_filter1:
-    car_models = df['車型'].unique()
-    selected_model = st.selectbox("車型", car_models)
+    col_filter1, col_filter2 = st.columns(2)
 
-# Filter Parts based on Model
-filtered_df = data_manager.get_filtered_data(df, car_model=selected_model)
-part_numbers = filtered_df['品番'].unique()
+    with col_filter1:
+        car_models = df['車型'].unique()
+        selected_model = st.selectbox("車型", car_models)
 
-with col_filter2:
-    selected_part_no = st.selectbox("品番", part_numbers)
+    # Filter Parts based on Model
+    filtered_df = data_manager.get_filtered_data(df, car_model=selected_model)
+    part_numbers = filtered_df['品番'].unique()
 
-# Get selected row data
-current_part_data = filtered_df[filtered_df['品番'] == selected_part_no].iloc[0]
+    with col_filter2:
+        selected_part_no = st.selectbox("品番", part_numbers)
 
-# --- History Trend Chart (Moved to Top) ---
-# Fetch Data from GAS
-with st.expander(f"📊 歷史重量趨勢: {selected_part_no}", expanded=True):
-    history_data = drive_integration.fetch_history(selected_part_no)
-    
-    if history_data:
-        chart_df = pd.DataFrame(history_data)
+    # Get selected row data
+    current_part_data = filtered_df[filtered_df['品番'] == selected_part_no].iloc[0]
+
+    # --- History Trend Chart (Top) ---
+    with st.expander(f"📊 歷史重量趨勢: {selected_part_no}", expanded=True):
+        history_data = drive_integration.fetch_history(selected_part_no)
         
-        # Robust Data Cleaning
-        chart_df.replace("", pd.NA, inplace=True)
-        chart_df['timestamp'] = pd.to_datetime(chart_df['timestamp'], errors='coerce')
-        
-        # Convert to Taiwan Time (UTC+8)
-        if chart_df['timestamp'].dt.tz is None:
-             chart_df['timestamp'] = chart_df['timestamp'].dt.tz_localize('UTC')
-        chart_df['timestamp'] = chart_df['timestamp'].dt.tz_convert('Asia/Taipei')
-        
-        chart_df['weight'] = pd.to_numeric(chart_df['weight'], errors='coerce')
-        
-        # Filter: Must have valid timestamp AND numeric weight
-        chart_df = chart_df.dropna(subset=['timestamp', 'weight'])
-        
-        if not chart_df.empty:
-            # 5. Add Limits if available
-            w_max_limit = pd.to_numeric(current_part_data.get('clean_重量上限'), errors='coerce')
-            w_min_limit = pd.to_numeric(current_part_data.get('clean_重量下限'), errors='coerce')
+        if history_data:
+            chart_df = pd.DataFrame(history_data)
+            chart_df.replace("", pd.NA, inplace=True)
+            chart_df['timestamp'] = pd.to_datetime(chart_df['timestamp'], errors='coerce')
+            
+            if chart_df['timestamp'].dt.tz is None:
+                 chart_df['timestamp'] = chart_df['timestamp'].dt.tz_localize('UTC')
+            chart_df['timestamp'] = chart_df['timestamp'].dt.tz_convert('Asia/Taipei')
+            
+            chart_df['weight'] = pd.to_numeric(chart_df['weight'], errors='coerce')
+            chart_df = chart_df.dropna(subset=['timestamp', 'weight'])
+            
+            if not chart_df.empty:
+                w_max_limit = pd.to_numeric(current_part_data.get('clean_重量上限'), errors='coerce')
+                w_min_limit = pd.to_numeric(current_part_data.get('clean_重量下限'), errors='coerce')
 
-            y_cols = ['weight']
-            
-            if pd.notna(w_max_limit):
-                chart_df['Upper Limit'] = float(w_max_limit)
-                y_cols.append('Upper Limit')
-            
-            if pd.notna(w_min_limit):
-                chart_df['Lower Limit'] = float(w_min_limit)
-                y_cols.append('Lower Limit')
-            
-            # Plot (Altair)
-            chart_long = chart_df.melt('timestamp', value_vars=y_cols, var_name='Type', value_name='Value')
-            
-            y_min_val = chart_long['Value'].min()
-            y_max_val = chart_long['Value'].max()
-            padding = (y_max_val - y_min_val) * 0.1 if y_max_val != y_min_val else 5
-            
-            base = alt.Chart(chart_long).encode(
-                x=alt.X('timestamp', title='時間', axis=alt.Axis(format='%m/%d %H:%M')),
-                y=alt.Y('Value', title='重量 (g)', 
-                        scale=alt.Scale(domain=[y_min_val - padding, y_max_val + padding])),
-                color=alt.Color('Type', title='類別', 
-                                scale=alt.Scale(domain=['weight', 'Upper Limit', 'Lower Limit'],
-                                              range=['#FF6C6C', '#457B9D', '#457B9D'])),
-                tooltip=[
-                    alt.Tooltip('timestamp', title='時間', format='%Y-%m-%d %H:%M'),
-                    alt.Tooltip('Type', title='類別'),
-                    alt.Tooltip('Value', title='數值', format='.1f')
-                ]
-            )
-
-            line_chart = base.mark_line().interactive()
-            st.altair_chart(line_chart, use_container_width=True)
+                y_cols = ['weight']
+                if pd.notna(w_max_limit):
+                    chart_df['Upper Limit'] = float(w_max_limit)
+                    y_cols.append('Upper Limit')
+                if pd.notna(w_min_limit):
+                    chart_df['Lower Limit'] = float(w_min_limit)
+                    y_cols.append('Lower Limit')
+                
+                chart_long = chart_df.melt('timestamp', value_vars=y_cols, var_name='Type', value_name='Value')
+                
+                y_min_val = chart_long['Value'].min()
+                y_max_val = chart_long['Value'].max()
+                padding = (y_max_val - y_min_val) * 0.1 if y_max_val != y_min_val else 5
+                
+                base = alt.Chart(chart_long).encode(
+                    x=alt.X('timestamp', title='時間', axis=alt.Axis(format='%m/%d %H:%M')),
+                    y=alt.Y('Value', title='重量 (g)', 
+                            scale=alt.Scale(domain=[y_min_val - padding, y_max_val + padding])),
+                    color=alt.Color('Type', title='類別', 
+                                    scale=alt.Scale(domain=['weight', 'Upper Limit', 'Lower Limit'],
+                                                  range=['#FF6C6C', '#457B9D', '#457B9D'])),
+                    tooltip=[alt.Tooltip('timestamp', format='%Y-%m-%d %H:%M'), alt.Tooltip('Type'), alt.Tooltip('Value', format='.1f')]
+                )
+                st.altair_chart(base.mark_line().interactive(), use_container_width=True)
+            else:
+                st.caption("無有效歷史數據")
         else:
-            st.caption("無有效歷史數據")
-    else:
-        st.caption("載入中或無數據...")
+            st.caption("載入中或無數據...")
 
-# --- Display Standard Info ---
-st.divider()
-info_col1, info_col2, info_col3 = st.columns(3)
-# Calculate Tolerance
-w_std = current_part_data['clean_重量']
-w_max = pd.to_numeric(current_part_data.get('clean_重量上限'), errors='coerce')
-w_min = pd.to_numeric(current_part_data.get('clean_重量下限'), errors='coerce')
-
-tol_str = ""
-if pd.notna(w_std) and pd.notna(w_max) and pd.notna(w_min):
-    upper_diff = w_max - w_std
-    lower_diff = w_std - w_min
+    # --- Display Standard Info ---
+    st.divider()
+    info_col1, info_col2, info_col3 = st.columns(3)
+    # Calculate Tolerance
+    w_std = current_part_data['clean_重量']
+    w_max = pd.to_numeric(current_part_data.get('clean_重量上限'), errors='coerce')
+    w_min = pd.to_numeric(current_part_data.get('clean_重量下限'), errors='coerce')
     
-    # Check if symmetric (allowing for small float diff)
-    if abs(upper_diff - lower_diff) < 0.001:
-        tol_str = f"±{upper_diff:g}"
-    else:
-        tol_str = f"+{upper_diff:g} / -{lower_diff:g}"
-
-info_col1.metric("標準重量", f"{current_part_data['重量']}", tol_str)
-info_col2.metric("原料編號", f"{current_part_data['原料編號']}")
-
-has_length = False
-if pd.notna(current_part_data['clean_標準長度']) and current_part_data['clean_標準長度'] > 0:
-    has_length = True
-    info_col3.metric("標準長度", f"{current_part_data['標準長度']}")
-
-
-# --- Inspection Form ---
-st.subheader("巡檢輸入")
-
-# 1. Inspection Type
-inspection_type = st.radio("巡檢階段", ["首件", "中件", "末件"], horizontal=True)
-
-# 2. Measurements
-col_input1, col_input2 = st.columns(2)
-
-with col_input1:
-    measured_weight = st.number_input("實測重量 (g)", min_value=0.0, step=0.1, format="%.1f")
-
-with col_input2:
-    measured_length = None
-    if has_length:
-        measured_length = st.number_input("實測長度 (mm)", min_value=0.0, step=0.1, format="%.1f")
-
-# --- Validation Logic (Immediate Feedback) ---
-weight_status = "OK"
-if measured_weight > 0:
-    
-    if pd.notna(w_min) and pd.notna(w_max):
-        if not (w_min <= measured_weight <= w_max):
-            st.markdown(f'<div class="alert-box">⚠️ 重量異常! (標準: {w_min} ~ {w_max})</div>', unsafe_allow_html=True)
-            weight_status = "NG"
-
-# 3. Material Check
-st.write(f"**確認原料**: `{current_part_data['原料編號']}`")
-material_check = st.radio("現場投料正確?", ["OK", "NG"], horizontal=True)
-material_ok = (material_check == "OK")
-
-# --- Key Control Points (Interactive) ---
-st.markdown("### ⚠️ 重點管制項目確認")
-control_points_status = {}
-has_ng_control_point = False
-control_points_log = [] # List to store status for logging
-
-for i in range(1, 4):
-    col_name = f"重點管制{i}"
-    if col_name in current_part_data and pd.notna(current_part_data[col_name]):
-        val = str(current_part_data[col_name]).strip()
-        if val:
-            # Interactive Check
-            status = st.radio(f"**{i}. {val}**", ["OK", "NG"], key=f"cp_{i}", horizontal=True)
-            control_points_status[val] = status
-            control_points_log.append(f"{i}.{status}")
-            if status == "NG":
-                has_ng_control_point = True
-
-if has_ng_control_point:
-    st.error("❌ 發現重點管制異常！請修正或記錄。")
-
-# 4. Change Point
-change_point = st.text_area("變化點說明 (選填)", placeholder="如有異常或變更請說明...")
-
-# 5. Image Input (Camera or Upload)
-# Note: Streamlit st.camera_input defaults to front camera. 
-# Using file_uploader on mobile allows "Take Photo" which usually defaults to rear.
-input_method = st.radio("影像輸入", ["📸 網頁相機 (Webcam)", "📂 上傳 / 後鏡頭 (Upload/Rear)"], index=1, horizontal=True, label_visibility="collapsed")
-
-img_file = None
-if input_method == "📸 網頁相機 (Webcam)":
-    img_file = st.camera_input("拍照記錄")
-else:
-    img_file = st.file_uploader("上傳照片", type=["jpg", "jpeg", "png"])
-
-# --- Submit ---
-if st.button("提交巡檢數據"):
-    if measured_weight == 0:
-        st.warning("請輸入重量")
-    elif not material_ok:
-        st.warning("原料確認為 NG，請確認正確料號")
-    elif img_file is None:
-        st.warning("請拍攝照片")
-    else:
-        with st.spinner("資料上傳中..."):
-            # 1. Prepare Filename
-            # Use UTC+8 for Taiwan/Beijing Time
-            tz = datetime.timezone(datetime.timedelta(hours=8))
-            timestamp = datetime.datetime.now(tz)
-            ts_str = timestamp.strftime("%Y%m%d_%H%M%S")
-            filename = f"{selected_model}_{selected_part_no}_{inspection_type}_{ts_str}.jpg"
-            
-            # 2. Prepare Data Row (Dict)
-            # Combine Control Points Status
-            key_control_str = ", ".join(control_points_log) if control_points_log else "N/A"
-            
-            row_data = {
-                "timestamp": timestamp.strftime("%Y-%m-%d %H:%M:%S"),
-                "model": selected_model,
-                "part_no": selected_part_no,
-                "inspection_type": inspection_type,
-                "weight": measured_weight,
-                "length": measured_length if has_length else "",
-                "material_ok": "OK" if material_ok else "NG",
-                "change_point": change_point,
-                "result": weight_status,
-                "key_control_status": key_control_str # New Field
-            }
-            
-            # 3. Call Unified GAS Function
-            success, message = drive_integration.upload_and_append(img_file, filename, row_data)
-        
-        if success:
-            st.success("數據提交成功!")
-            st.balloons()
+    tol_str = ""
+    if pd.notna(w_std) and pd.notna(w_max) and pd.notna(w_min):
+        upper_diff = w_max - w_std
+        lower_diff = w_std - w_min
+        if abs(upper_diff - lower_diff) < 0.001:
+            tol_str = f"±{upper_diff:g}"
         else:
-            st.error(f"提交失敗: {message}")
+            tol_str = f"+{upper_diff:g} / -{lower_diff:g}"
 
-# --- Bottom Section: History / Alerts / Quality Images ---
-st.divider()
-st.subheader("品質履歷 & 異常圖示")
-
-tab1, tab2 = st.tabs(["異常圖示", "歷史趨勢"])
-
-with tab1:
-    # Look for images in quality_images/ matching the part number
-    # For now, placeholder
-    # Look for images in quality_images/ matching the part number
+    info_col1.metric("標準重量", f"{current_part_data['重量']}", tol_str)
+    info_col2.metric("原料編號", f"{current_part_data['原料編號']}")
     
-    # Example: Check if specific control points have images?
-    # prompt said: "從 quality_images/ 資料夾顯示對應品番的歷史異常照片"
-    # I will look for files with part_no in filename
+    has_length = False
+    if pd.notna(current_part_data['clean_標準長度']) and current_part_data['clean_標準長度'] > 0:
+        has_length = True
+        info_col3.metric("標準長度", f"{current_part_data['標準長度']}")
+
+    # --- Inspection Form ---
+    st.subheader("巡檢輸入")
+    inspection_type = st.radio("巡檢階段", ["首件", "中件", "末件"], horizontal=True)
+
+    col_input1, col_input2 = st.columns(2)
+    with col_input1:
+        measured_weight = st.number_input("實測重量 (g)", min_value=0.0, step=0.1, format="%.1f")
+    with col_input2:
+        measured_length = None
+        if has_length:
+            measured_length = st.number_input("實測長度 (mm)", min_value=0.0, step=0.1, format="%.1f")
+
+    # --- Validation ---
+    weight_status = "OK"
+    if measured_weight > 0:
+        if pd.notna(w_min) and pd.notna(w_max):
+            if not (w_min <= measured_weight <= w_max):
+                st.markdown(f'<div class="alert-box">⚠️ 重量異常! (標準: {w_min} ~ {w_max})</div>', unsafe_allow_html=True)
+                weight_status = "NG"
+
+    st.write(f"**確認原料**: `{current_part_data['原料編號']}`")
+    material_check = st.radio("現場投料正確?", ["OK", "NG"], horizontal=True)
+    material_ok = (material_check == "OK")
+
+    # --- Key Control Points ---
+    st.markdown("### ⚠️ 重點管制項目確認")
+    control_points_status = {}
+    has_ng_control_point = False
+    control_points_log = [] 
+
+    for i in range(1, 4):
+        col_name = f"重點管制{i}"
+        if col_name in current_part_data and pd.notna(current_part_data[col_name]):
+            val = str(current_part_data[col_name]).strip()
+            if val:
+                status = st.radio(f"**{i}. {val}**", ["OK", "NG"], key=f"cp_{i}", horizontal=True)
+                control_points_status[val] = status
+                control_points_log.append(f"{i}.{status}")
+                if status == "NG":
+                    has_ng_control_point = True
+
+    if has_ng_control_point:
+        st.error("❌ 發現重點管制異常！請修正或記錄。")
+
+    change_point = st.text_area("變化點說明 (選填)", placeholder="如有異常或變更請說明...")
+
+    input_method = st.radio("影像輸入", ["📸 網頁相機 (Webcam)", "📂 上傳 / 後鏡頭 (Upload/Rear)"], index=1, horizontal=True, label_visibility="collapsed")
+    img_file = None
+    if input_method == "📸 網頁相機 (Webcam)":
+        img_file = st.camera_input("拍照記錄")
+    else:
+        img_file = st.file_uploader("上傳照片", type=["jpg", "jpeg", "png"])
+
+    # --- Submit ---
+    if st.button("提交巡檢數據"):
+        if measured_weight == 0:
+            st.warning("請輸入重量")
+        elif not material_ok:
+            st.warning("原料確認為 NG，請確認正確料號")
+        elif img_file is None:
+            st.warning("請拍攝照片")
+        else:
+            with st.spinner("資料上傳中..."):
+                tz = datetime.timezone(datetime.timedelta(hours=8))
+                timestamp = datetime.datetime.now(tz)
+                ts_str = timestamp.strftime("%Y%m%d_%H%M%S")
+                filename = f"{selected_model}_{selected_part_no}_{inspection_type}_{ts_str}.jpg"
+                
+                key_control_str = ", ".join(control_points_log) if control_points_log else "N/A"
+                
+                row_data = {
+                    "timestamp": timestamp.strftime("%Y-%m-%d %H:%M:%S"),
+                    "model": selected_model,
+                    "part_no": selected_part_no,
+                    "inspection_type": inspection_type,
+                    "weight": measured_weight,
+                    "length": measured_length if has_length else "",
+                    "material_ok": "OK" if material_ok else "NG",
+                    "change_point": change_point,
+                    "result": weight_status,
+                    "key_control_status": key_control_str
+                }
+                
+                success, message = drive_integration.upload_and_append(img_file, filename, row_data)
+            
+            if success:
+                st.success("數據提交成功!")
+                st.balloons()
+            else:
+                st.error(f"提交失敗: {message}")
+
+    # --- Bottom: Abnormal Images ---
+    st.divider()
+    st.subheader("異常圖示")
     import os
     img_dir = "quality_images"
     found_imgs = []
-    
     if os.path.exists(img_dir):
         all_files = os.listdir(img_dir)
-        # st.text(f"資料夾內檔案: {all_files}") # Uncomment if really stuck
-        
         for f in all_files:
-            # Case-insensitive check?
             if selected_part_no in f:
                 found_imgs.append(os.path.join(img_dir, f))
-                
         if found_imgs:
-            st.success(f"找到 {len(found_imgs)} 張相關照片")
             st.image(found_imgs, width=300, caption=[os.path.basename(p) for p in found_imgs])
         else:
-            st.warning(f"未找到相關照片。資料夾內現有: {all_files[:5]} ...")
-    else:
-        st.error(f"找不到資料夾: {img_dir}。請在桌面上建立此資料夾並放入照片。")
+            st.info("尚無異常照片歸檔")
 
-    # History Trend moved to top of page as per user request
-    with tab2:
-        st.caption("歷史趨勢圖已移至頁面頂端")
+elif mode == "📊 數據戰情室":
+    st.header("📊 生產品質戰情室")
+    st.caption("即時同步 Google Sheet 雲端數據")
+
+    with st.spinner("正在連線至總部資料庫，請稍候..."):
+        raw_data = drive_integration.fetch_all_data()
+
+    if not raw_data:
+        st.warning("目前無數據或無法連線至 Google Sheet (請確認 GAS V4 是否部署成功)。")
+    else:
+        df_dash = pd.DataFrame(raw_data)
+        
+        # --- Filters ---
+        col_d1, col_d2, col_d3 = st.columns(3)
+        with col_d1:
+            models_dash = ["全部"] + list(df_dash['model'].unique())
+            filter_model = st.selectbox("篩選車型", models_dash)
+        
+        with col_d2:
+            # Dynamic Part No Filter based on Model
+            if filter_model != "全部":
+                parts_dash = ["全部"] + list(df_dash[df_dash['model'] == filter_model]['part_no'].unique())
+            else:
+                parts_dash = ["全部"] + list(df_dash['part_no'].unique())
+            filter_part = st.selectbox("篩選品番", parts_dash)
+            
+        with col_d3:
+            filter_result = st.radio("篩選結果", ["全部", "NG Only"], horizontal=True)
+
+        # Apply Filters
+        if filter_model != "全部":
+            df_dash = df_dash[df_dash['model'] == filter_model]
+        if filter_part != "全部":
+            df_dash = df_dash[df_dash['part_no'] == filter_part]
+        if filter_result == "NG Only":
+            df_dash = df_dash[df_dash['result'] == 'NG']
+
+        # --- KPI Cards ---
+        kpi1, kpi2, kpi3 = st.columns(3)
+        total_count = len(df_dash)
+        ng_count = len(df_dash[df_dash['result'] == 'NG'])
+        yield_rate = ((total_count - ng_count) / total_count * 100) if total_count > 0 else 0
+
+        kpi1.metric("總檢驗數", total_count)
+        kpi2.metric("NG 件數", ng_count, delta=-ng_count, delta_color="inverse")
+        kpi3.metric("良率 (Yield)", f"{yield_rate:.1f}%")
+
+        # --- Data Enrichment (Translate Control Points) ---
+        # 1.OK, 2.NG -> 表面:OK, 尺寸:NG
+        def enrich_control_status(row):
+            raw_status = row.get('key_control_status', '')
+            part_no = row.get('part_no')
+            
+            if not raw_status or raw_status == "N/A":
+                return raw_status
+            
+            # Find Part Data
+            part_info = df[df['品番'] == part_no]
+            if part_info.empty:
+                return raw_status
+                
+            part_info = part_info.iloc[0]
+            
+            # Parse "1.OK, 2.NG"
+            segments = raw_status.split(',')
+            enriched_segments = []
+            
+            for seg in segments:
+                seg = seg.strip()
+                if '.' in seg:
+                    idx_str, state = seg.split('.', 1) # Split "1", "OK"
+                    try:
+                        idx = int(idx_str)
+                        col_name = f"重點管制{idx}"
+                        if col_name in part_info and pd.notna(part_info[col_name]):
+                            desc = part_info[col_name]
+                            enriched_segments.append(f"{desc}: {state}")
+                        else:
+                            enriched_segments.append(seg)
+                    except:
+                        enriched_segments.append(seg)
+                else:
+                    enriched_segments.append(seg)
+            
+            return " | ".join(enriched_segments)
+
+        df_dash['詳細管制狀態'] = df_dash.apply(enrich_control_status, axis=1)
+
+        # --- Data Grid ---
+        st.subheader("📋 詳細履歷表")
+        
+        # Select columns to display
+        display_cols = ['timestamp', 'model', 'part_no', 'weight', 'result', '詳細管制狀態', 'change_point']
+        
+        # Add Image Link Column
+        if 'image_url' in df_dash.columns:
+            df_dash['image_link'] = df_dash['image_url'].apply(lambda x: f"[查看照片]({x})" if x and str(x).startswith('http') else '無')
+            display_cols.append('image_link')
+
+        st.dataframe(
+            df_dash[display_cols].sort_values(by='timestamp', ascending=False),
+            use_container_width=True,
+            column_config={
+                "timestamp": st.column_config.DatetimeColumn("時間", format="YYYY/MM/DD HH:mm"),
+                "image_link": st.column_config.LinkColumn("照片佐證"),
+                "result": st.column_config.TextColumn("判定", help="OK or NG"),
+                "change_point": st.column_config.TextColumn("變化點", width="medium"),
+                "詳細管制狀態": st.column_config.TextColumn("重點管制細節", width="large"),
+            }
+        )
+
+        # --- Charts ---
+        st.subheader("趨勢分析")
+        chart_bar = alt.Chart(df_dash).mark_bar().encode(
+            x='model',
+            y='count()',
+            color='result'
+        )
+        st.altair_chart(chart_bar, use_container_width=True)
