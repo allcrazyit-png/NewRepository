@@ -5,6 +5,7 @@ import datetime
 import altair as alt
 import json
 import drive_integration
+import streamlit.components.v1 as components
 
 # --- Page Config ---
 st.set_page_config(
@@ -155,13 +156,29 @@ st.markdown("""
         font-size: 24px !important;
         height: 60px !important;
         padding: 10px !important;
-        inputmode: decimal !important; /* Force decimal keypad on mobile */
+        height: 60px !important;
+        padding: 10px !important;
     }
     div[data-testid="stNumberInput"] label {
         font-size: 1.2rem !important;
     }
 </style>
 """, unsafe_allow_html=True)
+
+# --- Inject JS for Mobile Keypad ---
+# CSS 'inputmode' is not supported, so we use JS to set the HTML attribute
+components.html("""
+<script>
+    function updateInputMode() {
+        const inputs = window.parent.document.querySelectorAll('input[type="number"]');
+        inputs.forEach(input => {
+            input.setAttribute('inputmode', 'decimal');
+        });
+    }
+    // Run periodically to catch re-renders
+    setInterval(updateInputMode, 1000);
+</script>
+""", height=0)
 
 # --- Load Data ---
 df = data_manager.load_data()
