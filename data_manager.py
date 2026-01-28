@@ -24,7 +24,7 @@ def clean_numeric_value(val):
             return None
     return None
 
-@st.cache_data
+@st.cache_data(ttl=60)
 def load_data():
     """
     Loads parts data from CSV and cleans numeric columns.
