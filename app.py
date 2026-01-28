@@ -477,17 +477,19 @@ elif mode == "📊 數據戰情室":
         # Select columns to display
         display_cols = ['timestamp', 'model', 'part_no', 'weight', 'result', '詳細管制狀態', 'change_point']
         
-        # Add Image Link Column
+        # Add Image Link Column (Raw URL for LinkColumn)
         if 'image_url' in df_dash.columns:
-            df_dash['image_link'] = df_dash['image_url'].apply(lambda x: f"[查看照片]({x})" if x and str(x).startswith('http') else '無')
-            display_cols.append('image_link')
+            # Filter out empty URLs or non-strings
+            df_dash['image_url'] = df_dash['image_url'].astype(str)
+            df_dash['image_url'] = df_dash['image_url'].replace('nan', None).replace('', None)
+            display_cols.append('image_url')
 
         st.dataframe(
             df_dash[display_cols].sort_values(by='timestamp', ascending=False),
             use_container_width=True,
             column_config={
                 "timestamp": st.column_config.DatetimeColumn("時間", format="YYYY/MM/DD HH:mm"),
-                "image_link": st.column_config.LinkColumn("照片佐證"),
+                "image_url": st.column_config.LinkColumn("照片佐證", display_text="📷 查看照片"),
                 "result": st.column_config.TextColumn("判定", help="OK or NG"),
                 "change_point": st.column_config.TextColumn("變化點", width="medium"),
                 "詳細管制狀態": st.column_config.TextColumn("重點管制細節", width="large"),
