@@ -190,6 +190,17 @@ if df.empty:
 # --- Mode Selection ---
 mode = st.sidebar.radio("模式選擇", ["📝 巡檢輸入", "📊 數據戰情室"], index=0)
 
+# --- Sidebar Footer ---
+st.sidebar.markdown("---")
+st.sidebar.markdown(
+    """
+    <div style='text-align: center; color: #666; font-size: 0.8em;'>
+        Designed by 何常豪
+    </div>
+    """, 
+    unsafe_allow_html=True
+)
+
 if mode == "📝 巡檢輸入":
     # --- Top Navigation / Filter ---
     # --- Top Navigation / Filter ---
