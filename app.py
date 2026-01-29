@@ -719,12 +719,18 @@ elif mode == "📊 數據戰情室":
             filter_model = st.selectbox("篩選車型", models_dash)
         
         with col_d2:
-            # Dynamic Part No Filter based on Model
+            # Dynamic Part No Filter based on Model (Use Master Data 'df' to group molds)
+            # This allows selecting "Base Part No" and showing all suffixes (_1, _2)
             if filter_model != "全部":
-                parts_dash = ["全部"] + list(df_dash[df_dash['model'] == filter_model]['part_no'].unique())
+                if '車型' in df.columns and '品番' in df.columns:
+                     available_parts = df[df['車型'] == filter_model]['品番'].unique()
+                else:
+                     available_parts = []
+                parts_dash = ["全部"] + list(available_parts)
             else:
-                parts_dash = ["全部"] + list(df_dash['part_no'].unique())
-            filter_part = st.selectbox("篩選品番", parts_dash)
+                parts_dash = ["全部"] + list(df['品番'].unique())
+            
+            filter_part = st.selectbox("篩選品番 (模具)", parts_dash)
             
         with col_d3:
             filter_result = st.radio("篩選結果", ["全部", "NG Only"], horizontal=True)
@@ -733,7 +739,12 @@ elif mode == "📊 數據戰情室":
         if filter_model != "全部":
             df_dash = df_dash[df_dash['model'] == filter_model]
         if filter_part != "全部":
-            df_dash = df_dash[df_dash['part_no'] == filter_part]
+            # Match Base Part No OR Base Part No + Suffix (e.g. _1, _2)
+            # Using startswith is risky if Part A is prefix of Part B.
+            # Safer: exact match or startswith(part + '_')
+            df_dash = df_dash[
+                df_dash['part_no'].apply(lambda x: str(x) == filter_part or str(x).startswith(str(filter_part) + '_'))
+            ]
         if filter_result == "NG Only":
             df_dash = df_dash[df_dash['result'] == 'NG']
 
