@@ -192,7 +192,15 @@ mode = st.sidebar.radio("模式選擇", ["📝 巡檢輸入", "📊 數據戰情
 
 if mode == "📝 巡檢輸入":
     # --- Top Navigation / Filter ---
-    st.header("瑞全智慧巡檢系統 (v3.1 壓縮版)")
+    # --- Top Navigation / Filter ---
+    # Title with Gradient Effect for Professional Look
+    st.markdown("""
+        <h1 style='text-align: center; margin-bottom: 20px;'>
+            <span style='background: linear-gradient(90deg, #00d4ff, #005bea); -webkit-background-clip: text; -webkit-text-fill-color: transparent;'>
+                瑞全智慧巡檢系統
+            </span>
+        </h1>
+    """, unsafe_allow_html=True)
 
     col_filter1, col_filter2 = st.columns(2)
 
