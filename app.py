@@ -377,22 +377,40 @@ if mode == "📝 巡檢輸入":
     # --- Display Standard Info ---
     st.divider()
     
-    # Helper to format value with tolerance, e.g., "93 (87~99)"
-    def format_with_tolerance(std_col, max_col, min_col):
-        # We use cleaned numeric lists from 'specs' or direct 'clean_' cols?
-        # Direct clean cols are easiest.
+    # Custom Card Helper to avoid truncation and improve formatting
+    def display_info_card(col_obj, label, value_html):
+        col_obj.markdown(f"""
+        <div style="
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            height: 100%;
+        ">
+            <div style="color: #a0a0a0; font-size: 1.1rem; margin-bottom: 5px;">{label}</div>
+            <div style="color: #00d4ff; font-size: 1.6rem; font-weight: bold; word-wrap: break-word; line-height: 1.4;">
+                {value_html}
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    # Helper to format value with tolerance
+    def get_formatted_value_html(std_col, max_col, min_col, unit=""):
         std_val = current_part_data.get(f'clean_{std_col}')
         max_val = current_part_data.get(f'clean_{max_col}')
         min_val = current_part_data.get(f'clean_{min_col}')
 
-        # Normalize to list for uniform handling
         if not isinstance(std_val, list): std_val = [std_val]
         if not isinstance(max_val, list): max_val = [max_val]
         if not isinstance(min_val, list): min_val = [min_val]
         
         display_parts = []
-        # Loop max length (usually 1 or 2)
         count = max(len(std_val), len(max_val), len(min_val))
+        
+        is_dual = (count > 1)
         
         for i in range(count):
             s = std_val[i] if i < len(std_val) else None
@@ -401,30 +419,42 @@ if mode == "📝 巡檢輸入":
             
             s_str = f"{s:g}" if isinstance(s, (float, int)) else str(s)
             
+            val_str = s_str
             if mx is not None and mn is not None:
-                display_parts.append(f"{s_str} ({mn:g}~{mx:g})")
+                # Use span for smaller font on tolerance
+                val_str += f'<span style="font-size: 0.8em; color: #ccc;"> ({mn:g}-{mx:g})</span>'
+            
+            if is_dual:
+                prefix = "R: " if i == 0 else "L: "
+                display_parts.append(f"<div><span style='font-size:0.6em; color:#888'>{prefix}</span>{val_str}</div>")
             else:
-                display_parts.append(s_str)
+                display_parts.append(val_str)
                 
-        return " / ".join(display_parts)
+        return "".join(display_parts)
 
     info_col1, info_col2, info_col3 = st.columns(3)
     
-    info_col1.metric("標準重量 (g)", format_with_tolerance('重量', '重量上限', '重量下限'))
+    # 1. Standard Weight
+    val_weight = get_formatted_value_html('重量', '重量上限', '重量下限')
+    display_info_card(info_col1, "標準重量 (g)", val_weight)
     
-    # [Request 1] Display Material Name (原料名稱) instead of ID if available
+    # 2. Material Name
     mat_name = current_part_data.get('原料名稱')
     if pd.isna(mat_name) or str(mat_name).strip() == "":
         mat_name = current_part_data.get('原料編號', 'N/A')
-    info_col2.metric("原料名稱", f"{mat_name}")
+    display_info_card(info_col2, "原料名稱", f"{mat_name}")
     
+    # 3. Standard Length
     has_length_field = False 
-    # Check if ANY spec has length > 0
     if any(s['len_std'] is not None and s['len_std'] > 0 for s in specs):
         has_length_field = True
              
     if has_length_field:
-        info_col3.metric("標準長度 (mm)", format_with_tolerance('標準長度', '長度上限', '長度下限'))
+        val_len = get_formatted_value_html('標準長度', '長度上限', '長度下限')
+        display_info_card(info_col3, "標準長度 (mm)", val_len)
+    else:
+        # Placeholder to keep alignment if no length
+        display_info_card(info_col3, "標準長度 (mm)", "<span style='color:#555;'>N/A</span>")
 
     # --- Inspection Form ---
     st.subheader("巡檢輸入")
