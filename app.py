@@ -318,8 +318,11 @@ if mode == "📝 巡檢輸入":
                                                           range=['#FF6C6C', '#457B9D', '#457B9D'])),
                             tooltip=[alt.Tooltip('timestamp', format='%Y-%m-%d %H:%M'), alt.Tooltip('Type'), alt.Tooltip('Value', format='.1f')]
                         )
-                        # Combine Line + Point for better visibility
-                        chart_combined = (base.mark_line() + base.mark_point(filled=True, size=60)).interactive()
+                        # Combine Line + Point (Points only for actual weight data, hide for limits)
+                        points = base.mark_point(filled=True, size=60).transform_filter(
+                            alt.datum.Type == 'weight'
+                        )
+                        chart_combined = (base.mark_line() + points).interactive()
                         st.altair_chart(chart_combined, use_container_width=True)
                     else:
                         st.caption("無有效重量歷史數據")
@@ -369,8 +372,11 @@ if mode == "📝 巡檢輸入":
                                                               range=['#00D4FF', '#457B9D', '#457B9D'])),
                                 tooltip=[alt.Tooltip('timestamp', format='%Y-%m-%d %H:%M'), alt.Tooltip('Type'), alt.Tooltip('Value', format='.1f')]
                             )
-                            # Combine Line + Point
-                            chart_combined_l = (base_l.mark_line() + base_l.mark_point(filled=True, size=60)).interactive()
+                            # Combine Line + Point (Points only for actual length data)
+                            points_l = base_l.mark_point(filled=True, size=60).transform_filter(
+                                alt.datum.Type == 'length'
+                            )
+                            chart_combined_l = (base_l.mark_line() + points_l).interactive()
                             st.altair_chart(chart_combined_l, use_container_width=True)
                         else:
                             st.caption("無有效長度歷史數據")
