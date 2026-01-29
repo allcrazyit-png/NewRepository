@@ -224,102 +224,165 @@ if mode == "📝 巡檢輸入":
             else:
                 st.warning(f"找不到圖片檔案: {product_img_filename} (請確認 quality_images 資料夾)")
 
-    # --- History Trend Chart (Top) ---
-    with st.expander(f"📊 歷史重量趨勢: {selected_part_no}", expanded=True):
-        history_data = drive_integration.fetch_history(selected_part_no)
-        
-        if history_data:
-            chart_df = pd.DataFrame(history_data)
-            chart_df.replace("", pd.NA, inplace=True)
-            chart_df['timestamp'] = pd.to_datetime(chart_df['timestamp'], errors='coerce')
-            
-            if chart_df['timestamp'].dt.tz is None:
-                 chart_df['timestamp'] = chart_df['timestamp'].dt.tz_localize('UTC')
-            chart_df['timestamp'] = chart_df['timestamp'].dt.tz_convert('Asia/Taipei')
-            
-            chart_df['weight'] = pd.to_numeric(chart_df['weight'], errors='coerce')
-            chart_df = chart_df.dropna(subset=['timestamp', 'weight'])
-            
-            if not chart_df.empty:
-                w_max_limit = pd.to_numeric(current_part_data.get('clean_重量上限'), errors='coerce')
-                w_min_limit = pd.to_numeric(current_part_data.get('clean_重量下限'), errors='coerce')
+    # --- Pre-process Dual Mode Logic ---
+    raw_weight_clean = current_part_data['clean_重量']
+    is_dual = isinstance(raw_weight_clean, list)
 
-                y_cols = ['weight']
-                if pd.notna(w_max_limit):
-                    chart_df['Upper Limit'] = float(w_max_limit)
-                    y_cols.append('Upper Limit')
-                if pd.notna(w_min_limit):
-                    chart_df['Lower Limit'] = float(w_min_limit)
-                    y_cols.append('Lower Limit')
-                
-                chart_long = chart_df.melt('timestamp', value_vars=y_cols, var_name='Type', value_name='Value')
-                
-                y_min_val = chart_long['Value'].min()
-                y_max_val = chart_long['Value'].max()
-                padding = (y_max_val - y_min_val) * 0.1 if y_max_val != y_min_val else 5
-                
-                base = alt.Chart(chart_long).encode(
-                    x=alt.X('timestamp', title='時間', axis=alt.Axis(format='%m/%d %H:%M')),
-                    y=alt.Y('Value', title='重量 (g)', 
-                            scale=alt.Scale(domain=[y_min_val - padding, y_max_val + padding])),
-                    color=alt.Color('Type', title='類別', 
-                                    scale=alt.Scale(domain=['weight', 'Upper Limit', 'Lower Limit'],
-                                                  range=['#FF6C6C', '#457B9D', '#457B9D'])),
-                    tooltip=[alt.Tooltip('timestamp', format='%Y-%m-%d %H:%M'), alt.Tooltip('Type'), alt.Tooltip('Value', format='.1f')]
-                )
-                st.altair_chart(base.mark_line().interactive(), use_container_width=True)
-            else:
-                st.caption("無有效歷史數據")
-        else:
-            st.caption("載入中或無數據...")
+    # Helper to get specific limit (Left/Right) or shared limit
+    def get_spec_val(col_name, idx):
+        val = current_part_data.get(col_name)
+        if isinstance(val, list):
+            return val[idx] if idx < len(val) else None
+        return val
 
+    # Prepare Specifications for 1 or 2 items
+    specs = [] # List of dicts: {suffix, label, std, max, min, ...}
+    if is_dual:
+        specs.append({
+            "suffix": "_1", "label": " (右/R)", 
+            "std": raw_weight_clean[0],
+            "max": get_spec_val('clean_重量上限', 0),
+            "min": get_spec_val('clean_重量下限', 0)
+        })
+        specs.append({
+            "suffix": "_2", "label": " (左/L)", 
+            "std": raw_weight_clean[1], 
+            "max": get_spec_val('clean_重量上限', 1),
+            "min": get_spec_val('clean_重量下限', 1)
+        })
+    else:
+        specs.append({
+            "suffix": "", "label": "",
+            "std": raw_weight_clean,
+            "max": current_part_data.get('clean_重量上限'),
+            "min": current_part_data.get('clean_重量下限')
+        })
 
+    # --- History Trend Charts ---
+    # Display side-by-side if dual
+    cols_chart = st.columns(len(specs))
+    
+    for idx, sp in enumerate(specs):
+        with cols_chart[idx]:
+            chart_title = f"{selected_part_no}{sp['label']}"
+            with st.expander(f"📊 歷史趨勢: {chart_title}", expanded=True):
+                # Fetch history with suffix (e.g. part_no_1)
+                history_target_no = f"{selected_part_no}{sp['suffix']}"
+                # If single mode (suffix is empty), standard fetch. If dual, fetch with suffix.
+                # Note: Existing data has no suffix. New dual data has suffix.
+                # If we are in Single Mode, we fetch `part_no`.
+                # If we are in Dual Mode, we fetch `part_no_1` and `part_no_2`. 
+                # (Existing non-suffixed data won't show on _1/_2 charts, which is intended per plan)
+                
+                history_data = drive_integration.fetch_history(history_target_no)
+                
+                if history_data:
+                    chart_df = pd.DataFrame(history_data)
+                    chart_df.replace("", pd.NA, inplace=True)
+                    chart_df['timestamp'] = pd.to_datetime(chart_df['timestamp'], errors='coerce')
+                    
+                    if chart_df['timestamp'].dt.tz is None:
+                         chart_df['timestamp'] = chart_df['timestamp'].dt.tz_localize('UTC')
+                    chart_df['timestamp'] = chart_df['timestamp'].dt.tz_convert('Asia/Taipei')
+                    
+                    chart_df['weight'] = pd.to_numeric(chart_df['weight'], errors='coerce')
+                    chart_df = chart_df.dropna(subset=['timestamp', 'weight'])
+                    
+                    if not chart_df.empty:
+                        w_max_limit = sp['max']
+                        w_min_limit = sp['min']
+
+                        y_cols = ['weight']
+                        if w_max_limit is not None:
+                            chart_df['Upper Limit'] = float(w_max_limit)
+                            y_cols.append('Upper Limit')
+                        if w_min_limit is not None:
+                            chart_df['Lower Limit'] = float(w_min_limit)
+                            y_cols.append('Lower Limit')
+                        
+                        chart_long = chart_df.melt('timestamp', value_vars=y_cols, var_name='Type', value_name='Value')
+                        
+                        y_min_val = chart_long['Value'].min()
+                        y_max_val = chart_long['Value'].max()
+                        padding = (y_max_val - y_min_val) * 0.1 if y_max_val != y_min_val else 5
+                        
+                        base = alt.Chart(chart_long).encode(
+                            x=alt.X('timestamp', title='時間', axis=alt.Axis(format='%m/%d %H:%M')),
+                            y=alt.Y('Value', title='重量 (g)', 
+                                    scale=alt.Scale(domain=[y_min_val - padding, y_max_val + padding])),
+                            color=alt.Color('Type', title='類別', 
+                                            scale=alt.Scale(domain=['weight', 'Upper Limit', 'Lower Limit'],
+                                                          range=['#FF6C6C', '#457B9D', '#457B9D'])),
+                            tooltip=[alt.Tooltip('timestamp', format='%Y-%m-%d %H:%M'), alt.Tooltip('Type'), alt.Tooltip('Value', format='.1f')]
+                        )
+                        st.altair_chart(base.mark_line().interactive(), use_container_width=True)
+                    else:
+                        st.caption("無有效歷史數據")
+                else:
+                    st.caption("尚無數據")
 
     # --- Display Standard Info ---
     st.divider()
-    info_col1, info_col2, info_col3 = st.columns(3)
-    # Calculate Tolerance
-    w_std = current_part_data['clean_重量']
-    w_max = pd.to_numeric(current_part_data.get('clean_重量上限'), errors='coerce')
-    w_min = pd.to_numeric(current_part_data.get('clean_重量下限'), errors='coerce')
     
-    tol_str = ""
-    if pd.notna(w_std) and pd.notna(w_max) and pd.notna(w_min):
-        upper_diff = w_max - w_std
-        lower_diff = w_std - w_min
-        if abs(upper_diff - lower_diff) < 0.001:
-            tol_str = f"±{upper_diff:g}"
-        else:
-            tol_str = f"+{upper_diff:g} / -{lower_diff:g}"
+    # We construct the display string manually to handle "93 / 95"
+    def format_val_display(col_name):
+        val = current_part_data.get(col_name)
+        if isinstance(val, list):
+             # Try clean formatting if float
+             return " / ".join([f"{v:g}" if isinstance(v, (float, int)) else str(v) for v in val])
+        return f"{val}"
 
-    info_col1.metric("標準重量", f"{current_part_data['重量']}", tol_str)
+    info_col1, info_col2, info_col3 = st.columns(3)
+    
+    # Tolerance display is tricky for dual. We'll simplify or show multiple.
+    # For now, let's just show the Standard Weight text.
+    info_col1.metric("標準重量", format_val_display('重量'))
     info_col2.metric("原料編號", f"{current_part_data['原料編號']}")
     
     has_length = False
-    if pd.notna(current_part_data['clean_標準長度']) and current_part_data['clean_標準長度'] > 0:
-        has_length = True
-        info_col3.metric("標準長度", f"{current_part_data['標準長度']}")
+    if pd.notna(current_part_data['clean_標準長度']):
+         # clean_標準長度 could be float or list
+         # Check if any value is > 0
+         l_val = current_part_data['clean_標準長度']
+         if isinstance(l_val, list):
+             if any(v is not None and v > 0 for v in l_val): has_length = True
+         elif l_val is not None and l_val > 0:
+             has_length = True
+             
+    if has_length:
+        info_col3.metric("標準長度", format_val_display('標準長度'))
 
     # --- Inspection Form ---
     st.subheader("巡檢輸入")
     inspection_type = st.radio("巡檢階段", ["首件", "中件", "末件"], horizontal=True)
 
-    col_input1, col_input2 = st.columns(2)
-    with col_input1:
-        measured_weight = st.number_input("實測重量 (g)", min_value=0.0, step=0.1, format="%.1f")
-    with col_input2:
-        measured_length = None
-        if has_length:
-            measured_length = st.number_input("實測長度 (mm)", min_value=0.0, step=0.1, format="%.1f")
+    # Dictionary to hold user inputs: { index: {'weight': val, 'length': val} }
+    user_inputs = {}
+    
+    cols_input = st.columns(len(specs))
+    
+    for idx, sp in enumerate(specs):
+        with cols_input[idx]:
+            st.markdown(f"**{sp['label'].strip(' ()') or '規格'}**")
+            # Weight Input
+            w_input = st.number_input(f"實測重量{sp['label']} (g)", min_value=0.0, step=0.1, format="%.1f", key=f"w_in_{idx}")
+            
+            # Length Input (Only if needed)
+            l_input = None
+            if has_length:
+                l_input = st.number_input(f"實測長度{sp['label']} (mm)", min_value=0.0, step=0.1, format="%.1f", key=f"l_in_{idx}")
+                
+            user_inputs[idx] = {'weight': w_input, 'length': l_input}
 
-    # --- Validation ---
-    weight_status = "OK"
-    if measured_weight > 0:
-        if pd.notna(w_min) and pd.notna(w_max):
-            if not (w_min <= measured_weight <= w_max):
-                st.markdown(f'<div class="alert-box">⚠️ 重量異常! (標準: {w_min} ~ {w_max})</div>', unsafe_allow_html=True)
-                weight_status = "NG"
+            # Immediate Validation Feedback
+            if w_input > 0:
+                if sp['min'] is not None and sp['max'] is not None:
+                    if not (sp['min'] <= w_input <= sp['max']):
+                         st.error(f"⚠️ 重量異常! (標準: {sp['min']} ~ {sp['max']})")
+                    else:
+                         st.success("OK")
 
+    # --- Common Validation ---
     st.write(f"**確認原料**: `{current_part_data['原料編號']}`")
     material_check = st.radio("現場投料正確?", ["OK", "NG"], horizontal=True)
     material_ok = (material_check == "OK")
@@ -355,41 +418,77 @@ if mode == "📝 巡檢輸入":
 
     # --- Submit ---
     if st.button("提交巡檢數據"):
-        if measured_weight == 0:
-            st.warning("請輸入重量")
+        # Check if ALL weights are entered (if they are required)
+        # Assuming we need both inputs if dual.
+        any_missing_weight = any(user_inputs[i]['weight'] == 0 for i in user_inputs)
+        
+        if any_missing_weight:
+            st.warning("請輸入所有重量數據")
         elif not material_ok:
             st.warning("原料確認為 NG，請確認正確料號")
         elif img_file is None:
             st.warning("請拍攝照片")
         else:
-            with st.spinner("資料上傳中..."):
+            with st.spinner("資料上傳中 (可能需要上傳兩筆數據)..."):
+                
+                # Shared Data
                 tz = datetime.timezone(datetime.timedelta(hours=8))
                 timestamp = datetime.datetime.now(tz)
                 ts_str = timestamp.strftime("%Y%m%d_%H%M%S")
-                filename = f"{selected_model}_{selected_part_no}_{inspection_type}_{ts_str}.jpg"
-                
                 key_control_str = ", ".join(control_points_log) if control_points_log else "N/A"
                 
-                row_data = {
-                    "timestamp": timestamp.strftime("%Y-%m-%d %H:%M:%S"),
-                    "model": selected_model,
-                    "part_no": selected_part_no,
-                    "inspection_type": inspection_type,
-                    "weight": measured_weight,
-                    "length": measured_length if has_length else "",
-                    "material_ok": "OK" if material_ok else "NG",
-                    "change_point": change_point,
-                    "result": weight_status,
-                    "key_control_status": key_control_str
-                }
+                all_success = True
+                fail_msg = ""
                 
-                success, message = drive_integration.upload_and_append(img_file, filename, row_data)
+                # Iterate and submit per spec
+                for idx, sp in enumerate(specs):
+                    # Prepare specific data
+                    target_part_no = f"{selected_part_no}{sp['suffix']}"
+                    m_weight = user_inputs[idx]['weight']
+                    m_length = user_inputs[idx]['length']
+                    
+                    # Status Check
+                    current_status = "OK"
+                    if sp['min'] is not None and sp['max'] is not None:
+                        if not (sp['min'] <= m_weight <= sp['max']):
+                            current_status = "NG"
+                    
+                    # Construct Filename (unique per entry? or shared?)
+                    # If we share image, filename can be shared or suffixed.
+                    # Best to suffix filename too so they don't overwrite if using simple storage, 
+                    # but GAS script usually handles unique IDs. 
+                    # Let's suffix filename to be safe: ...part_no_1_... .jpg
+                    filename = f"{selected_model}_{target_part_no}_{inspection_type}_{ts_str}.jpg"
+                    
+                    row_data = {
+                        "timestamp": timestamp.strftime("%Y-%m-%d %H:%M:%S"),
+                        "model": selected_model,
+                        "part_no": target_part_no, # Suffixed
+                        "inspection_type": inspection_type,
+                        "weight": m_weight,
+                        "length": m_length if m_length is not None else "",
+                        "material_ok": "OK" if material_ok else "NG",
+                        "change_point": change_point,
+                        "result": current_status,
+                        "key_control_status": key_control_str
+                    }
+                    
+                    # Reuse the same image file object! 
+                    # Important: upload_and_append reads the file. If it reads to end, next call reads nothing.
+                    # We must reset cursor.
+                    if idx > 0 and hasattr(img_file, 'seek'):
+                        img_file.seek(0)
+                        
+                    success, message = drive_integration.upload_and_append(img_file, filename, row_data)
+                    if not success:
+                        all_success = False
+                        fail_msg += f"[{target_part_no} 失敗: {message}] "
             
-            if success:
-                st.success("數據提交成功!")
+            if all_success:
+                st.success("數據提交成功! (Dual Mode Complete)" if is_dual else "數據提交成功!")
                 st.balloons()
             else:
-                st.error(f"提交失敗: {message}")
+                st.error(f"部分或全部提交失敗: {fail_msg}")
 
     # --- Bottom: Abnormal Images ---
     # --- Defect History Image (Bottom) ---

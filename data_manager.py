@@ -6,8 +6,9 @@ DATA_PATH = "parts_data.csv"
 
 def clean_numeric_value(val):
     """
-    Extracts the first floating point or integer number from a string.
-    Returns None if no number found.
+    Extracts number(s) from a string.
+    If multiple numbers are separated by '/', returns a list of floats.
+    Otherwise returns a single float or None.
     """
     if pd.isna(val) or val == "":
         return None
@@ -15,7 +16,31 @@ def clean_numeric_value(val):
     if val_str == "":
         return None
         
-    # Regex to find numbers, handling decimals
+    # Check for Slash Separator
+    if '/' in val_str:
+        parts = val_str.split('/')
+        results = []
+        for p in parts:
+            match = re.search(r"(\d+(\.\d+)?)", p)
+            if match:
+                try:
+                    results.append(float(match.group(1)))
+                except ValueError:
+                    results.append(None) # Keep format index aligned if possible or just skip? 
+                                       # Plan says "93/95" -> [93.0, 95.0]. 
+                                       # If "93/abc", probably better to store None or handle gracefully.
+                                       # Let's assume user inputs are relatively clean or we accept partials.
+            else:
+                 results.append(None)
+        
+        # If we found valid numbers, return list
+        # Remove Nones? No, we need index 0 and 1 to match. 
+        # But if all are None, return None.
+        if all(v is None for v in results):
+             return None
+        return results
+
+    # Standard Single Value Case
     match = re.search(r"(\d+(\.\d+)?)", val_str)
     if match:
         try:
