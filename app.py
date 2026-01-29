@@ -318,7 +318,9 @@ if mode == "📝 巡檢輸入":
                                                           range=['#FF6C6C', '#457B9D', '#457B9D'])),
                             tooltip=[alt.Tooltip('timestamp', format='%Y-%m-%d %H:%M'), alt.Tooltip('Type'), alt.Tooltip('Value', format='.1f')]
                         )
-                        st.altair_chart(base.mark_line().interactive(), use_container_width=True)
+                        # Combine Line + Point for better visibility
+                        chart_combined = (base.mark_line() + base.mark_point(filled=True, size=60)).interactive()
+                        st.altair_chart(chart_combined, use_container_width=True)
                     else:
                         st.caption("無有效重量歷史數據")
                 else:
@@ -367,7 +369,9 @@ if mode == "📝 巡檢輸入":
                                                               range=['#00D4FF', '#457B9D', '#457B9D'])),
                                 tooltip=[alt.Tooltip('timestamp', format='%Y-%m-%d %H:%M'), alt.Tooltip('Type'), alt.Tooltip('Value', format='.1f')]
                             )
-                            st.altair_chart(base_l.mark_line().interactive(), use_container_width=True)
+                            # Combine Line + Point
+                            chart_combined_l = (base_l.mark_line() + base_l.mark_point(filled=True, size=60)).interactive()
+                            st.altair_chart(chart_combined_l, use_container_width=True)
                         else:
                             st.caption("無有效長度歷史數據")
                     else:
