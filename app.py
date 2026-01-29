@@ -390,7 +390,12 @@ if mode == "📝 巡檢輸入":
     # Tolerance display is tricky for dual. We'll simplify or show multiple.
     # For now, let's just show the Standard Weight text.
     info_col1.metric("標準重量", format_val_display('重量'))
-    info_col2.metric("原料編號", f"{current_part_data['原料編號']}")
+    
+    # [Request 1] Display Material Name (原料名稱) instead of ID if available
+    mat_name = current_part_data.get('原料名稱')
+    if pd.isna(mat_name) or str(mat_name).strip() == "":
+        mat_name = current_part_data.get('原料編號', 'N/A')
+    info_col2.metric("原料名稱", f"{mat_name}")
     
     has_length_field = False 
     # Check if ANY spec has length > 0
@@ -439,7 +444,7 @@ if mode == "📝 巡檢輸入":
                          st.success("長度 OK")
 
     # --- Common Validation ---
-    st.write(f"**確認原料**: `{current_part_data['原料編號']}`")
+    st.write(f"**確認原料**: `{mat_name}`")
     material_check = st.radio("現場投料正確?", ["OK", "NG"], horizontal=True)
     material_ok = (material_check == "OK")
 
@@ -451,14 +456,14 @@ if mode == "📝 巡檢輸入":
 
     for i in range(1, 4):
         col_name = f"重點管制{i}"
-        if col_name in current_part_data and pd.notna(current_part_data[col_name]):
-            val = str(current_part_data[col_name]).strip()
-            if val:
-                status = st.radio(f"**{i}. {val}**", ["OK", "NG"], key=f"cp_{i}", horizontal=True)
-                control_points_status[val] = status
-                control_points_log.append(f"{i}.{status}")
-                if status == "NG":
-                    has_ng_control_point = True
+        val = current_part_data.get(col_name)
+        if pd.notna(val) and str(val).strip():
+            val_str = str(val).strip()
+            status = st.radio(f"**{i}. {val_str}**", ["OK", "NG"], key=f"cp_{i}", horizontal=True)
+            control_points_status[val_str] = status
+            control_points_log.append(f"{i}.{status}")
+            if status == "NG":
+                has_ng_control_point = True
 
     if has_ng_control_point:
         st.error("❌ 發現重點管制異常！請修正或記錄。")
@@ -466,24 +471,28 @@ if mode == "📝 巡檢輸入":
     change_point = st.text_area("變化點說明 (選填)", placeholder="如有異常或變更請說明...")
 
     input_method = st.radio("影像輸入", ["📸 網頁相機 (Webcam)", "📂 上傳 / 後鏡頭 (Upload/Rear)"], index=1, horizontal=True, label_visibility="collapsed")
-    img_file = None
+    
+    # [Request 2] Optional Photo & Multiple Upload
+    img_files = []
+    
     if input_method == "📸 網頁相機 (Webcam)":
-        img_file = st.camera_input("拍照記錄")
+        cam_file = st.camera_input("拍照記錄")
+        if cam_file: img_files = [cam_file]
     else:
-        img_file = st.file_uploader("上傳照片", type=["jpg", "jpeg", "png"])
+        # Enable multiple files
+        uploaded_files = st.file_uploader("上傳照片 (可多選，不必拍照亦可提交)", type=["jpg", "jpeg", "png"], accept_multiple_files=True)
+        if uploaded_files: img_files = uploaded_files
 
     # --- Submit ---
     if st.button("提交巡檢數據"):
         # Check if ALL weights are entered (if they are required)
-        # Assuming we need both inputs if dual.
         any_missing_weight = any(user_inputs[i]['weight'] == 0 for i in user_inputs)
         
         if any_missing_weight:
             st.warning("請輸入所有重量數據")
         elif not material_ok:
             st.warning("原料確認為 NG，請確認正確料號")
-        elif img_file is None:
-            st.warning("請拍攝照片")
+        # [Request 2] Photo is optional now, so no "is None" check here
         else:
             with st.spinner("資料上傳中 (可能需要上傳兩筆數據)..."):
                 
@@ -495,6 +504,9 @@ if mode == "📝 巡檢輸入":
                 
                 all_success = True
                 fail_msg = ""
+                
+                # Determine Primary Photo (Use the first one if multiple)
+                primary_img = img_files[0] if img_files else None
                 
                 # Iterate and submit per spec
                 for idx, sp in enumerate(specs):
@@ -509,11 +521,6 @@ if mode == "📝 巡檢輸入":
                         if not (sp['min'] <= m_weight <= sp['max']):
                             current_status = "NG"
                     
-                    # Construct Filename (unique per entry? or shared?)
-                    # If we share image, filename can be shared or suffixed.
-                    # Best to suffix filename too so they don't overwrite if using simple storage, 
-                    # but GAS script usually handles unique IDs. 
-                    # Let's suffix filename to be safe: ...part_no_1_... .jpg
                     filename = f"{selected_model}_{target_part_no}_{inspection_type}_{ts_str}.jpg"
                     
                     row_data = {
@@ -529,19 +536,27 @@ if mode == "📝 巡檢輸入":
                         "key_control_status": key_control_str
                     }
                     
-                    # Reuse the same image file object! 
-                    # Important: upload_and_append reads the file. If it reads to end, next call reads nothing.
-                    # We must reset cursor.
-                    if idx > 0 and hasattr(img_file, 'seek'):
-                        img_file.seek(0)
+                    # [Request 3] Dual Mode De-duplication
+                    # If this is the second item (idx > 0) in a dual submission, 
+                    # and we are using the SAME image, DO NOT upload it again.
+                    # Send None to upload_and_append (it will log data but skip photo).
+                    
+                    img_to_send = primary_img
+                    if is_dual and idx > 0:
+                        img_to_send = None 
+                    
+                    # Reset cursor if we are sending a file we read before
+                    if img_to_send and hasattr(img_to_send, 'seek'):
+                         try: img_to_send.seek(0)
+                         except: pass
                         
-                    success, message = drive_integration.upload_and_append(img_file, filename, row_data)
+                    success, message = drive_integration.upload_and_append(img_to_send, filename, row_data)
                     if not success:
                         all_success = False
                         fail_msg += f"[{target_part_no} 失敗: {message}] "
             
             if all_success:
-                st.success("數據提交成功! (Dual Mode Complete)" if is_dual else "數據提交成功!")
+                st.success("數據提交成功!" + (" (照片僅上傳第一筆)" if is_dual and primary_img else ""))
                 st.balloons()
             else:
                 st.error(f"部分或全部提交失敗: {fail_msg}")
@@ -674,8 +689,8 @@ elif mode == "📊 數據戰情室":
 
         df_dash['詳細管制狀態'] = df_dash.apply(enrich_control_status, axis=1)
 
-        # --- Data Grid ---
-        st.subheader("📋 詳細履歷表")
+        # --- Data Grid & Photo Preview [Request 4] ---
+        st.subheader("📋 詳細履歷表 (點擊選取可檢視大圖)")
         
         # Select columns to display
         display_cols = ['timestamp', 'model', 'part_no', 'weight', 'result', '詳細管制狀態', 'change_point']
@@ -687,7 +702,8 @@ elif mode == "📊 數據戰情室":
             df_dash['image_url'] = df_dash['image_url'].replace('nan', None).replace('', None)
             display_cols.append('image_url')
 
-        st.dataframe(
+        # Enable Selection
+        event = st.dataframe(
             df_dash[display_cols].sort_values(by='timestamp', ascending=False),
             use_container_width=True,
             column_config={
@@ -696,8 +712,27 @@ elif mode == "📊 數據戰情室":
                 "result": st.column_config.TextColumn("判定", help="OK or NG"),
                 "change_point": st.column_config.TextColumn("變化點", width="medium"),
                 "詳細管制狀態": st.column_config.TextColumn("重點管制細節", width="large"),
-            }
+            },
+            selection_mode="single-row",
+            on_select="rerun"
         )
+        
+        # Show Selected Image
+        if len(event.selection.rows) > 0:
+            selected_idx = event.selection.rows[0]
+            # Need to find the actual row in sorted/filtered df? 
+            # Re-sort to match display
+            sorted_df = df_dash.sort_values(by='timestamp', ascending=False)
+            selected_row = sorted_df.iloc[selected_idx]
+            
+            st.divider()
+            st.markdown(f"### 📷 選取項目的照片: {selected_row['part_no']}")
+            
+            img_url = selected_row.get('image_url')
+            if img_url and str(img_url).startswith('http'):
+                st.image(img_url, caption="現場拍攝照片", use_container_width=True)
+            else:
+                st.info("此筆記錄無照片")
 
         # --- Charts ---
         st.subheader("趨勢分析")

@@ -1,4 +1,4 @@
-from PIL import Image
+from PIL import Image, ImageOps
 import io
 import requests
 import base64
@@ -19,6 +19,9 @@ def compress_image(image_file, max_size_mb=1.0, quality=85):
              # Streamlit UploadedFile or BytesIO
              image_file.seek(0)
              img = Image.open(image_file)
+        
+        # --- Fix Rotation (EXIF) ---
+        img = ImageOps.exif_transpose(img)
         
         # Convert to RGB if needed (e.g., RGBA -> JPEG)
         if img.mode in ("RGBA", "P"):
@@ -47,41 +50,47 @@ def compress_image(image_file, max_size_mb=1.0, quality=85):
         print(f"Compression failed: {e}")
         # Buildin fallback: if compression fails, return original bytes if possible
         if isinstance(image_file, bytes): return image_file
-        image_file.seek(0)
-        return image_file.read()
+        try:
+            image_file.seek(0)
+            return image_file.read()
+        except:
+             return b""
 
 def upload_and_append(image_file, filename, row_data):
     """
     Sends data + image to Google Apps Script.
     GAS will handle Drive upload and Sheet append.
     
-    row_data: dict containing all inspection fields
+    If image_file is None, we send empty string for image_base64.
     """
     try:
-        # 1. Compress & Encode Image to Base64
-        # Note: image_file from Streamlit is a file-like object
-        compressed_bytes = compress_image(image_file, max_size_mb=1.0)
-        
-        # DEBUG: Show Compression Result
-        orig_size = 0
-        if isinstance(image_file, bytes): orig_size = len(image_file)
-        else: 
-            image_file.seek(0, 2) # Seek end
-            orig_size = image_file.tell()
-            image_file.seek(0)
+        image_base64 = ""
+        if image_file is not None:
+            # 1. Compress & Encode Image to Base64
+            # Note: image_file from Streamlit is a file-like object
+            compressed_bytes = compress_image(image_file, max_size_mb=1.0)
             
-        comp_size = len(compressed_bytes)
-        # Change to st.warning/success for better visibility than toast
-        if comp_size < orig_size:
-            st.success(f"📉 照片已壓縮: {orig_size/1024/1024:.2f}MB ➝ {comp_size/1024/1024:.2f}MB")
-        else:
-            st.info(f"ℹ️ 照片未壓縮 (已夠小): {comp_size/1024/1024:.2f}MB")
-        
-        image_base64 = base64.b64encode(compressed_bytes).decode('utf-8')
+            # DEBUG: Show Compression Result
+            orig_size = 0
+            if isinstance(image_file, bytes): orig_size = len(image_file)
+            else: 
+                try:
+                    image_file.seek(0, 2) # Seek end
+                    orig_size = image_file.tell()
+                    image_file.seek(0)
+                except:
+                    pass
+                
+            comp_size = len(compressed_bytes)
+            # Change to st.warning/success for better visibility than toast
+            if comp_size < orig_size:
+                st.success(f"📉 照片已壓縮: {orig_size/1024/1024:.2f}MB ➝ {comp_size/1024/1024:.2f}MB")
+            
+            image_base64 = base64.b64encode(compressed_bytes).decode('utf-8')
         
         # 2. Prepare Payload (Clean Version)
         payload = {
-            "image_base64": image_base64, # Now compressed
+            "image_base64": image_base64, # Can be empty
             "filename": filename,
             # Flatten row_data into individual fields expected by GAS
             "timestamp": row_data.get("timestamp"),
