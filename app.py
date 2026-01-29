@@ -236,26 +236,35 @@ if mode == "📝 巡檢輸入":
         return val
 
     # Prepare Specifications for 1 or 2 items
-    specs = [] # List of dicts: {suffix, label, std, max, min, ...}
+    specs = [] # List of dicts: {suffix, label, std, max, min, len_std, len_max, len_min ...}
     if is_dual:
         specs.append({
             "suffix": "_1", "label": " (右/R)", 
             "std": raw_weight_clean[0],
             "max": get_spec_val('clean_重量上限', 0),
-            "min": get_spec_val('clean_重量下限', 0)
+            "min": get_spec_val('clean_重量下限', 0),
+            "len_std": get_spec_val('clean_標準長度', 0),
+            "len_max": get_spec_val('clean_長度上限', 0),
+            "len_min": get_spec_val('clean_長度下限', 0)
         })
         specs.append({
             "suffix": "_2", "label": " (左/L)", 
             "std": raw_weight_clean[1], 
             "max": get_spec_val('clean_重量上限', 1),
-            "min": get_spec_val('clean_重量下限', 1)
+            "min": get_spec_val('clean_重量下限', 1),
+            "len_std": get_spec_val('clean_標準長度', 1),
+            "len_max": get_spec_val('clean_長度上限', 1),
+            "len_min": get_spec_val('clean_長度下限', 1)
         })
     else:
         specs.append({
             "suffix": "", "label": "",
             "std": raw_weight_clean,
             "max": current_part_data.get('clean_重量上限'),
-            "min": current_part_data.get('clean_重量下限')
+            "min": current_part_data.get('clean_重量下限'),
+            "len_std": current_part_data.get('clean_標準長度'),
+            "len_max": current_part_data.get('clean_長度上限'),
+            "len_min": current_part_data.get('clean_長度下限')
         })
 
     # --- History Trend Charts ---
@@ -264,16 +273,10 @@ if mode == "📝 巡檢輸入":
     
     for idx, sp in enumerate(specs):
         with cols_chart[idx]:
+            # 1. Weight Chart
             chart_title = f"{selected_part_no}{sp['label']}"
-            with st.expander(f"📊 歷史趨勢: {chart_title}", expanded=True):
-                # Fetch history with suffix (e.g. part_no_1)
+            with st.expander(f"📊 重量歷史: {chart_title}", expanded=True):
                 history_target_no = f"{selected_part_no}{sp['suffix']}"
-                # If single mode (suffix is empty), standard fetch. If dual, fetch with suffix.
-                # Note: Existing data has no suffix. New dual data has suffix.
-                # If we are in Single Mode, we fetch `part_no`.
-                # If we are in Dual Mode, we fetch `part_no_1` and `part_no_2`. 
-                # (Existing non-suffixed data won't show on _1/_2 charts, which is intended per plan)
-                
                 history_data = drive_integration.fetch_history(history_target_no)
                 
                 if history_data:
@@ -317,9 +320,59 @@ if mode == "📝 巡檢輸入":
                         )
                         st.altair_chart(base.mark_line().interactive(), use_container_width=True)
                     else:
-                        st.caption("無有效歷史數據")
+                        st.caption("無有效重量歷史數據")
                 else:
                     st.caption("尚無數據")
+
+            # 2. Length Chart (if applicable)
+            if sp['len_std'] is not None and sp['len_std'] > 0:
+                with st.expander(f"📏 長度歷史: {chart_title}", expanded=False):
+                     # Re-use history_data if available
+                    if history_data:
+                        chart_df_l = pd.DataFrame(history_data)
+                        chart_df_l.replace("", pd.NA, inplace=True)
+                         # Timestamp parsing repeated (could optimize, but safe)
+                        chart_df_l['timestamp'] = pd.to_datetime(chart_df_l['timestamp'], errors='coerce')
+                        if chart_df_l['timestamp'].dt.tz is None:
+                             chart_df_l['timestamp'] = chart_df_l['timestamp'].dt.tz_localize('UTC')
+                        chart_df_l['timestamp'] = chart_df_l['timestamp'].dt.tz_convert('Asia/Taipei')
+
+                        chart_df_l['length'] = pd.to_numeric(chart_df_l['length'], errors='coerce')
+                        chart_df_l = chart_df_l.dropna(subset=['timestamp', 'length'])
+
+                        if not chart_df_l.empty:
+                            l_max_limit = sp['len_max']
+                            l_min_limit = sp['len_min']
+
+                            y_cols_l = ['length']
+                            if l_max_limit is not None:
+                                chart_df_l['Upper Limit'] = float(l_max_limit)
+                                y_cols_l.append('Upper Limit')
+                            if l_min_limit is not None:
+                                chart_df_l['Lower Limit'] = float(l_min_limit)
+                                y_cols_l.append('Lower Limit')
+                            
+                            chart_long_l = chart_df_l.melt('timestamp', value_vars=y_cols_l, var_name='Type', value_name='Value')
+                            
+                            l_min_val = chart_long_l['Value'].min()
+                            l_max_val = chart_long_l['Value'].max()
+                            l_padding = (l_max_val - l_min_val) * 0.1 if l_max_val != l_min_val else 5
+
+                            base_l = alt.Chart(chart_long_l).encode(
+                                x=alt.X('timestamp', title='時間', axis=alt.Axis(format='%m/%d %H:%M')),
+                                y=alt.Y('Value', title='長度 (mm)', 
+                                        scale=alt.Scale(domain=[l_min_val - l_padding, l_max_val + l_padding])),
+                                color=alt.Color('Type', title='類別', 
+                                                scale=alt.Scale(domain=['length', 'Upper Limit', 'Lower Limit'],
+                                                              range=['#00D4FF', '#457B9D', '#457B9D'])),
+                                tooltip=[alt.Tooltip('timestamp', format='%Y-%m-%d %H:%M'), alt.Tooltip('Type'), alt.Tooltip('Value', format='.1f')]
+                            )
+                            st.altair_chart(base_l.mark_line().interactive(), use_container_width=True)
+                        else:
+                            st.caption("無有效長度歷史數據")
+                    else:
+                        st.caption("尚無數據")
+
 
     # --- Display Standard Info ---
     st.divider()
@@ -339,17 +392,12 @@ if mode == "📝 巡檢輸入":
     info_col1.metric("標準重量", format_val_display('重量'))
     info_col2.metric("原料編號", f"{current_part_data['原料編號']}")
     
-    has_length = False
-    if pd.notna(current_part_data['clean_標準長度']):
-         # clean_標準長度 could be float or list
-         # Check if any value is > 0
-         l_val = current_part_data['clean_標準長度']
-         if isinstance(l_val, list):
-             if any(v is not None and v > 0 for v in l_val): has_length = True
-         elif l_val is not None and l_val > 0:
-             has_length = True
+    has_length_field = False 
+    # Check if ANY spec has length > 0
+    if any(s['len_std'] is not None and s['len_std'] > 0 for s in specs):
+        has_length_field = True
              
-    if has_length:
+    if has_length_field:
         info_col3.metric("標準長度", format_val_display('標準長度'))
 
     # --- Inspection Form ---
@@ -367,20 +415,28 @@ if mode == "📝 巡檢輸入":
             # Weight Input
             w_input = st.number_input(f"實測重量{sp['label']} (g)", min_value=0.0, step=0.1, format="%.1f", key=f"w_in_{idx}")
             
-            # Length Input (Only if needed)
+            # Length Input (Only if needed for this specific spec)
             l_input = None
-            if has_length:
+            if sp['len_std'] is not None and sp['len_std'] > 0:
                 l_input = st.number_input(f"實測長度{sp['label']} (mm)", min_value=0.0, step=0.1, format="%.1f", key=f"l_in_{idx}")
                 
             user_inputs[idx] = {'weight': w_input, 'length': l_input}
 
-            # Immediate Validation Feedback
+            # Immediate Validation Feedback - Weight
             if w_input > 0:
                 if sp['min'] is not None and sp['max'] is not None:
                     if not (sp['min'] <= w_input <= sp['max']):
                          st.error(f"⚠️ 重量異常! (標準: {sp['min']} ~ {sp['max']})")
                     else:
-                         st.success("OK")
+                         st.success("重量 OK")
+            
+            # Immediate Validation Feedback - Length
+            if l_input is not None and l_input > 0:
+                if sp['len_min'] is not None and sp['len_max'] is not None:
+                     if not (sp['len_min'] <= l_input <= sp['len_max']):
+                         st.error(f"⚠️ 長度異常! (標準: {sp['len_min']} ~ {sp['len_max']})")
+                     else:
+                         st.success("長度 OK")
 
     # --- Common Validation ---
     st.write(f"**確認原料**: `{current_part_data['原料編號']}`")
