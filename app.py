@@ -377,19 +377,40 @@ if mode == "📝 巡檢輸入":
     # --- Display Standard Info ---
     st.divider()
     
-    # We construct the display string manually to handle "93 / 95"
-    def format_val_display(col_name):
-        val = current_part_data.get(col_name)
-        if isinstance(val, list):
-             # Try clean formatting if float
-             return " / ".join([f"{v:g}" if isinstance(v, (float, int)) else str(v) for v in val])
-        return f"{val}"
+    # Helper to format value with tolerance, e.g., "93 (87~99)"
+    def format_with_tolerance(std_col, max_col, min_col):
+        # We use cleaned numeric lists from 'specs' or direct 'clean_' cols?
+        # Direct clean cols are easiest.
+        std_val = current_part_data.get(f'clean_{std_col}')
+        max_val = current_part_data.get(f'clean_{max_col}')
+        min_val = current_part_data.get(f'clean_{min_col}')
+
+        # Normalize to list for uniform handling
+        if not isinstance(std_val, list): std_val = [std_val]
+        if not isinstance(max_val, list): max_val = [max_val]
+        if not isinstance(min_val, list): min_val = [min_val]
+        
+        display_parts = []
+        # Loop max length (usually 1 or 2)
+        count = max(len(std_val), len(max_val), len(min_val))
+        
+        for i in range(count):
+            s = std_val[i] if i < len(std_val) else None
+            mx = max_val[i] if i < len(max_val) else None
+            mn = min_val[i] if i < len(min_val) else None
+            
+            s_str = f"{s:g}" if isinstance(s, (float, int)) else str(s)
+            
+            if mx is not None and mn is not None:
+                display_parts.append(f"{s_str} ({mn:g}~{mx:g})")
+            else:
+                display_parts.append(s_str)
+                
+        return " / ".join(display_parts)
 
     info_col1, info_col2, info_col3 = st.columns(3)
     
-    # Tolerance display is tricky for dual. We'll simplify or show multiple.
-    # For now, let's just show the Standard Weight text.
-    info_col1.metric("標準重量", format_val_display('重量'))
+    info_col1.metric("標準重量 (g)", format_with_tolerance('重量', '重量上限', '重量下限'))
     
     # [Request 1] Display Material Name (原料名稱) instead of ID if available
     mat_name = current_part_data.get('原料名稱')
@@ -403,7 +424,7 @@ if mode == "📝 巡檢輸入":
         has_length_field = True
              
     if has_length_field:
-        info_col3.metric("標準長度", format_val_display('標準長度'))
+        info_col3.metric("標準長度 (mm)", format_with_tolerance('標準長度', '長度上限', '長度下限'))
 
     # --- Inspection Form ---
     st.subheader("巡檢輸入")
