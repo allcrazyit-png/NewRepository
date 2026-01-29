@@ -228,7 +228,11 @@ if mode == "📝 巡檢輸入":
         # Display in an expander
         with st.expander("🖼️ 產品標準圖 (Standard Image)", expanded=True):
             if os.path.exists(img_path):
-                st.image(img_path, caption=f"標準圖: {product_img_filename}", use_container_width=True)
+                # [Request] Limit image size (too big)
+                # Use columns to center and constrain width (approx 50%)
+                c1, c2, c3 = st.columns([1, 2, 1])
+                with c2:
+                    st.image(img_path, caption=f"標準圖: {product_img_filename}", use_container_width=True)
             else:
                 st.warning(f"找不到圖片檔案: {product_img_filename} (請確認 quality_images 資料夾)")
 
