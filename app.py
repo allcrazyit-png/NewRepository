@@ -654,14 +654,29 @@ if mode == "📝 巡檢輸入":
 
     if defect_images:
         with st.expander("⚠️ 過去異常履歷 (Defect History)", expanded=True):
-            cols_defect = st.columns(len(defect_images))
+            # [Request] Limit image size (too big)
+            # Use fixed 3 columns. If fewer images, they stay small in their column.
+            # If more than 3, we might need rows, but specs say max 3 images.
+            cols_defect = st.columns(3) 
+            
             for idx, (label, fname) in enumerate(defect_images):
+                # Ensure we don't go out of bounds if > 3 images (though unlikely per data)
+                col_idx = idx % 3
+                if idx > 0 and idx % 3 == 0:
+                     # New row (not natively supported in loop easily without container logic, 
+                     # but st.columns returns list. We just reuse columns or create new rows?
+                     # Streamlit places iteratively. 
+                     # Simplest: Just use 3 columns. If 4th, it goes to col 1? No, we need new columns.
+                     # Given CSV has 3 fixed columns for defect images, max is 3.
+                     pass 
+                
                 img_path = os.path.join("quality_images", fname)
-                with cols_defect[idx]:
+                with cols_defect[col_idx]:
                     if os.path.exists(img_path):
                         st.image(img_path, caption=f"異常履歷-{label}: {fname}", use_container_width=True)
                     else:
                         st.caption(f"履歷{label} 找不到檔案: {fname}")
+
     else:
         st.caption("無異常履歷記錄")
 
