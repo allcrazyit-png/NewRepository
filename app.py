@@ -548,15 +548,32 @@ if mode == "📝 巡檢輸入":
 
     # --- Bottom: Abnormal Images ---
     # --- Defect History Image (Bottom) ---
+    # --- Defect History Images (Bottom) ---
     st.divider()
-    defect_img_filename = current_part_data.get('異常履歷寫真')
-    if pd.notna(defect_img_filename) and str(defect_img_filename).strip():
-        img_path = os.path.join("quality_images", str(defect_img_filename).strip())
+    
+    # Collect available defect images
+    defect_images = []
+    # 1. Main legacy column (mapped from 異常履歷寫真1)
+    d1 = current_part_data.get('異常履歷寫真')
+    if pd.notna(d1) and str(d1).strip(): defect_images.append(("1", str(d1).strip()))
+    
+    # 2. Extra columns
+    for i in range(2, 4):
+        col = f"異常履歷寫真{i}"
+        val = current_part_data.get(col)
+        if pd.notna(val) and str(val).strip():
+            defect_images.append((str(i), str(val).strip()))
+
+    if defect_images:
         with st.expander("⚠️ 過去異常履歷 (Defect History)", expanded=True):
-             if os.path.exists(img_path):
-                st.image(img_path, caption=f"異常履歷: {defect_img_filename}", use_container_width=True)
-             else:
-                st.caption(f"註記有異常履歷但找不到檔案: {defect_img_filename}")
+            cols_defect = st.columns(len(defect_images))
+            for idx, (label, fname) in enumerate(defect_images):
+                img_path = os.path.join("quality_images", fname)
+                with cols_defect[idx]:
+                    if os.path.exists(img_path):
+                        st.image(img_path, caption=f"異常履歷-{label}: {fname}", use_container_width=True)
+                    else:
+                        st.caption(f"履歷{label} 找不到檔案: {fname}")
     else:
         st.caption("無異常履歷記錄")
 

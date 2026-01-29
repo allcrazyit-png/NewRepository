@@ -60,6 +60,22 @@ def load_data():
         st.error(f"Cannot find {DATA_PATH}. Please ensure the file exists.")
         return pd.DataFrame()
 
+    # Rename columns to match internal logic (User changed CSV headers)
+    rename_map = {
+        '標準重量(g)': '重量',
+        '重量上限(g)': '重量上限',
+        '重量下限(g)': '重量下限',
+        '標準長度(mm)': '標準長度',
+        '長度上限(mm)': '長度上限',
+        '長度下限(mm)': '長度下限',
+        '異常履歷寫真1': '異常履歷寫真' # Map first defect image to legacy col
+    }
+    df.rename(columns=rename_map, inplace=True)
+
+    # Ensure required columns exist
+    if '原料編號' not in df.columns:
+        df['原料編號'] = '' # Default empty if missing
+    
     # Columns that need cleaning
     numeric_cols = ['重量', '重量上限', '重量下限', '標準長度', '長度上限', '長度下限']
     
