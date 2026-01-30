@@ -319,11 +319,12 @@ if mode == "📝 巡檢輸入":
         })
 
     # --- Split Layout Implementation ---
-    # Create two main columns: Left (Inputs) and Right (Reference Info)
-    c_left, c_right = st.columns([1, 1], gap="medium")
+    # Create two main columns: Left (Reference Info) and Right (Inputs)
+    # Ref: User requested "Left to Right" flow (Read Standard -> Input Data)
+    c_info, c_input = st.columns([1, 1], gap="medium")
 
-    # --- RIGHT COLUMN: Reference Information ---
-    with c_right:
+    # --- LEFT COLUMN: Reference Information (Was Right) ---
+    with c_info:
         st.info("ℹ️ 標準規格與歷史參考")
         
         # --- Display Standard Info Cards ---
@@ -404,58 +405,60 @@ if mode == "📝 巡檢輸入":
         else:
             display_info_card(ric3, "標準長度 (mm)", "<span style='color:#555;'>N/A</span>")
 
-        # --- History Trend Charts (Moved Up) ---
-        # Display vertically to maximize width in straight column
+        # --- History Trend Charts ---
+        # Display side-by-side [Restored]
+        chart_cols = st.columns(len(specs))
+        
         for idx, sp in enumerate(specs):
-            chart_title = f"{selected_part_no}{sp['label']}"
-            # Weight Chart
-            # Default expanded for visibility
-            with st.expander(f"📊 重量歷史: {chart_title}", expanded=True):
-                history_target_no = f"{selected_part_no}{sp['suffix']}"
-                history_data = drive_integration.fetch_history(history_target_no)
-                
-                if history_data:
-                    chart_df = pd.DataFrame(history_data)
-                    chart_df.replace("", pd.NA, inplace=True)
-                    chart_df['timestamp'] = pd.to_datetime(chart_df['timestamp'], errors='coerce')
-                    if chart_df['timestamp'].dt.tz is None:
-                            chart_df['timestamp'] = chart_df['timestamp'].dt.tz_localize('UTC')
-                    chart_df['timestamp'] = chart_df['timestamp'].dt.tz_convert('Asia/Taipei')
+            with chart_cols[idx]:
+                chart_title = f"{selected_part_no}{sp['label']}"
+                # Weight Chart
+                with st.expander(f"📊 重量歷史: {chart_title}", expanded=True):
+                    history_target_no = f"{selected_part_no}{sp['suffix']}"
+                    history_data = drive_integration.fetch_history(history_target_no)
                     
-                    chart_df['weight'] = pd.to_numeric(chart_df['weight'], errors='coerce')
-                    chart_df = chart_df.dropna(subset=['timestamp', 'weight'])
-                    
-                    if not chart_df.empty:
-                        w_max_limit = sp['max']
-                        w_min_limit = sp['min']
-                        y_cols = ['weight']
-                        if w_max_limit is not None:
-                            chart_df['Limit H'] = float(w_max_limit)
-                            y_cols.append('Limit H')
-                        if w_min_limit is not None:
-                            chart_df['Limit L'] = float(w_min_limit)
-                            y_cols.append('Limit L')
+                    if history_data:
+                        chart_df = pd.DataFrame(history_data)
+                        chart_df.replace("", pd.NA, inplace=True)
+                        chart_df['timestamp'] = pd.to_datetime(chart_df['timestamp'], errors='coerce')
+                        if chart_df['timestamp'].dt.tz is None:
+                                chart_df['timestamp'] = chart_df['timestamp'].dt.tz_localize('UTC')
+                        chart_df['timestamp'] = chart_df['timestamp'].dt.tz_convert('Asia/Taipei')
                         
-                        chart_long = chart_df.melt('timestamp', value_vars=y_cols, var_name='Type', value_name='Value')
-                        y_min_val = chart_long['Value'].min(); y_max_val = chart_long['Value'].max()
-                        padding = (y_max_val - y_min_val) * 0.1 if y_max_val != y_min_val else 5
+                        chart_df['weight'] = pd.to_numeric(chart_df['weight'], errors='coerce')
+                        chart_df = chart_df.dropna(subset=['timestamp', 'weight'])
                         
-                        base = alt.Chart(chart_long).encode(
-                            x=alt.X('timestamp', title=None, axis=alt.Axis(format='%m/%d', ticks=False)),
-                            y=alt.Y('Value', title='g', scale=alt.Scale(domain=[y_min_val - padding, y_max_val + padding])),
-                            color=alt.Color('Type', legend=None, scale=alt.Scale(range=['#FF6C6C', '#457B9D', '#457B9D'])),
-                            tooltip=['timestamp', 'Value']
-                        )
-                        st.altair_chart((base.mark_line() + base.mark_point(size=30)).interactive(), use_container_width=True)
+                        if not chart_df.empty:
+                            w_max_limit = sp['max']
+                            w_min_limit = sp['min']
+                            y_cols = ['weight']
+                            if w_max_limit is not None:
+                                chart_df['Limit H'] = float(w_max_limit)
+                                y_cols.append('Limit H')
+                            if w_min_limit is not None:
+                                chart_df['Limit L'] = float(w_min_limit)
+                                y_cols.append('Limit L')
+                            
+                            chart_long = chart_df.melt('timestamp', value_vars=y_cols, var_name='Type', value_name='Value')
+                            y_min_val = chart_long['Value'].min(); y_max_val = chart_long['Value'].max()
+                            padding = (y_max_val - y_min_val) * 0.1 if y_max_val != y_min_val else 5
+                            
+                            base = alt.Chart(chart_long).encode(
+                                x=alt.X('timestamp', title=None, axis=alt.Axis(format='%m/%d', ticks=False)),
+                                y=alt.Y('Value', title='g', scale=alt.Scale(domain=[y_min_val - padding, y_max_val + padding])),
+                                color=alt.Color('Type', legend=None, scale=alt.Scale(range=['#FF6C6C', '#457B9D', '#457B9D'])),
+                                tooltip=['timestamp', 'Value']
+                            )
+                            st.altair_chart((base.mark_line() + base.mark_point(size=30)).interactive(), use_container_width=True)
+                        else:
+                            st.caption("無數據")
                     else:
                         st.caption("無數據")
-                else:
-                    st.caption("無數據")
-            
-            # Length Chart if needed
-            if sp['len_std'] is not None and sp['len_std'] > 0:
-                    with st.expander(f"📏 長度歷史: {chart_title}", expanded=False):
-                        st.caption("長度趨勢圖 (請參考詳細數據)")
+                
+                # Length Chart if needed
+                if sp['len_std'] is not None and sp['len_std'] > 0:
+                        with st.expander(f"📏 長度歷史: {chart_title}", expanded=False):
+                            st.caption("長度趨勢圖 (請參考詳細數據)")
 
         # --- Product Image (Standard) ---
         product_img_filename = current_part_data.get('產品圖片')
@@ -463,7 +466,6 @@ if mode == "📝 巡檢輸入":
             import os
             img_path = os.path.join("quality_images", str(product_img_filename).strip())
             
-            # Reduce visual noise, collapsed by default if charts are open? No, keep reference open
             with st.expander("🖼️ 產品標準圖 (Standard Image)", expanded=True):
                 if os.path.exists(img_path):
                     st.image(img_path, caption=f"標準圖: {product_img_filename}", use_container_width=True)
@@ -510,8 +512,8 @@ if mode == "📝 巡檢輸入":
             control_points_log = []
 
 
-    # --- LEFT COLUMN: Inputs & Operation ---
-    with c_left:
+    # --- RIGHT COLUMN: Inputs & Operation (Was Left) ---
+    with c_input:
         st.subheader("📝 巡檢輸入作業")
         
         inspection_type = st.radio("巡檢階段", ["首件", "中件", "末件"], horizontal=True)
