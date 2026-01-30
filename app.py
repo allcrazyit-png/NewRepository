@@ -489,7 +489,43 @@ if mode == "📝 巡檢輸入":
         # Placeholder to keep alignment if no length
         display_info_card(info_col3, "標準長度 (mm)", "<span style='color:#555;'>N/A</span>")
 
+    # --- Defect History Images (Moved to Top) ---
+    st.divider()
+    
+    # Collect available defect images
+    defect_images = []
+    # 1. Main legacy column (mapped from 異常履歷寫真1)
+    d1 = current_part_data.get('異常履歷寫真')
+    if pd.notna(d1) and str(d1).strip(): defect_images.append(("1", str(d1).strip()))
+    
+    # 2. Extra columns
+    for i in range(2, 4):
+        col = f"異常履歷寫真{i}"
+        val = current_part_data.get(col)
+        if pd.notna(val) and str(val).strip():
+            defect_images.append((str(i), str(val).strip()))
+
+    if defect_images:
+        # Default Expanded for visibility since it's now a priority check
+        with st.expander("⚠️ 過去異常履歷 (Defect History)", expanded=True):
+            # Use fixed 3 columns
+            cols_defect = st.columns(3) 
+            
+            for idx, (label, fname) in enumerate(defect_images):
+                # Ensure we don't go out of bounds if > 3 images
+                col_idx = idx % 3
+                
+                img_path = os.path.join("quality_images", fname)
+                with cols_defect[col_idx]:
+                    if os.path.exists(img_path):
+                        st.image(img_path, caption=f"異常履歷-{label}", use_container_width=True)
+                    else:
+                        st.caption(f"履歷{label} 找不到檔案: {fname}")
+    else:
+        st.info("✅ 此零件無過去異常履歷")
+
     # --- Inspection Form ---
+    st.divider()
     st.subheader("巡檢輸入")
     inspection_type = st.radio("巡檢階段", ["首件", "中件", "末件"], horizontal=True)
 
@@ -528,29 +564,40 @@ if mode == "📝 巡檢輸入":
                          st.success("長度 OK")
 
     # --- Common Validation ---
-    st.write(f"**確認原料**: `{mat_name}`")
-    material_check = st.radio("現場投料正確?", ["OK", "NG"], horizontal=True)
+    # [Request] Remove hint of correct material. Fix layout compression.
+    st.markdown("##### 📦 原料確認")
+    # Use columns to give space to the Radio button
+    mc1, mc2 = st.columns([1, 2])
+    with mc1:
+        st.write("確認投料是否正確?")
+    with mc2:
+        # Expanded layout for better touch target
+        material_check = st.radio("原料狀態", ["OK", "NG"], horizontal=True, label_visibility="collapsed", key="mat_check_radio")
+    
     material_ok = (material_check == "OK")
 
     # --- Key Control Points ---
     st.markdown("### ⚠️ 重點管制項目確認")
-    control_points_status = {}
-    has_ng_control_point = False
-    control_points_log = [] 
-
+    # [Request] Text description only, no OK/NG selection.
+    
+    has_ng_control_point = False # No longer user-selectable, so assume OK unless we want to force manual check? 
+    # User said "Just text description, no OK/NG fields".
+    # So we just list them.
+    
+    valid_cps = []
     for i in range(1, 4):
         col_name = f"重點管制{i}"
         val = current_part_data.get(col_name)
         if pd.notna(val) and str(val).strip():
-            val_str = str(val).strip()
-            status = st.radio(f"**{i}. {val_str}**", ["OK", "NG"], key=f"cp_{i}", horizontal=True)
-            control_points_status[val_str] = status
-            control_points_log.append(f"{i}.{status}")
-            if status == "NG":
-                has_ng_control_point = True
-
-    if has_ng_control_point:
-        st.error("❌ 發現重點管制異常！請修正或記錄。")
+            valid_cps.append(str(val).strip())
+            
+    if valid_cps:
+        for cp in valid_cps:
+            st.markdown(f"- 🔴 **{cp}**")
+        control_points_log = ["Viewed"] # Log that they were shown
+    else:
+        st.caption("無重點管制項目")
+        control_points_log = []
 
     change_point = st.text_area("變化點說明 (選填)", placeholder="如有異常或變更請說明...")
 
@@ -645,51 +692,7 @@ if mode == "📝 巡檢輸入":
             else:
                 st.error(f"部分或全部提交失敗: {fail_msg}")
 
-    # --- Bottom: Abnormal Images ---
-    # --- Defect History Image (Bottom) ---
-    # --- Defect History Images (Bottom) ---
-    st.divider()
-    
-    # Collect available defect images
-    defect_images = []
-    # 1. Main legacy column (mapped from 異常履歷寫真1)
-    d1 = current_part_data.get('異常履歷寫真')
-    if pd.notna(d1) and str(d1).strip(): defect_images.append(("1", str(d1).strip()))
-    
-    # 2. Extra columns
-    for i in range(2, 4):
-        col = f"異常履歷寫真{i}"
-        val = current_part_data.get(col)
-        if pd.notna(val) and str(val).strip():
-            defect_images.append((str(i), str(val).strip()))
-
-    if defect_images:
-        with st.expander("⚠️ 過去異常履歷 (Defect History)", expanded=True):
-            # [Request] Limit image size (too big)
-            # Use fixed 3 columns. If fewer images, they stay small in their column.
-            # If more than 3, we might need rows, but specs say max 3 images.
-            cols_defect = st.columns(3) 
-            
-            for idx, (label, fname) in enumerate(defect_images):
-                # Ensure we don't go out of bounds if > 3 images (though unlikely per data)
-                col_idx = idx % 3
-                if idx > 0 and idx % 3 == 0:
-                     # New row (not natively supported in loop easily without container logic, 
-                     # but st.columns returns list. We just reuse columns or create new rows?
-                     # Streamlit places iteratively. 
-                     # Simplest: Just use 3 columns. If 4th, it goes to col 1? No, we need new columns.
-                     # Given CSV has 3 fixed columns for defect images, max is 3.
-                     pass 
-                
-                img_path = os.path.join("quality_images", fname)
-                with cols_defect[col_idx]:
-                    if os.path.exists(img_path):
-                        st.image(img_path, caption=f"異常履歷-{label}: {fname}", use_container_width=True)
-                    else:
-                        st.caption(f"履歷{label} 找不到檔案: {fname}")
-
-    else:
-        st.caption("無異常履歷記錄")
+    # --- Bottom: Abnormal Images (Removed - Moved to Top) ---
 
 elif mode == "📊 數據戰情室":
     st.header("📊 生產品質戰情室")
