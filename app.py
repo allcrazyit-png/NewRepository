@@ -15,7 +15,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-st.toast("🍎 Apple UI Loaded Successfully!", icon="✨")
+st.error("✅ 系統更新成功：Apple UI V2.0 (若看到此訊息代表更新已生效)", icon="🍏")
 
 # Custom CSS for Mobile Optimization / Aesthetics
 # --- Apply Apple UI CSS ---
