@@ -351,17 +351,40 @@ if mode == "📝 巡檢輸入":
                             chart_df['Limit L'] = float(w_min_limit)
                             y_cols.append('Limit L')
                         
-                        chart_long = chart_df.melt('timestamp', value_vars=y_cols, var_name='Type', value_name='Value')
+                        chart_long = chart_df.melt('timestamp', value_vars=y_cols, var_name='MetricType', value_name='Value')
                         y_min_val = chart_long['Value'].min(); y_max_val = chart_long['Value'].max()
                         padding = (y_max_val - y_min_val) * 0.1 if y_max_val != y_min_val else 5
                         
+                        # Define explicit color mapping
+                        # Limits (H/L) -> Red/Orange, Weight -> Blue
+                        color_domain = ['Limit H', 'Limit L', 'weight']
+                        color_range = ['#FF6C6C', '#FF6C6C', '#457B9D'] 
+                        
+                        # Base Chart
                         base = alt.Chart(chart_long).encode(
                             x=alt.X('timestamp', title=None, axis=alt.Axis(format='%m/%d', ticks=False)),
                             y=alt.Y('Value', title='g', scale=alt.Scale(domain=[y_min_val - padding, y_max_val + padding])),
-                            color=alt.Color('Type', legend=None, scale=alt.Scale(range=['#FF6C6C', '#457B9D', '#457B9D'])),
-                            tooltip=['timestamp', 'Value']
+                            color=alt.Color('MetricType', legend=None, scale=alt.Scale(domain=color_domain, range=color_range)),
+                            tooltip=['timestamp', 'Value', 'MetricType']
                         )
-                        st.altair_chart((base.mark_line() + base.mark_point(size=30)).interactive(), use_container_width=True)
+                        
+                        # 1. Weight Line (Thick)
+                        line_w = base.transform_filter(
+                            alt.datum.MetricType == 'weight'
+                        ).mark_line(strokeWidth=3)
+
+                        # 2. Weight Points (Big Dots)
+                        point_w = base.transform_filter(
+                            alt.datum.MetricType == 'weight'
+                        ).mark_point(size=60, filled=True)
+
+                        # 3. Limit Lines (Dashed, NO Points)
+                        # Explicitly filter for Limit H and Limit L
+                        line_limits = base.transform_filter(
+                            (alt.datum.MetricType == 'Limit H') | (alt.datum.MetricType == 'Limit L')
+                        ).mark_line(strokeDash=[5, 5], opacity=0.8)
+
+                        st.altair_chart((line_w + point_w + line_limits).interactive(), use_container_width=True)
                     else:
                         st.caption("無數據")
                 else:
