@@ -257,24 +257,6 @@ if mode == "📝 巡檢輸入":
     # Get selected row data
     current_part_data = filtered_df[filtered_df['品番'] == selected_part_no].iloc[0]
 
-    # --- Product Image (Standard) ---
-    product_img_filename = current_part_data.get('產品圖片')
-    if pd.notna(product_img_filename) and str(product_img_filename).strip():
-        # Construct full path
-        import os
-        img_path = os.path.join("quality_images", str(product_img_filename).strip())
-        
-        # Display in an expander
-        with st.expander("🖼️ 產品標準圖 (Standard Image)", expanded=True):
-            if os.path.exists(img_path):
-                # [Request] Limit image size (too big)
-                # Use columns to center and constrain width (approx 33% - User Request "Smaller")
-                c1, c2, c3 = st.columns([1, 1, 1])
-                with c2:
-                    st.image(img_path, caption=f"標準圖: {product_img_filename}", use_container_width=True)
-            else:
-                st.warning(f"找不到圖片檔案: {product_img_filename} (請確認 quality_images 資料夾)")
-
     # --- Pre-process Dual Mode Logic ---
     raw_weight_clean = current_part_data['clean_重量']
     is_dual = isinstance(raw_weight_clean, list)
