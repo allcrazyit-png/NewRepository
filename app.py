@@ -16,185 +16,152 @@ st.set_page_config(
 )
 
 # Custom CSS for Mobile Optimization / Aesthetics
+""", unsafe_allow_html=True)
+
+# --- Apply Apple UI CSS ---
 st.markdown("""
 <style>
-    /* --- 1. Global Reset & Dark Mode Base --- */
+    /* --- 1. Global Reset & Apple Dark Mode Base --- */
     @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap');
 
     .stApp {
-        background-color: #0e1117; /* Dark background */
-        color: #e6e6e6;
-        font-family: 'Noto Sans TC', sans-serif !important;
+        background-color: #000000; /* Deep Black for OLED feel */
+        color: #f5f5f7; /* Apple Off-White */
+        font-family: 'Noto Sans TC', -apple-system, BlinkMacSystemFont, sans-serif !important;
     }
     
-    /* --- 2. Typography & Headers --- */
-    h1, h2, h3, .stMarkdown, .stButton, p, label, input, button, textarea {
+    /* --- 2. Typography --- */
+    h1, h2, h3, .stMarkdown, .stButton, p, label, input, button, textarea, div {
         font-family: 'Noto Sans TC', sans-serif !important;
     }
 
     h1, h2, h3 {
-        color: #ffffff !important;
+        color: #f5f5f7 !important;
         font-weight: 700;
-        text-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
+        letter-spacing: -0.02em; /* Tight Apple Headers */
     }
-    .stMarkdown p {
-        font-size: 1.2rem !important;
-        color: #d0d0d0;
-    }
+    
+    h1 { font-size: 2.5rem !important; }
+    h2 { font-size: 1.8rem !important; }
+    h3 { font-size: 1.4rem !important; }
 
-    /* --- 3. Glassmorphism Cards for Metrics --- */
+    /* --- 3. iOS "Island" Cards (Glassmorphism) --- */
     div[data-testid="stMetric"] {
-        background: rgba(255, 255, 255, 0.05);
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
+        background: rgba(28, 28, 30, 0.6); /* #1c1c1e with opacity */
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
         border: 1px solid rgba(255, 255, 255, 0.1);
-        padding: 15px;
-        border-radius: 15px;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        padding: 20px;
+        border-radius: 18px; /* Apple Rounded Corners */
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
         text-align: center;
-        transition: transform 0.2s;
-    }
-    div[data-testid="stMetric"]:hover {
-        transform: translateY(-5px);
-        border-color: #00d4ff; /* Tech Blue Glow */
-        box-shadow: 0 0 15px rgba(0, 212, 255, 0.3);
     }
     div[data-testid="stMetricLabel"] {
-        font-size: 1.1rem !important;
-        color: #a0a0a0 !important;
+        font-size: 1rem !important;
+        color: #86868b !important; /* Apple Subtext Gray */
+        font-weight: 500;
     }
     div[data-testid="stMetricValue"] {
-        font-size: 2rem !important;
-        color: #00d4ff !important; /* Tech Blue */
-        font-weight: bold;
+        font-size: 2.2rem !important;
+        color: #f5f5f7 !important;
+        font-weight: 600;
     }
 
-    /* --- 4. Modern Input Fields (Mobile Friendly) --- */
-    .stTextInput input, .stNumberInput input, .stSelectbox div[data-baseweb="select"] > div {
-        background-color: rgba(255, 255, 255, 0.05) !important;
-        color: #ffffff !important;
-        border: 1px solid rgba(255, 255, 255, 0.2) !important;
-        border-radius: 12px !important;
-        height: 3.5rem !important; /* Larger for touch */
-        font-size: 1.3rem !important;
+    /* --- 4. Inputs (Flat & Clean) --- */
+    .stTextInput input, .stNumberInput input, .stSelectbox div[data-baseweb="select"] > div, .stTextArea textarea {
+        background-color: #1c1c1e !important;
+        color: #f5f5f7 !important;
+        border: none !important;
+        border-radius: 10px !important;
+        height: 3.2rem !important;
+        font-size: 1.1rem !important;
+        padding-left: 15px !important;
     }
-    .stTextInput input:focus, .stNumberInput input:focus {
-        border-color: #00d4ff !important;
-        box-shadow: 0 0 10px rgba(0, 212, 255, 0.3) !important;
-    }
-    .stTextArea textarea {
-        background-color: rgba(255, 255, 255, 0.05) !important;
-        color: white !important;
-        border-radius: 12px !important;
-        font-size: 1.2rem !important;
+    .stTextInput input:focus, .stNumberInput input:focus, .stTextArea textarea:focus {
+        box-shadow: 0 0 0 2px #0A84FF !important; /* System Blue Focus Ring */
     }
 
-    /* --- 5. Radio Buttons (Pills Style) --- */
-    .stRadio > label { font-size: 1.3rem !important; color: white !important; margin-bottom: 10px; }
+    /* --- 5. Segmented Controls (Radio Buttons) --- */
+    .stRadio > label { font-size: 1.1rem !important; color: #86868b !important; margin-bottom: 8px; }
     .stRadio div[role='radiogroup'] {
-        gap: 10px;
-        display: flex;
-        flex-wrap: wrap;
+        background: #1c1c1e;
+        padding: 4px;
+        border-radius: 12px;
+        display: inline-flex;
+        gap: 0px;
     }
     .stRadio div[role='radiogroup'] > label { 
-        background-color: rgba(255, 255, 255, 0.05) !important;
-        padding: 10px 20px !important; /* Reduced padding to fit tight spaces */
-        border-radius: 50px !important; /* Rounded Pills */
-        border: 1px solid rgba(255, 255, 255, 0.2) !important;
-        color: #e0e0e0 !important;
-        transition: all 0.3s ease;
-        flex: 1 1 0px; /* Force equal width */
-        min-width: 0;
-        justify-content: center;
-        text-align: center;
-        white-space: nowrap !important; /* Prevent text wrapping (N G split) */
-        overflow: hidden;
-        text-overflow: ellipsis;
+        background-color: transparent !important;
+        padding: 8px 20px !important;
+        border-radius: 8px !important;
+        border: none !important;
+        color: #86868b !important;
+        transition: all 0.2s ease;
+        margin: 0 !important;
+        box-shadow: none !important;
     }
     .stRadio div[role='radiogroup'] > label:hover {
-        background-color: rgba(255, 255, 255, 0.15) !important;
-        border-color: #00d4ff !important;
+        color: #f5f5f7 !important;
     }
     .stRadio div[role='radiogroup'] > label[data-checked='true'] {
-        background: linear-gradient(135deg, #00d4ff 0%, #005bea 100%) !important; /* Neon Gradient */
-        color: white !important;
-        border: none !important;
-        box-shadow: 0 0 15px rgba(0, 212, 255, 0.5);
-        font-weight: bold;
+        background-color: #636366 !important; /* Selected Gray */
+        color: #ffffff !important;
+        font-weight: 600;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2) !important;
     }
 
-    /* --- SIDEBAR OVERRIDE (Reset to Vertical List) --- */
+    /* Sidebar Radio Override */
     section[data-testid="stSidebar"] div[role='radiogroup'] {
-        flex-direction: column !important;
-        gap: 5px !important;
+        background: transparent !important;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
     }
     section[data-testid="stSidebar"] div[role='radiogroup'] > label {
         width: 100% !important;
-        flex: none !important;
-        border-radius: 10px !important;
-        text-align: left !important;
-        padding: 10px 15px !important;
-        white-space: normal !important; /* Allow wrapping in sidebar */
         background: transparent !important;
-        border: 1px solid transparent !important;
-    }
-    section[data-testid="stSidebar"] div[role='radiogroup'] > label:hover {
-        background: rgba(255, 255, 255, 0.1) !important;
+        text-align: left !important;
+        padding: 10px 10px !important;
     }
     section[data-testid="stSidebar"] div[role='radiogroup'] > label[data-checked='true'] {
-        background: rgba(255, 255, 255, 0.2) !important; /* Subtle highlight */
-        border: 1px solid rgba(255, 255, 255, 0.5) !important;
-        box-shadow: none !important;
+        background-color: rgba(10, 132, 255, 0.2) !important; /* Transparent Blue */
+        color: #0A84FF !important;
     }
 
-    /* --- 6. Submit Button (Big & Glowing) --- */
+    /* --- 6. Buttons (Apple Blue Pills) --- */
     div.stButton > button:first-child {
-        background: linear-gradient(90deg, #ff416c 0%, #ff4b2b 100%) !important; /* Warning Red Gradient */
+        background-color: #0A84FF !important; /* System Blue */
         color: white !important;
-        font-size: 1.5rem !important;
-        height: 4rem !important;
-        border-radius: 50px !important;
+        font-size: 1.2rem !important;
+        height: 3.5rem !important;
+        border-radius: 40px !important;
         border: none !important;
-        box-shadow: 0 5px 15px rgba(255, 75, 43, 0.4);
-        transition: transform 0.2s, box-shadow 0.2s;
+        font-weight: 600;
+        box-shadow: 0 4px 12px rgba(10, 132, 255, 0.3);
+        transition: all 0.2s;
         width: 100%;
-        margin-top: 20px;
     }
     div.stButton > button:first-child:active {
-        transform: scale(0.98);
-        box-shadow: 0 2px 10px rgba(255, 75, 43, 0.4);
+        transform: scale(0.97);
+        opacity: 0.8;
+    }
+    div.stButton > button:first-child:hover {
+        background-color: #0077ED !important;
     }
 
-    /* --- 7. Alert Box --- */
-    .alert-box {
-        background: rgba(255, 0, 0, 0.1);
-        backdrop-filter: blur(5px);
-        color: #ff4b4b;
-        border: 1px solid #ff4b4b;
-        padding: 20px;
-        border-radius: 12px;
-        text-align: center;
-        font-size: 1.5rem;
-        font-weight: bold;
-        box-shadow: 0 0 20px rgba(255, 75, 75, 0.2);
-        animation: pulse 2s infinite;
-    }
-    @keyframes pulse {
-        0% { box-shadow: 0 0 0 0 rgba(255, 75, 75, 0.4); }
-        70% { box-shadow: 0 0 0 10px rgba(255, 75, 75, 0); }
-        100% { box-shadow: 0 0 0 0 rgba(255, 75, 75, 0); }
+    /* --- 7. Status Alerts --- */
+    .stSuccess, .stError, .stInfo, .stWarning {
+        background-color: rgba(28, 28, 30, 0.8) !important;
+        backdrop-filter: blur(10px);
+        border-radius: 12px !important;
+        border: none !important;
+        color: #f5f5f7 !important;
     }
     
     /* ENLARGE INPUTS for Mobile */
     div[data-testid="stNumberInput"] input {
-        font-size: 24px !important;
-        height: 60px !important;
-        padding: 10px !important;
-        height: 60px !important;
-        padding: 10px !important;
-    }
-    div[data-testid="stNumberInput"] label {
-        font-size: 1.2rem !important;
+        font-size: 20px !important;
+        height: 50px !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -238,12 +205,10 @@ st.sidebar.markdown(
 if mode == "📝 巡檢輸入":
     # --- Top Navigation / Filter ---
     # --- Top Navigation / Filter ---
-    # Title with Gradient Effect for Professional Look
+    # Title with Clean Apple Header
     st.markdown("""
         <h1 style='text-align: center; margin-bottom: 20px;'>
-            <span style='background: linear-gradient(90deg, #00d4ff, #005bea); -webkit-background-clip: text; -webkit-text-fill-color: transparent;'>
-                瑞全智慧巡檢系統
-            </span>
+            瑞全智慧巡檢系統
         </h1>
     """, unsafe_allow_html=True)
 
@@ -406,21 +371,21 @@ if mode == "📝 巡檢輸入":
     # [Moved UP above Defect History as requested]
     st.info("ℹ️ 標準規格參考")
     
-    # Custom Card Helper
+    # Custom Card Helper (Apple Style)
     def display_info_card(col_obj, label, value_html):
         col_obj.markdown(f"""
         <div style="
-            background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(10px);
+            background: rgba(28, 28, 30, 0.6);
+            backdrop-filter: blur(20px);
             border: 1px solid rgba(255, 255, 255, 0.1);
-            padding: 10px;
-            border-radius: 10px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 15px;
+            border-radius: 18px; /* Apple Rounded Corners */
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
             text-align: center;
             margin-bottom: 10px;
         ">
-            <div style="color: #a0a0a0; font-size: 0.9rem; margin-bottom: 3px;">{label}</div>
-            <div style="color: #00d4ff; font-size: 1.2rem; font-weight: bold; word-wrap: break-word; line-height: 1.2;">
+            <div style="color: #86868b; font-size: 0.9rem; margin-bottom: 3px; font-weight: 500;">{label}</div>
+            <div style="color: #f5f5f7; font-size: 1.3rem; font-weight: 600; word-wrap: break-word; line-height: 1.2;">
                 {value_html}
             </div>
         </div>
