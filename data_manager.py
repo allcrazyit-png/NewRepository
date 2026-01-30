@@ -18,26 +18,47 @@ def clean_numeric_value(val):
         
     # Check for Slash Separator
     if '/' in val_str:
+        # Filter out empty strings to handle '93/' or '/93' typos as single values if applicable
+        # However, we must be careful about preserving position if intention is dual.
+        # But for 'Single Mold', a trailing slash is a common typo.
+        # Hybrid Approach: Split, but if adjacent parts are empty, be smart?
+        # Simpler: Split. If we have exactly 1 non-empty and the rest are empty, treat as scalar.
+        
         parts = val_str.split('/')
+        
+        # Parse all
         results = []
         for p in parts:
             match = re.search(r"(\d+(\.\d+)?)", p)
             if match:
-                try:
-                    results.append(float(match.group(1)))
-                except ValueError:
-                    results.append(None) # Keep format index aligned if possible or just skip? 
-                                       # Plan says "93/95" -> [93.0, 95.0]. 
-                                       # If "93/abc", probably better to store None or handle gracefully.
-                                       # Let's assume user inputs are relatively clean or we accept partials.
+                try: results.append(float(match.group(1)))
+                except: results.append(None)
             else:
-                 results.append(None)
+                results.append(None)
         
-        # If we found valid numbers, return list
-        # Remove Nones? No, we need index 0 and 1 to match. 
-        # But if all are None, return None.
-        if all(v is None for v in results):
-             return None
+        # If result is like [93.0, None], check if original string was just '93/' (Trailing slash typo)
+        # or if it was '93/ ' 
+        # Heuristic: If we have multiple Nones, it's messy.
+        
+        # New Logic: Filter valid numbers. 
+        valid_nums = [x for x in results if x is not None]
+        
+        # If only 1 valid number exists, AND the user didn't explicitly use a placeholder like '0' or '-'?
+        # Regex search meant we only found digits.
+        # If val_str was "93/", results=[93.0, None]. valid=[93.0].
+        # If we return scalar 93.0, we fix duplicate issue.
+        # If val_str was "/95", results=[None, 95.0]. valid=[95.0]. Returns 95.0 Scalar.
+        # Does anyone intentionally write "/95" for Dual Mode (Left only)?
+        # Context: User said "Single Mold".
+        
+        if len(valid_nums) == 1:
+            return valid_nums[0]
+            
+        # If 0 valid nums, return None
+        if not valid_nums:
+            return None
+            
+        # If > 1 valid nums (e.g. 93/95), return list
         return results
 
     # Standard Single Value Case
