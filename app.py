@@ -16,8 +16,6 @@ st.set_page_config(
 )
 
 # Custom CSS for Mobile Optimization / Aesthetics
-""", unsafe_allow_html=True)
-
 # --- Apply Apple UI CSS ---
 st.markdown("""
 <style>
