@@ -15,11 +15,11 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-st.error("✅ 系統更新成功：Apple UI V2.0 (若看到此訊息代表更新已生效)", icon="🍏")
+st.error(f"⚠️ DEBUG MODE: Updated at {datetime.datetime.now().strftime('%H:%M:%S')}", icon="🐛")
 
 # Custom CSS for Mobile Optimization / Aesthetics
 # --- Apply Apple UI CSS ---
-st.markdown("""
+css_unused = """
 <style>
     /* --- 1. Global Reset & Apple Dark Mode Base --- */
     @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap');
@@ -164,7 +164,7 @@ st.markdown("""
         height: 50px !important;
     }
 </style>
-""", unsafe_allow_html=True)
+"""
 
 # --- Inject JS for Mobile Keypad ---
 # CSS 'inputmode' is not supported, so we use JS to set the HTML attribute
