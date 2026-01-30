@@ -19,15 +19,21 @@ st.set_page_config(
 st.markdown("""
 <style>
     /* --- 1. Global Reset & Dark Mode Base --- */
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap');
+
     .stApp {
         background-color: #0e1117; /* Dark background */
         color: #e6e6e6;
+        font-family: 'Noto Sans TC', sans-serif !important;
     }
     
     /* --- 2. Typography & Headers --- */
+    h1, h2, h3, .stMarkdown, .stButton, div, span, p, label, input, button {
+        font-family: 'Noto Sans TC', sans-serif !important;
+    }
+
     h1, h2, h3 {
         color: #ffffff !important;
-        font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
         font-weight: 700;
         text-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
     }
