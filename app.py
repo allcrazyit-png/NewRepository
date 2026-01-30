@@ -565,13 +565,22 @@ if mode == "📝 巡檢輸入":
     for idx, sp in enumerate(specs):
         with cols_input[idx]:
             st.markdown(f"**{sp['label'].strip(' ()') or '規格'}**")
+            
+            # Helper for tolerance hint
+            def get_hint(mn, mx):
+                if mn is not None and mx is not None:
+                    return f" ({mn}~{mx})"
+                return ""
+
             # Weight Input
-            w_input = st.number_input(f"實測重量{sp['label']} (g)", min_value=0.0, step=0.1, format="%.1f", key=f"w_in_{idx}")
+            w_hint = get_hint(sp['min'], sp['max'])
+            w_input = st.number_input(f"實測重量{sp['label']} (g) {w_hint}", min_value=0.0, step=0.1, format="%.1f", key=f"w_in_{idx}")
             
             # Length Input (Only if needed for this specific spec)
             l_input = None
             if sp['len_std'] is not None and sp['len_std'] > 0:
-                l_input = st.number_input(f"實測長度{sp['label']} (mm)", min_value=0.0, step=0.1, format="%.1f", key=f"l_in_{idx}")
+                l_hint = get_hint(sp['len_min'], sp['len_max'])
+                l_input = st.number_input(f"實測長度{sp['label']} (mm) {l_hint}", min_value=0.0, step=0.1, format="%.1f", key=f"l_in_{idx}")
                 
             user_inputs[idx] = {'weight': w_input, 'length': l_input}
 
