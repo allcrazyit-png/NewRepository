@@ -15,11 +15,9 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-st.error(f"⚠️ DEBUG MODE: Updated at {datetime.datetime.now().strftime('%H:%M:%S')}", icon="🐛")
-
 # Custom CSS for Mobile Optimization / Aesthetics
 # --- Apply Apple UI CSS ---
-css_unused = """
+st.markdown("""
 <style>
     /* --- 1. Global Reset & Apple Dark Mode Base --- */
     @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap');
@@ -164,7 +162,7 @@ css_unused = """
         height: 50px !important;
     }
 </style>
-"""
+""", unsafe_allow_html=True)
 
 # --- Inject JS for Mobile Keypad ---
 # CSS 'inputmode' is not supported, so we use JS to set the HTML attribute
