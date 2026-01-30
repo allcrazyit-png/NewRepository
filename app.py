@@ -11,7 +11,7 @@ import streamlit.components.v1 as components
 st.set_page_config(
     page_title="瑞全智慧巡檢",
     page_icon="🔧",
-    layout="wide",
+    layout="centered",
     initial_sidebar_state="collapsed"
 )
 
