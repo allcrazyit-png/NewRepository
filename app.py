@@ -268,8 +268,8 @@ if mode == "📝 巡檢輸入":
         with st.expander("🖼️ 產品標準圖 (Standard Image)", expanded=True):
             if os.path.exists(img_path):
                 # [Request] Limit image size (too big)
-                # Use columns to center and constrain width (approx 50%)
-                c1, c2, c3 = st.columns([1, 2, 1])
+                # Use columns to center and constrain width (approx 33% - User Request "Smaller")
+                c1, c2, c3 = st.columns([1, 1, 1])
                 with c2:
                     st.image(img_path, caption=f"標準圖: {product_img_filename}", use_container_width=True)
             else:
