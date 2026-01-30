@@ -28,7 +28,7 @@ st.markdown("""
     }
     
     /* --- 2. Typography & Headers --- */
-    h1, h2, h3, .stMarkdown, .stButton, div, span, p, label, input, button {
+    h1, h2, h3, .stMarkdown, .stButton, p, label, input, button, textarea {
         font-family: 'Noto Sans TC', sans-serif !important;
     }
 
