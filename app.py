@@ -97,7 +97,8 @@ st.markdown("""
         border: 1px solid rgba(255, 255, 255, 0.2) !important;
         color: #e0e0e0 !important;
         transition: all 0.3s ease;
-        flex: 1;
+        flex: 1 1 0px; /* Force equal width regardless of content length */
+        min-width: 0;  /* Allow shrinking if needed */
         justify-content: center;
         text-align: center;
     }
