@@ -117,6 +117,30 @@ st.markdown("""
         font-weight: bold;
     }
 
+    /* --- SIDEBAR OVERRIDE (Reset to Vertical List) --- */
+    section[data-testid="stSidebar"] div[role='radiogroup'] {
+        flex-direction: column !important;
+        gap: 5px !important;
+    }
+    section[data-testid="stSidebar"] div[role='radiogroup'] > label {
+        width: 100% !important;
+        flex: none !important;
+        border-radius: 10px !important;
+        text-align: left !important;
+        padding: 10px 15px !important;
+        white-space: normal !important; /* Allow wrapping in sidebar */
+        background: transparent !important;
+        border: 1px solid transparent !important;
+    }
+    section[data-testid="stSidebar"] div[role='radiogroup'] > label:hover {
+        background: rgba(255, 255, 255, 0.1) !important;
+    }
+    section[data-testid="stSidebar"] div[role='radiogroup'] > label[data-checked='true'] {
+        background: rgba(255, 255, 255, 0.2) !important; /* Subtle highlight */
+        border: 1px solid rgba(255, 255, 255, 0.5) !important;
+        box-shadow: none !important;
+    }
+
     /* --- 6. Submit Button (Big & Glowing) --- */
     div.stButton > button:first-child {
         background: linear-gradient(90deg, #ff416c 0%, #ff4b2b 100%) !important; /* Warning Red Gradient */
