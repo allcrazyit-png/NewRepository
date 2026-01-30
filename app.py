@@ -300,9 +300,6 @@ if mode == "📝 巡檢輸入":
             "len_min": current_part_data.get('clean_長度下限')
         })
 
-    # --- Vertical Layout Implementation (Revert Split) ---
-    # User Request Order: 3.Image -> 2.Charts -> 4.Defect -> 1.Specs -> 5.Input
-    
     # [3] Product Image (Standard)
     product_img_filename = current_part_data.get('產品圖片')
     if pd.notna(product_img_filename) and str(product_img_filename).strip():
@@ -312,10 +309,11 @@ if mode == "📝 巡檢輸入":
         # Keep expanded
         with st.expander("🖼️ 產品標準圖 (Standard Image)", expanded=True):
             if os.path.exists(img_path):
-                # Use columns to verify center or size? User wants "Wide Mode" so full width is okay.
-                # Or maybe limit width slightly for aesthetics? User complained about "short/long" columns before.
-                # Let's use full container width.
-                st.image(img_path, caption=f"標準圖: {product_img_filename}", use_container_width=True)
+                # [Request] "Too big, reduce by half" (approx 50%)
+                # Use columns [1, 2, 1] -> Middle column is 50% (2/4)
+                c1, c2, c3 = st.columns([1, 2, 1])
+                with c2:
+                    st.image(img_path, caption=f"標準圖: {product_img_filename}", use_container_width=True)
             else:
                 st.warning(f"找不到圖片檔案: {product_img_filename}")
 
@@ -375,29 +373,8 @@ if mode == "📝 巡檢輸入":
                         st.caption("長度趨勢圖 (請參考詳細數據)")
 
 
-    # [4] Defect History Images
-    defect_images = []
-    d1 = current_part_data.get('異常履歷寫真')
-    if pd.notna(d1) and str(d1).strip(): defect_images.append(("1", str(d1).strip()))
-    for i in range(2, 4):
-        col = f"異常履歷寫真{i}"
-        val = current_part_data.get(col)
-        if pd.notna(val) and str(val).strip():
-            defect_images.append((str(i), str(val).strip()))
-
-    if defect_images:
-        with st.expander("⚠️ 過去異常履歷 (Defect History)", expanded=True):
-            dh_cols = st.columns(3)
-            for idx, (label, fname) in enumerate(defect_images):
-                col_idx = idx % 3
-                img_path = os.path.join("quality_images", fname)
-                with dh_cols[col_idx]:
-                    if os.path.exists(img_path):
-                        st.image(img_path, caption=f"履歷-{label}", use_container_width=True)
-                    else:
-                        st.caption(f"履歷{label} 失效")
-
     # [1] Standard Info Cards (Reference Info)
+    # [Moved UP above Defect History as requested]
     st.info("ℹ️ 標準規格參考")
     
     # Custom Card Helper
@@ -476,6 +453,28 @@ if mode == "📝 巡檢輸入":
         display_info_card(ric3, "標準長度 (mm)", val_len)
     else:
         display_info_card(ric3, "標準長度 (mm)", "<span style='color:#555;'>N/A</span>")
+
+    # [4] Defect History Images
+    defect_images = []
+    d1 = current_part_data.get('異常履歷寫真')
+    if pd.notna(d1) and str(d1).strip(): defect_images.append(("1", str(d1).strip()))
+    for i in range(2, 4):
+        col = f"異常履歷寫真{i}"
+        val = current_part_data.get(col)
+        if pd.notna(val) and str(val).strip():
+            defect_images.append((str(i), str(val).strip()))
+
+    if defect_images:
+        with st.expander("⚠️ 過去異常履歷 (Defect History)", expanded=True):
+            dh_cols = st.columns(3)
+            for idx, (label, fname) in enumerate(defect_images):
+                col_idx = idx % 3
+                img_path = os.path.join("quality_images", fname)
+                with dh_cols[col_idx]:
+                    if os.path.exists(img_path):
+                        st.image(img_path, caption=f"履歷-{label}", use_container_width=True)
+                    else:
+                        st.caption(f"履歷{label} 失效")
 
     # --- Key Control Points (Reference only) ---
     st.markdown("##### ⚠️ 重點管制項目")
