@@ -15,6 +15,8 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
+st.toast("🍎 Apple UI Loaded Successfully!", icon="✨")
+
 # Custom CSS for Mobile Optimization / Aesthetics
 # --- Apply Apple UI CSS ---
 st.markdown("""
