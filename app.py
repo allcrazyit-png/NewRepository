@@ -318,416 +318,327 @@ if mode == "📝 巡檢輸入":
             "len_min": current_part_data.get('clean_長度下限')
         })
 
-    # --- History Trend Charts ---
-    # Display side-by-side if dual
-    cols_chart = st.columns(len(specs))
-    
-    for idx, sp in enumerate(specs):
-        with cols_chart[idx]:
-            # 1. Weight Chart
-            chart_title = f"{selected_part_no}{sp['label']}"
-            with st.expander(f"📊 重量歷史: {chart_title}", expanded=True):
-                history_target_no = f"{selected_part_no}{sp['suffix']}"
-                history_data = drive_integration.fetch_history(history_target_no)
-                
-                if history_data:
-                    chart_df = pd.DataFrame(history_data)
-                    chart_df.replace("", pd.NA, inplace=True)
-                    chart_df['timestamp'] = pd.to_datetime(chart_df['timestamp'], errors='coerce')
-                    
-                    if chart_df['timestamp'].dt.tz is None:
-                         chart_df['timestamp'] = chart_df['timestamp'].dt.tz_localize('UTC')
-                    chart_df['timestamp'] = chart_df['timestamp'].dt.tz_convert('Asia/Taipei')
-                    
-                    chart_df['weight'] = pd.to_numeric(chart_df['weight'], errors='coerce')
-                    chart_df = chart_df.dropna(subset=['timestamp', 'weight'])
-                    
-                    if not chart_df.empty:
-                        w_max_limit = sp['max']
-                        w_min_limit = sp['min']
+    # --- Split Layout Implementation ---
+    # Create two main columns: Left (Inputs) and Right (Reference Info)
+    c_left, c_right = st.columns([1, 1], gap="medium")
 
-                        y_cols = ['weight']
-                        if w_max_limit is not None:
-                            chart_df['Upper Limit'] = float(w_max_limit)
-                            y_cols.append('Upper Limit')
-                        if w_min_limit is not None:
-                            chart_df['Lower Limit'] = float(w_min_limit)
-                            y_cols.append('Lower Limit')
-                        
-                        chart_long = chart_df.melt('timestamp', value_vars=y_cols, var_name='Type', value_name='Value')
-                        
-                        y_min_val = chart_long['Value'].min()
-                        y_max_val = chart_long['Value'].max()
-                        padding = (y_max_val - y_min_val) * 0.1 if y_max_val != y_min_val else 5
-                        
-                        base = alt.Chart(chart_long).encode(
-                            x=alt.X('timestamp', title='時間', axis=alt.Axis(format='%m/%d %H:%M')),
-                            y=alt.Y('Value', title='重量 (g)', 
-                                    scale=alt.Scale(domain=[y_min_val - padding, y_max_val + padding])),
-                            color=alt.Color('Type', title='類別', 
-                                            scale=alt.Scale(domain=['weight', 'Upper Limit', 'Lower Limit'],
-                                                          range=['#FF6C6C', '#457B9D', '#457B9D'])),
-                            tooltip=[alt.Tooltip('timestamp', format='%Y-%m-%d %H:%M'), alt.Tooltip('Type'), alt.Tooltip('Value', format='.1f')]
-                        )
-                        # Combine Line + Point (Points only for actual weight data, hide for limits)
-                        points = base.mark_point(filled=True, size=60).transform_filter(
-                            alt.datum.Type == 'weight'
-                        )
-                        chart_combined = (base.mark_line() + points).interactive()
-                        st.altair_chart(chart_combined, use_container_width=True)
-                    else:
-                        st.caption("無有效重量歷史數據")
-                else:
-                    st.caption("尚無數據")
-
-            # 2. Length Chart (if applicable)
-            if sp['len_std'] is not None and sp['len_std'] > 0:
-                with st.expander(f"📏 長度歷史: {chart_title}", expanded=False):
-                     # Re-use history_data if available
-                    if history_data:
-                        chart_df_l = pd.DataFrame(history_data)
-                        chart_df_l.replace("", pd.NA, inplace=True)
-                         # Timestamp parsing repeated (could optimize, but safe)
-                        chart_df_l['timestamp'] = pd.to_datetime(chart_df_l['timestamp'], errors='coerce')
-                        if chart_df_l['timestamp'].dt.tz is None:
-                             chart_df_l['timestamp'] = chart_df_l['timestamp'].dt.tz_localize('UTC')
-                        chart_df_l['timestamp'] = chart_df_l['timestamp'].dt.tz_convert('Asia/Taipei')
-
-                        chart_df_l['length'] = pd.to_numeric(chart_df_l['length'], errors='coerce')
-                        chart_df_l = chart_df_l.dropna(subset=['timestamp', 'length'])
-
-                        if not chart_df_l.empty:
-                            l_max_limit = sp['len_max']
-                            l_min_limit = sp['len_min']
-
-                            y_cols_l = ['length']
-                            if l_max_limit is not None:
-                                chart_df_l['Upper Limit'] = float(l_max_limit)
-                                y_cols_l.append('Upper Limit')
-                            if l_min_limit is not None:
-                                chart_df_l['Lower Limit'] = float(l_min_limit)
-                                y_cols_l.append('Lower Limit')
-                            
-                            chart_long_l = chart_df_l.melt('timestamp', value_vars=y_cols_l, var_name='Type', value_name='Value')
-                            
-                            l_min_val = chart_long_l['Value'].min()
-                            l_max_val = chart_long_l['Value'].max()
-                            l_padding = (l_max_val - l_min_val) * 0.1 if l_max_val != l_min_val else 5
-
-                            base_l = alt.Chart(chart_long_l).encode(
-                                x=alt.X('timestamp', title='時間', axis=alt.Axis(format='%m/%d %H:%M')),
-                                y=alt.Y('Value', title='長度 (mm)', 
-                                        scale=alt.Scale(domain=[l_min_val - l_padding, l_max_val + l_padding])),
-                                color=alt.Color('Type', title='類別', 
-                                                scale=alt.Scale(domain=['length', 'Upper Limit', 'Lower Limit'],
-                                                              range=['#00D4FF', '#457B9D', '#457B9D'])),
-                                tooltip=[alt.Tooltip('timestamp', format='%Y-%m-%d %H:%M'), alt.Tooltip('Type'), alt.Tooltip('Value', format='.1f')]
-                            )
-                            # Combine Line + Point (Points only for actual length data)
-                            points_l = base_l.mark_point(filled=True, size=60).transform_filter(
-                                alt.datum.Type == 'length'
-                            )
-                            chart_combined_l = (base_l.mark_line() + points_l).interactive()
-                            st.altair_chart(chart_combined_l, use_container_width=True)
-                        else:
-                            st.caption("無有效長度歷史數據")
-                    else:
-                        st.caption("尚無數據")
-
-
-    # --- Display Standard Info ---
-    st.divider()
-    
-    # Custom Card Helper to avoid truncation and improve formatting
-    def display_info_card(col_obj, label, value_html):
-        col_obj.markdown(f"""
-        <div style="
-            background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            padding: 15px;
-            border-radius: 15px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            text-align: center;
-            height: 100%;
-        ">
-            <div style="color: #a0a0a0; font-size: 1.1rem; margin-bottom: 5px;">{label}</div>
-            <div style="color: #00d4ff; font-size: 1.6rem; font-weight: bold; word-wrap: break-word; line-height: 1.4;">
-                {value_html}
+    # --- RIGHT COLUMN: Reference Information ---
+    with c_right:
+        st.info("ℹ️ 標準規格與歷史參考")
+        
+        # --- Display Standard Info Cards ---
+        # Custom Card Helper
+        def display_info_card(col_obj, label, value_html):
+            col_obj.markdown(f"""
+            <div style="
+                background: rgba(255, 255, 255, 0.05);
+                backdrop-filter: blur(10px);
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                padding: 10px;
+                border-radius: 10px;
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                text-align: center;
+                margin-bottom: 10px;
+            ">
+                <div style="color: #a0a0a0; font-size: 0.9rem; margin-bottom: 3px;">{label}</div>
+                <div style="color: #00d4ff; font-size: 1.2rem; font-weight: bold; word-wrap: break-word; line-height: 1.2;">
+                    {value_html}
+                </div>
             </div>
-        </div>
-        """, unsafe_allow_html=True)
+            """, unsafe_allow_html=True)
 
-    # Helper to format value with tolerance
-    def get_formatted_value_html(std_col, max_col, min_col, unit=""):
-        std_val = current_part_data.get(f'clean_{std_col}')
-        max_val = current_part_data.get(f'clean_{max_col}')
-        min_val = current_part_data.get(f'clean_{min_col}')
+        # Helper to format value with tolerance
+        def get_formatted_value_html(std_col, max_col, min_col, unit=""):
+            std_val = current_part_data.get(f'clean_{std_col}')
+            max_val = current_part_data.get(f'clean_{max_col}')
+            min_val = current_part_data.get(f'clean_{min_col}')
 
-        if not isinstance(std_val, list): std_val = [std_val]
-        if not isinstance(max_val, list): max_val = [max_val]
-        if not isinstance(min_val, list): min_val = [min_val]
-        
-        display_parts = []
-        count = max(len(std_val), len(max_val), len(min_val))
-        
-        is_dual = (count > 1)
-        
-        for i in range(count):
-            s = std_val[i] if i < len(std_val) else None
-            mx = max_val[i] if i < len(max_val) else None
-            mn = min_val[i] if i < len(min_val) else None
+            if not isinstance(std_val, list): std_val = [std_val]
+            if not isinstance(max_val, list): max_val = [max_val]
+            if not isinstance(min_val, list): min_val = [min_val]
             
-            s_str = f"{s:g}" if isinstance(s, (float, int)) else str(s)
+            display_parts = []
+            count = max(len(std_val), len(max_val), len(min_val))
+            is_dual = (count > 1)
             
-            val_str = s_str
-            if mx is not None and mn is not None:
-                # Use span for smaller font on tolerance
-                val_str += f'<span style="font-size: 0.8em; color: #ccc;"> ({mn:g}-{mx:g})</span>'
-            
-            if is_dual:
-                prefix = "R: " if i == 0 else "L: "
-                display_parts.append(f"<div><span style='font-size:0.6em; color:#888'>{prefix}</span>{val_str}</div>")
-            else:
-                display_parts.append(val_str)
+            for i in range(count):
+                s = std_val[i] if i < len(std_val) else None
+                mx = max_val[i] if i < len(max_val) else None
+                mn = min_val[i] if i < len(min_val) else None
                 
-        return "".join(display_parts)
-
-    info_col1, info_col2, info_col3 = st.columns(3)
-    
-    # 1. Standard Weight
-    val_weight = get_formatted_value_html('重量', '重量上限', '重量下限')
-    display_info_card(info_col1, "標準重量 (g)", val_weight)
-    
-    # 2. Material Name
-    mat_name = current_part_data.get('原料名稱')
-    if pd.isna(mat_name) or str(mat_name).strip() == "":
-        mat_name = current_part_data.get('原料編號', 'N/A')
-    display_info_card(info_col2, "原料名稱", f"{mat_name}")
-    
-    # 3. Standard Length
-    has_length_field = False 
-    if any(s['len_std'] is not None and s['len_std'] > 0 for s in specs):
-        has_length_field = True
-             
-    if has_length_field:
-        val_len = get_formatted_value_html('標準長度', '長度上限', '長度下限')
-        display_info_card(info_col3, "標準長度 (mm)", val_len)
-    else:
-        # Placeholder to keep alignment if no length
-        display_info_card(info_col3, "標準長度 (mm)", "<span style='color:#555;'>N/A</span>")
-
-    # --- Defect History Images (Moved to Top) ---
-    st.divider()
-    
-    # Collect available defect images
-    defect_images = []
-    # 1. Main legacy column (mapped from 異常履歷寫真1)
-    d1 = current_part_data.get('異常履歷寫真')
-    if pd.notna(d1) and str(d1).strip(): defect_images.append(("1", str(d1).strip()))
-    
-    # 2. Extra columns
-    for i in range(2, 4):
-        col = f"異常履歷寫真{i}"
-        val = current_part_data.get(col)
-        if pd.notna(val) and str(val).strip():
-            defect_images.append((str(i), str(val).strip()))
-
-    if defect_images:
-        # Default Expanded for visibility since it's now a priority check
-        with st.expander("⚠️ 過去異常履歷 (Defect History)", expanded=True):
-            # Use fixed 3 columns
-            cols_defect = st.columns(3) 
-            
-            for idx, (label, fname) in enumerate(defect_images):
-                # Ensure we don't go out of bounds if > 3 images
-                col_idx = idx % 3
+                s_str = f"{s:g}" if isinstance(s, (float, int)) else str(s)
                 
-                img_path = os.path.join("quality_images", fname)
-                with cols_defect[col_idx]:
-                    if os.path.exists(img_path):
-                        st.image(img_path, caption=f"異常履歷-{label}", use_container_width=True)
+                val_str = s_str
+                if mx is not None and mn is not None:
+                    # Use span for smaller font on tolerance
+                    val_str += f'<span style="font-size: 0.8em; color: #ccc;"> ({mn:g}-{mx:g})</span>'
+                
+                if is_dual:
+                    prefix = "R: " if i == 0 else "L: "
+                    display_parts.append(f"<div><span style='font-size:0.6em; color:#888'>{prefix}</span>{val_str}</div>")
+                else:
+                    display_parts.append(val_str)
+                    
+            return "".join(display_parts)
+
+        ric1, ric2, ric3 = st.columns(3)
+        
+        # 1. Standard Weight
+        val_weight = get_formatted_value_html('重量', '重量上限', '重量下限')
+        display_info_card(ric1, "標準重量 (g)", val_weight)
+        
+        # 2. Material Name
+        mat_name = current_part_data.get('原料名稱')
+        if pd.isna(mat_name) or str(mat_name).strip() == "":
+            mat_name = current_part_data.get('原料編號', 'N/A')
+        display_info_card(ric2, "原料名稱", f"{mat_name}")
+        
+        # 3. Standard Length
+        has_length_field = False 
+        if any(s['len_std'] is not None and s['len_std'] > 0 for s in specs):
+            has_length_field = True
+                 
+        if has_length_field:
+            val_len = get_formatted_value_html('標準長度', '長度上限', '長度下限')
+            display_info_card(ric3, "標準長度 (mm)", val_len)
+        else:
+            display_info_card(ric3, "標準長度 (mm)", "<span style='color:#555;'>N/A</span>")
+
+        # --- Product Image (Standard) ---
+        product_img_filename = current_part_data.get('產品圖片')
+        if pd.notna(product_img_filename) and str(product_img_filename).strip():
+            import os
+            img_path = os.path.join("quality_images", str(product_img_filename).strip())
+            
+            with st.expander("🖼️ 產品標準圖 (Standard Image)", expanded=False):
+                if os.path.exists(img_path):
+                    # Center the image
+                    st.image(img_path, caption=f"標準圖: {product_img_filename}", use_container_width=True)
+                else:
+                    st.warning(f"找不到圖片檔案: {product_img_filename}")
+
+        # --- Defect History Images ---
+        defect_images = []
+        d1 = current_part_data.get('異常履歷寫真')
+        if pd.notna(d1) and str(d1).strip(): defect_images.append(("1", str(d1).strip()))
+        for i in range(2, 4):
+            col = f"異常履歷寫真{i}"
+            val = current_part_data.get(col)
+            if pd.notna(val) and str(val).strip():
+                defect_images.append((str(i), str(val).strip()))
+
+        if defect_images:
+            with st.expander("⚠️ 過去異常履歷 (Defect History)", expanded=True):
+                dh_cols = st.columns(3)
+                for idx, (label, fname) in enumerate(defect_images):
+                    col_idx = idx % 3
+                    img_path = os.path.join("quality_images", fname)
+                    with dh_cols[col_idx]:
+                        if os.path.exists(img_path):
+                            st.image(img_path, caption=f"履歷-{label}", use_container_width=True)
+                        else:
+                            st.caption(f"履歷{label} 失效")
+        else:
+            st.caption("✅ 此零件無過去異常履歷")
+
+        # --- Key Control Points (Reference only) ---
+        st.markdown("##### ⚠️ 重點管制項目")
+        valid_cps = []
+        for i in range(1, 4):
+            col_name = f"重點管制{i}"
+            val = current_part_data.get(col_name)
+            if pd.notna(val) and str(val).strip():
+                valid_cps.append(str(val).strip())
+                
+        if valid_cps:
+            for cp in valid_cps:
+                st.markdown(f"- 🔴 **{cp}**")
+            control_points_log = ["Viewed"] 
+        else:
+            st.caption("無重點管制項目")
+            control_points_log = []
+
+        # --- History Trend Charts ---
+        # Use nested columns for charts
+        cols_chart = st.columns(len(specs))
+        
+        for idx, sp in enumerate(specs):
+            with cols_chart[idx]:
+                chart_title = f"{selected_part_no}{sp['label']}"
+                # Weight Chart
+                with st.expander(f"📊 重量Trend: {chart_title}", expanded=False):
+                    history_target_no = f"{selected_part_no}{sp['suffix']}"
+                    history_data = drive_integration.fetch_history(history_target_no)
+                    
+                    if history_data:
+                        chart_df = pd.DataFrame(history_data)
+                        chart_df.replace("", pd.NA, inplace=True)
+                        chart_df['timestamp'] = pd.to_datetime(chart_df['timestamp'], errors='coerce')
+                        if chart_df['timestamp'].dt.tz is None:
+                             chart_df['timestamp'] = chart_df['timestamp'].dt.tz_localize('UTC')
+                        chart_df['timestamp'] = chart_df['timestamp'].dt.tz_convert('Asia/Taipei')
+                        
+                        chart_df['weight'] = pd.to_numeric(chart_df['weight'], errors='coerce')
+                        chart_df = chart_df.dropna(subset=['timestamp', 'weight'])
+                        
+                        if not chart_df.empty:
+                            w_max_limit = sp['max']
+                            w_min_limit = sp['min']
+                            y_cols = ['weight']
+                            if w_max_limit is not None:
+                                chart_df['Limit H'] = float(w_max_limit)
+                                y_cols.append('Limit H')
+                            if w_min_limit is not None:
+                                chart_df['Limit L'] = float(w_min_limit)
+                                y_cols.append('Limit L')
+                            
+                            chart_long = chart_df.melt('timestamp', value_vars=y_cols, var_name='Type', value_name='Value')
+                            y_min_val = chart_long['Value'].min(); y_max_val = chart_long['Value'].max()
+                            padding = (y_max_val - y_min_val) * 0.1 if y_max_val != y_min_val else 5
+                            
+                            base = alt.Chart(chart_long).encode(
+                                x=alt.X('timestamp', title=None, axis=alt.Axis(format='%m/%d', ticks=False)),
+                                y=alt.Y('Value', title='g', scale=alt.Scale(domain=[y_min_val - padding, y_max_val + padding])),
+                                color=alt.Color('Type', legend=None, scale=alt.Scale(range=['#FF6C6C', '#457B9D', '#457B9D'])),
+                                tooltip=['timestamp', 'Value']
+                            )
+                            st.altair_chart((base.mark_line() + base.mark_point(size=30)).interactive(), use_container_width=True)
+                        else:
+                            st.caption("無數據")
                     else:
-                        st.caption(f"履歷{label} 找不到檔案: {fname}")
-    else:
-        st.info("✅ 此零件無過去異常履歷")
+                        st.caption("無數據")
+                
+                # Length Chart if needed
+                if sp['len_std'] is not None and sp['len_std'] > 0:
+                     # (Simplified logic for length chart to save space, user can expand if used)
+                     with st.expander(f"📏 長度Trend: {chart_title}", expanded=False):
+                         st.caption("長度趨勢圖 (請參考詳細數據)")
 
-    # --- Inspection Form ---
-    st.divider()
-    st.subheader("巡檢輸入")
-    inspection_type = st.radio("巡檢階段", ["首件", "中件", "末件"], horizontal=True)
 
-    # Dictionary to hold user inputs: { index: {'weight': val, 'length': val} }
-    user_inputs = {}
-    
-    cols_input = st.columns(len(specs))
-    
-    for idx, sp in enumerate(specs):
-        with cols_input[idx]:
+    # --- LEFT COLUMN: Inputs & Operation ---
+    with c_left:
+        st.subheader("📝 巡檢輸入作業")
+        
+        inspection_type = st.radio("巡檢階段", ["首件", "中件", "末件"], horizontal=True)
+
+        user_inputs = {}
+        # Input Loop
+        for idx, sp in enumerate(specs):
             st.markdown(f"**{sp['label'].strip(' ()') or '規格'}**")
             
-            # Helper for tolerance hint
             def get_hint(mn, mx):
-                if mn is not None and mx is not None:
-                    return f" ({mn}~{mx})"
-                return ""
+                 return f" ({mn}~{mx})" if (mn is not None and mx is not None) else ""
 
-            # Weight Input
+            # Weight
             w_hint = get_hint(sp['min'], sp['max'])
-            w_input = st.number_input(f"實測重量{sp['label']} (g) {w_hint}", min_value=0.0, step=0.1, format="%.1f", key=f"w_in_{idx}")
+            w_input = st.number_input(f"重量 (g){w_hint}", min_value=0.0, step=0.1, format="%.1f", key=f"w_in_{idx}")
             
-            # Length Input (Only if needed for this specific spec)
+            # Length
             l_input = None
             if sp['len_std'] is not None and sp['len_std'] > 0:
                 l_hint = get_hint(sp['len_min'], sp['len_max'])
-                l_input = st.number_input(f"實測長度{sp['label']} (mm) {l_hint}", min_value=0.0, step=0.1, format="%.1f", key=f"l_in_{idx}")
+                l_input = st.number_input(f"長度 (mm){l_hint}", min_value=0.0, step=0.1, format="%.1f", key=f"l_in_{idx}")
                 
             user_inputs[idx] = {'weight': w_input, 'length': l_input}
 
-            # Immediate Validation Feedback - Weight
+            # Validation Msg in Expandable to save space? Or just small text.
+            # Use columns for compact feedback
+            msg_cols = st.columns([1, 1])
+            # Weight Msg
             if w_input > 0:
                 if sp['min'] is not None and sp['max'] is not None:
-                    if not (sp['min'] <= w_input <= sp['max']):
-                         st.error(f"⚠️ 重量異常! (標準: {sp['min']} ~ {sp['max']})")
-                    else:
+                     if not (sp['min'] <= w_input <= sp['max']):
+                         st.error(f"⚠️ 重量NG")
+                     else:
                          st.success("重量 OK")
-            
-            # Immediate Validation Feedback - Length
+            # Length Msg
             if l_input is not None and l_input > 0:
                 if sp['len_min'] is not None and sp['len_max'] is not None:
                      if not (sp['len_min'] <= l_input <= sp['len_max']):
-                         st.error(f"⚠️ 長度異常! (標準: {sp['len_min']} ~ {sp['len_max']})")
+                         st.error(f"⚠️ 長度NG")
                      else:
                          st.success("長度 OK")
+            st.markdown("---")
 
-    # --- Common Validation ---
-    # [Request] Remove hint of correct material. Fix layout compression.
-    st.markdown("##### 📦 原料確認")
-    # Use columns to give space to the Radio button
-    mc1, mc2 = st.columns([1, 2])
-    with mc1:
-        st.write("確認投料是否正確?")
-    with mc2:
-        # Expanded layout for better touch target
-        material_check = st.radio("原料狀態", ["OK", "NG"], horizontal=True, label_visibility="collapsed", key="mat_check_radio")
-    
-    material_ok = (material_check == "OK")
+        # Material Check
+        st.markdown("##### 📦 原料確認")
+        material_check = st.radio("原料狀態", ["OK", "NG"], horizontal=True, key="mat_check_radio")
+        material_ok = (material_check == "OK")
 
-    # --- Key Control Points ---
-    st.markdown("### ⚠️ 重點管制項目確認")
-    # [Request] Text description only, no OK/NG selection.
-    
-    has_ng_control_point = False # No longer user-selectable, so assume OK unless we want to force manual check? 
-    # User said "Just text description, no OK/NG fields".
-    # So we just list them.
-    
-    valid_cps = []
-    for i in range(1, 4):
-        col_name = f"重點管制{i}"
-        val = current_part_data.get(col_name)
-        if pd.notna(val) and str(val).strip():
-            valid_cps.append(str(val).strip())
-            
-    if valid_cps:
-        for cp in valid_cps:
-            st.markdown(f"- 🔴 **{cp}**")
-        control_points_log = ["Viewed"] # Log that they were shown
-    else:
-        st.caption("無重點管制項目")
-        control_points_log = []
+        # Change Point
+        change_point = st.text_area("變化點說明 (選填)", placeholder="如有異常請說明...", height=100)
 
-    change_point = st.text_area("變化點說明 (選填)", placeholder="如有異常或變更請說明...")
-
-    input_method = st.radio("影像輸入", ["📸 網頁相機 (Webcam)", "📂 上傳 / 後鏡頭 (Upload/Rear)"], index=1, horizontal=True, label_visibility="collapsed")
-    
-    # [Request 2] Optional Photo & Multiple Upload
-    img_files = []
-    
-    if input_method == "📸 網頁相機 (Webcam)":
-        cam_file = st.camera_input("拍照記錄")
-        if cam_file: img_files = [cam_file]
-    else:
-        # Enable multiple files
-        uploaded_files = st.file_uploader("上傳照片 (可多選，不必拍照亦可提交)", type=["jpg", "jpeg", "png"], accept_multiple_files=True)
-        if uploaded_files: img_files = uploaded_files
-
-    # --- Submit ---
-    if st.button("提交巡檢數據"):
-        # Check if ALL weights are entered (if they are required)
-        any_missing_weight = any(user_inputs[i]['weight'] == 0 for i in user_inputs)
-        
-        if any_missing_weight:
-            st.warning("請輸入所有重量數據")
-        elif not material_ok:
-            st.warning("原料確認為 NG，請確認正確料號")
-        # [Request 2] Photo is optional now, so no "is None" check here
+        # Photo Input
+        input_method = st.radio("影像輸入", ["📸 網頁相機", "📂 上傳照片"], index=1, horizontal=True)
+        img_files = []
+        if input_method == "📸 網頁相機":
+            cam_file = st.camera_input("拍照")
+            if cam_file: img_files = [cam_file]
         else:
-            with st.spinner("資料上傳中 (可能需要上傳兩筆數據)..."):
-                
-                # Shared Data
-                tz = datetime.timezone(datetime.timedelta(hours=8))
-                timestamp = datetime.datetime.now(tz)
-                ts_str = timestamp.strftime("%Y%m%d_%H%M%S")
-                key_control_str = ", ".join(control_points_log) if control_points_log else "N/A"
-                
-                all_success = True
-                fail_msg = ""
-                
-                # Determine Primary Photo (Use the first one if multiple)
-                primary_img = img_files[0] if img_files else None
-                
-                # Iterate and submit per spec
-                for idx, sp in enumerate(specs):
-                    # Prepare specific data
-                    target_part_no = f"{selected_part_no}{sp['suffix']}"
-                    m_weight = user_inputs[idx]['weight']
-                    m_length = user_inputs[idx]['length']
-                    
-                    # Status Check
-                    current_status = "OK"
-                    if sp['min'] is not None and sp['max'] is not None:
-                        if not (sp['min'] <= m_weight <= sp['max']):
-                            current_status = "NG"
-                    
-                    filename = f"{selected_model}_{target_part_no}_{inspection_type}_{ts_str}.jpg"
-                    
-                    row_data = {
-                        "timestamp": timestamp.strftime("%Y-%m-%d %H:%M:%S"),
-                        "model": selected_model,
-                        "part_no": target_part_no, # Suffixed
-                        "inspection_type": inspection_type,
-                        "weight": m_weight,
-                        "length": m_length if m_length is not None else "",
-                        "material_ok": "OK" if material_ok else "NG",
-                        "change_point": change_point,
-                        "result": current_status,
-                        "key_control_status": key_control_str
-                    }
-                    
-                    # [Request 3] Dual Mode De-duplication
-                    # If this is the second item (idx > 0) in a dual submission, 
-                    # and we are using the SAME image, DO NOT upload it again.
-                    # Send None to upload_and_append (it will log data but skip photo).
-                    
-                    img_to_send = primary_img
-                    if is_dual and idx > 0:
-                        img_to_send = None 
-                    
-                    # Reset cursor if we are sending a file we read before
-                    if img_to_send and hasattr(img_to_send, 'seek'):
-                         try: img_to_send.seek(0)
-                         except: pass
-                        
-                    success, message = drive_integration.upload_and_append(img_to_send, filename, row_data)
-                    if not success:
-                        all_success = False
-                        fail_msg += f"[{target_part_no} 失敗: {message}] "
+            uploaded_files = st.file_uploader("上傳照片", type=["jpg", "png"], accept_multiple_files=True)
+            if uploaded_files: img_files = uploaded_files
+
+        # Submit Button
+        st.write("") # Spacer
+        if st.button("🚀 提交巡檢數據", use_container_width=True, type="primary"):
+            # Check inputs
+            any_missing_weight = any(user_inputs[i]['weight'] == 0 for i in user_inputs)
             
-            if all_success:
-                st.success("數據提交成功!" + (" (照片僅上傳第一筆)" if is_dual and primary_img else ""))
-                st.balloons()
+            if any_missing_weight:
+                st.warning("請輸入所有重量數據")
+            elif not material_ok:
+                st.warning("原料確認為 NG!")
             else:
-                st.error(f"部分或全部提交失敗: {fail_msg}")
+                with st.spinner("資料上傳中..."):
+                    
+                    tz = datetime.timezone(datetime.timedelta(hours=8))
+                    timestamp = datetime.datetime.now(tz)
+                    ts_str = timestamp.strftime("%Y%m%d_%H%M%S")
+                    key_control_str = ", ".join(control_points_log) if control_points_log else "N/A"
+                    all_success = True
+                    fail_msg = ""
+                    primary_img = img_files[0] if img_files else None
+                    
+                    for idx, sp in enumerate(specs):
+                        target_part_no = f"{selected_part_no}{sp['suffix']}"
+                        m_weight = user_inputs[idx]['weight']
+                        m_length = user_inputs[idx]['length']
+                        
+                        current_status = "OK"
+                        if sp['min'] is not None and sp['max'] is not None:
+                            if not (sp['min'] <= m_weight <= sp['max']):
+                                current_status = "NG"
+                        
+                        filename = f"{selected_model}_{target_part_no}_{inspection_type}_{ts_str}.jpg"
+                        row_data = {
+                            "timestamp": timestamp.strftime("%Y-%m-%d %H:%M:%S"),
+                            "model": selected_model,
+                            "part_no": target_part_no,
+                            "inspection_type": inspection_type,
+                            "weight": m_weight,
+                            "length": m_length if m_length is not None else "",
+                            "material_ok": "OK" if material_ok else "NG",
+                            "change_point": change_point,
+                            "result": current_status,
+                            "key_control_status": key_control_str
+                        }
+                        
+                        img_to_send = primary_img
+                        if is_dual and idx > 0: img_to_send = None 
+                        if img_to_send and hasattr(img_to_send, 'seek'):
+                             try: img_to_send.seek(0)
+                             except: pass
+                            
+                        success, message = drive_integration.upload_and_append(img_to_send, filename, row_data)
+                        if not success:
+                            all_success = False
+                            fail_msg += f"[{target_part_no} Err] "
+                
+                if all_success:
+                    st.success("提交成功!")
+                    st.balloons()
+                else:
+                    st.error(f"提交失敗: {fail_msg}")
 
     # --- Bottom: Abnormal Images (Removed - Moved to Top) ---
 
