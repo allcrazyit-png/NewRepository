@@ -237,72 +237,91 @@ if mode == "📝 巡檢輸入":
         """, unsafe_allow_html=True)
         
         # Container for Selection
+        # 1. Model Selection (Top)
         with st.container():
-            col_sel1, col_sel2 = st.columns(2)
-            
-            with col_sel1:
+            col_model, col_search = st.columns([1, 2])
+            with col_model:
                 st.subheader("1️⃣ 選擇車型")
                 car_models = df['車型'].unique()
-                # Default to previous selection if available
                 default_model_idx = 0
                 if 'saved_model' in st.session_state and st.session_state['saved_model'] in car_models:
                     default_model_idx = list(car_models).index(st.session_state['saved_model'])
-                    
+                
                 selected_model_landing = st.selectbox("車型", car_models, index=default_model_idx, key="landing_model")
 
-            # Filter Parts
-            filtered_df = data_manager.get_filtered_data(df, car_model=selected_model_landing)
-            part_numbers = filtered_df['品番'].unique()
-            
-            with col_sel2:
-                st.subheader("2️⃣ 選擇品番")
-                default_part_idx = 0
-                if 'saved_part' in st.session_state and st.session_state['saved_part'] in part_numbers:
-                     default_part_idx = list(part_numbers).index(st.session_state['saved_part'])
-                
-                selected_part_landing = st.selectbox("品番", part_numbers, index=default_part_idx, key="landing_part")
+        # Filter Parts
+        filtered_df = data_manager.get_filtered_data(df, car_model=selected_model_landing)
+        
+        # 2. Product Grid View
+        st.markdown("---")
+        st.subheader(f"📦 {selected_model_landing} 產品列表 (點擊選擇)")
+        
+        # Initialize selection state if not present
+        if 'temp_selected_part' not in st.session_state:
+            st.session_state['temp_selected_part'] = None
 
-        # Preview Card
-        if selected_part_landing:
-            # Get selected row data
-            preview_data = filtered_df[filtered_df['品番'] == selected_part_landing].iloc[0]
+        # Grid Layout
+        cols = st.columns(3)
+        
+        for idx, row in filtered_df.iterrows():
+            part_no = row['品番']
+            part_name = row.get('品名', 'N/A')
+            img_name = row.get('產品圖片')
             
-            st.markdown("---")
-            st.subheader("📋 產品確認")
-            
-            # Preview Columns
-            p_col1, p_col2 = st.columns([1, 2])
-            
-            with p_col1:
-                # Show Image
-                product_img_filename = preview_data.get('產品圖片')
-                if pd.notna(product_img_filename) and str(product_img_filename).strip():
-                    img_path = os.path.join("quality_images", str(product_img_filename).strip())
-                    valid_img_path = check_image_availability(img_path)
-                    
-                    if valid_img_path:
-                         st.image(valid_img_path, caption=f"{selected_part_landing}", use_container_width=True)
+            with cols[idx % 3]:
+                with st.container():
+                    # Image
+                    if pd.notna(img_name) and str(img_name).strip():
+                        img_path = os.path.join("quality_images", str(img_name).strip())
+                        valid_img = check_image_availability(img_path)
+                        if valid_img:
+                            st.image(valid_img, use_container_width=True)
+                        else:
+                            st.image("https://via.placeholder.com/300x200?text=No+Image", use_container_width=True)
                     else:
-                        st.warning("無標準圖")
-                else:
-                     st.info("未設定圖片")
+                         st.image("https://via.placeholder.com/300x200?text=No+Image", use_container_width=True)
+                    
+                    # Label
+                    st.markdown(f"**{part_no}**")
+                    st.caption(f"{part_name}")
+                    
+                    # Select Button
+                    if st.button("選取", key=f"btn_{part_no}", use_container_width=True):
+                        st.session_state['temp_selected_part'] = part_no
+                        st.rerun()
 
-            with p_col2:
-                # Show Info
-                st.markdown(f"### {preview_data.get('品名', 'N/A')}")
-                st.markdown(f"**車型**: {selected_model_landing}")
-                st.markdown(f"**品番**: {selected_part_landing}")
-                st.markdown(f"**原料**: {preview_data.get('原料名稱', 'N/A')}")
+        # 3. Preview & Start (Bottom Sheet / Section)
+        # Only show if a part is selected (either from temp state or saved state)
+        current_part = st.session_state.get('temp_selected_part')
+        
+        if current_part:
+            st.markdown("---")
+            st.markdown(f"### ✅ 已選擇: {current_part}")
+            
+            preview_row = filtered_df[filtered_df['品番'] == current_part]
+            if not preview_row.empty:
+                preview_data = preview_row.iloc[0]
                 
-                st.write("")
-                st.write("")
-                
-                # Big Start Button
-                if st.button("🚀 開始巡檢 (Start Inspection)", use_container_width=True, type="primary"):
-                    st.session_state['saved_model'] = selected_model_landing
-                    st.session_state['saved_part'] = selected_part_landing
-                    st.session_state['inspection_started'] = True
-                    st.rerun()
+                # Preview Layout
+                p_c1, p_c2 = st.columns([1, 2])
+                with p_c1:
+                   # Show Image again (Standard)
+                    p_img = preview_data.get('產品圖片')
+                    if pd.notna(p_img) and str(p_img).strip():
+                        p_img_path = os.path.join("quality_images", str(p_img).strip())
+                        if check_image_availability(p_img_path):
+                             st.image(p_img_path, caption="標準圖", use_container_width=True)
+
+                with p_c2:
+                    st.info(f"品名: {preview_data.get('品名', 'N/A')}")
+                    st.text(f"原料: {preview_data.get('原料名稱', 'N/A')}")
+                    
+                    # START BUTTON
+                    if st.button("🚀 確認並開始巡檢", type="primary", use_container_width=True):
+                        st.session_state['saved_model'] = selected_model_landing
+                        st.session_state['saved_part'] = current_part
+                        st.session_state['inspection_started'] = True
+                        st.rerun()
 
     # --- State 2: Inspection Form ---
     else:
