@@ -214,6 +214,12 @@ mode = st.sidebar.radio("模式選擇", ["📝 巡檢輸入", "📊 數據戰情
 
 # --- Sidebar Footer ---
 st.sidebar.markdown("---")
+if st.sidebar.button("🔄 手動更新數據 (Refresh)", use_container_width=True):
+    drive_integration.fetch_history.clear()
+    drive_integration.fetch_all_data.clear()
+    st.toast("已強制更新與 Google Sheet 同步", icon="✅")
+    st.rerun()
+
 st.sidebar.markdown(
     """
     <div style='text-align: center; color: #666; font-size: 0.8em;'>
@@ -685,9 +691,18 @@ if mode == "📝 巡檢輸入":
             uploaded_files = st.file_uploader("上傳照片", type=["jpg", "png"], accept_multiple_files=True)
             if uploaded_files: img_files = uploaded_files
 
-        # Submit Button
+        # Actions
         st.write("") # Spacer
-        if st.button("🚀 提交巡檢數據", use_container_width=True, type="primary"):
+        
+        col_back, col_submit = st.columns([1, 4])
+        
+        with col_back:
+            if st.button("⬅️ 返回", use_container_width=True):
+                st.session_state['inspection_started'] = False
+                st.rerun()
+        
+        with col_submit:
+            if st.button("🚀 提交巡檢數據", use_container_width=True, type="primary"):
             # Check inputs
             any_missing_weight = any(user_inputs[i]['weight'] == 0 for i in user_inputs)
             
