@@ -261,14 +261,15 @@ if mode == "📝 巡檢輸入":
             st.session_state['temp_selected_part'] = None
 
         # Grid Layout
-        cols = st.columns(3)
+        # Increased to 5 columns for smaller images as requested
+        cols = st.columns(5)
         
         for idx, row in filtered_df.iterrows():
             part_no = row['品番']
             part_name = row.get('品名', 'N/A')
             img_name = row.get('產品圖片')
             
-            with cols[idx % 3]:
+            with cols[idx % 5]:
                 with st.container():
                     # Image
                     if pd.notna(img_name) and str(img_name).strip():
