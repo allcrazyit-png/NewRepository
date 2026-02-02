@@ -9,6 +9,7 @@ import streamlit.components.v1 as components
 import os
 
 # --- Helper: Image Integrity Check ---
+@st.cache_data(show_spinner=False)
 def check_image_availability(image_path):
     """
     Verifies if the image exists and is not empty (iCloud sync issue).
