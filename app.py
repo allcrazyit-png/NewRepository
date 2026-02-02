@@ -380,6 +380,14 @@ if mode == "📝 巡檢輸入":
                 "len_min": current_part_data.get('clean_長度下限')
             })
 
+        # --- Top Action Bar ---
+        with st.container():
+            col_back_top, _ = st.columns([1, 4])
+            with col_back_top:
+                if st.button("⬅️ 返回選擇", key="btn_back_top", use_container_width=True):
+                    st.session_state['inspection_started'] = False
+                    st.rerun()
+        
         # [3] Product Image (Standard) - KEEPING as per user habit
         product_img_filename = current_part_data.get('產品圖片')
         if pd.notna(product_img_filename) and str(product_img_filename).strip():
@@ -694,15 +702,7 @@ if mode == "📝 巡檢輸入":
         # Actions
         st.write("") # Spacer
         
-        col_back, col_submit = st.columns([1, 4])
-        
-        with col_back:
-            if st.button("⬅️ 返回", use_container_width=True):
-                st.session_state['inspection_started'] = False
-                st.rerun()
-        
-        with col_submit:
-            if st.button("🚀 提交巡檢數據", use_container_width=True, type="primary"):
+        if st.button("🚀 提交巡檢數據", use_container_width=True, type="primary"):
                 # Check inputs
                 any_missing_weight = any(user_inputs[i]['weight'] == 0 for i in user_inputs)
                 
