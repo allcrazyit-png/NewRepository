@@ -298,41 +298,10 @@ if mode == "📝 巡檢輸入":
                     st.markdown(f"**{part_no}**")
                     st.caption(f"{part_name}")
                     
-                    # Select Button
-                    if st.button("選取", key=f"btn_{part_no}", use_container_width=True):
-                        st.session_state['temp_selected_part'] = part_no
-                        st.rerun()
-
-        # 3. Preview & Start (Bottom Sheet / Section)
-        # Only show if a part is selected (either from temp state or saved state)
-        current_part = st.session_state.get('temp_selected_part')
-        
-        if current_part:
-            st.markdown("---")
-            st.markdown(f"### ✅ 已選擇: {current_part}")
-            
-            preview_row = filtered_df[filtered_df['品番'] == current_part]
-            if not preview_row.empty:
-                preview_data = preview_row.iloc[0]
-                
-                # Preview Layout
-                p_c1, p_c2 = st.columns([1, 2])
-                with p_c1:
-                   # Show Image again (Standard)
-                    p_img = preview_data.get('產品圖片')
-                    if pd.notna(p_img) and str(p_img).strip():
-                        p_img_path = os.path.join("quality_images", str(p_img).strip())
-                        if check_image_availability(p_img_path):
-                             st.image(p_img_path, caption="標準圖", use_container_width=True)
-
-                with p_c2:
-                    st.info(f"品名: {preview_data.get('品名', 'N/A')}")
-                    st.text(f"原料: {preview_data.get('原料名稱', 'N/A')}")
-                    
-                    # START BUTTON
-                    if st.button("🚀 確認並開始巡檢", type="primary", use_container_width=True):
+                    # Select and Start Button
+                    if st.button("開始巡檢", key=f"btn_{part_no}", use_container_width=True):
                         st.session_state['saved_model'] = selected_model_landing
-                        st.session_state['saved_part'] = current_part
+                        st.session_state['saved_part'] = part_no
                         st.session_state['inspection_started'] = True
                         st.rerun()
 
