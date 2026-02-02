@@ -380,13 +380,7 @@ if mode == "📝 巡檢輸入":
                 "len_min": current_part_data.get('clean_長度下限')
             })
 
-        # --- Top Action Bar ---
-        with st.container():
-            col_back_top, _ = st.columns([1, 4])
-            with col_back_top:
-                if st.button("⬅️ 返回選擇", key="btn_back_top", use_container_width=True):
-                    st.session_state['inspection_started'] = False
-                    st.rerun()
+
         
         # [3] Product Image (Standard) - KEEPING as per user habit
         product_img_filename = current_part_data.get('產品圖片')
