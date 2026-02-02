@@ -116,7 +116,7 @@ def upload_and_append(image_file, filename, row_data):
     except Exception as e:
         return False, str(e)
 
-@st.cache_data(ttl=60)
+@st.cache_data(ttl=600)
 def fetch_history(part_no):
     """
     Fetches history data for a specific part from GAS.
@@ -140,7 +140,7 @@ def fetch_history(part_no):
     except Exception:
         return []
 
-@st.cache_data(ttl=300) # Cache longer for full data
+@st.cache_data(ttl=600) # Cache longer for full data
 def fetch_all_data():
     """
     Fetches ALL data from GAS (Columns A-K) for the Dashboard.

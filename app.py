@@ -744,6 +744,12 @@ if mode == "📝 巡檢輸入":
                 if all_success:
                     st.success("提交成功!")
                     st.balloons()
+                    
+                    # --- Smart Cache Clearing ---
+                    drive_integration.fetch_history.clear()
+                    drive_integration.fetch_all_data.clear()
+                    st.toast("✅ 已清除快取，重新載入最新數據", icon="🔄")
+                    
                 else:
                     st.error(f"提交失敗: {fail_msg}")
 
