@@ -237,9 +237,10 @@ if mode == "📝 巡檢輸入":
         """, unsafe_allow_html=True)
         
         # Container for Selection
-        # 1. Model Selection (Top)
+        # 1. Model & Part Selection (Top)
         with st.container():
-            col_model, col_search = st.columns([1, 2])
+            col_model, col_part = st.columns([1, 1])
+            
             with col_model:
                 st.subheader("1️⃣ 選擇車型")
                 car_models = df['車型'].unique()
@@ -249,8 +250,19 @@ if mode == "📝 巡檢輸入":
                 
                 selected_model_landing = st.selectbox("車型", car_models, index=default_model_idx, key="landing_model")
 
-        # Filter Parts
-        filtered_df = data_manager.get_filtered_data(df, car_model=selected_model_landing)
+            # Filter Parts based on Model
+            model_filtered_df = data_manager.get_filtered_data(df, car_model=selected_model_landing)
+            available_parts = ["全部"] + list(model_filtered_df['品番'].unique())
+            
+            with col_part:
+                st.subheader("2️⃣ 選擇品番 (可選)")
+                selected_part_filter = st.selectbox("品番篩選", available_parts, key="landing_part_filter")
+
+        # Apply Part Filter to Grid Data
+        if selected_part_filter != "全部":
+            filtered_df = model_filtered_df[model_filtered_df['品番'] == selected_part_filter]
+        else:
+            filtered_df = model_filtered_df
         
         # 2. Product Grid View
         st.markdown("---")
