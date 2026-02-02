@@ -6,6 +6,28 @@ import altair as alt
 import json
 import drive_integration
 import streamlit.components.v1 as components
+import os
+
+# --- Helper: Image Integrity Check ---
+def check_image_availability(image_path):
+    """
+    Verifies if the image exists and is not empty (iCloud sync issue).
+    Returns the path if valid, None otherwise.
+    """
+    if not image_path: return None
+    
+    # 1. Check existence
+    if not os.path.exists(image_path):
+        return None
+        
+    # 2. Check size (Fix for iCloud empty placeholders)
+    try:
+        if os.path.getsize(image_path) == 0:
+            return None
+    except OSError:
+        return None
+        
+    return image_path
 
 # --- Page Config ---
 st.set_page_config(
@@ -174,7 +196,7 @@ components.html("""
             input.setAttribute('inputmode', 'decimal');
         });
     }
-    // Run periodically to catch re-renders
+    # Run periodically to catch re-renders
     setInterval(updateInputMode, 1000);
 </script>
 """, height=0)
@@ -201,417 +223,527 @@ st.sidebar.markdown(
 )
 
 if mode == "📝 巡檢輸入":
-    # --- Top Navigation / Filter ---
-    # --- Top Navigation / Filter ---
-    # Title with Clean Apple Header
-    st.markdown("""
-        <h1 style='text-align: center; margin-bottom: 20px;'>
-            瑞全智慧巡檢系統
-        </h1>
-    """, unsafe_allow_html=True)
-
-    col_filter1, col_filter2 = st.columns(2)
-
-    with col_filter1:
-        car_models = df['車型'].unique()
-        selected_model = st.selectbox("車型", car_models)
-
-    # Filter Parts based on Model
-    filtered_df = data_manager.get_filtered_data(df, car_model=selected_model)
-    part_numbers = filtered_df['品番'].unique()
-
-    with col_filter2:
-        selected_part_no = st.selectbox("品番", part_numbers)
-
-    # Get selected row data
-    current_part_data = filtered_df[filtered_df['品番'] == selected_part_no].iloc[0]
-
-    # --- Pre-process Dual Mode Logic ---
-    raw_weight_clean = current_part_data['clean_重量']
-    is_dual = isinstance(raw_weight_clean, list)
-
-    # Helper to get specific limit (Left/Right) or shared limit
-    def get_spec_val(col_name, idx):
-        val = current_part_data.get(col_name)
-        if isinstance(val, list):
-            return val[idx] if idx < len(val) else None
-        return val
-
-    # Prepare Specifications for 1 or 2 items
-    specs = [] # List of dicts: {suffix, label, std, max, min, len_std, len_max, len_min ...}
-    if is_dual:
-        specs.append({
-            "suffix": "_1", "label": " (右/R)", 
-            "std": raw_weight_clean[0],
-            "max": get_spec_val('clean_重量上限', 0),
-            "min": get_spec_val('clean_重量下限', 0),
-            "len_std": get_spec_val('clean_標準長度', 0),
-            "len_max": get_spec_val('clean_長度上限', 0),
-            "len_min": get_spec_val('clean_長度下限', 0)
-        })
-        specs.append({
-            "suffix": "_2", "label": " (左/L)", 
-            "std": raw_weight_clean[1], 
-            "max": get_spec_val('clean_重量上限', 1),
-            "min": get_spec_val('clean_重量下限', 1),
-            "len_std": get_spec_val('clean_標準長度', 1),
-            "len_max": get_spec_val('clean_長度上限', 1),
-            "len_min": get_spec_val('clean_長度下限', 1)
-        })
-    else:
-        specs.append({
-            "suffix": "", "label": "",
-            "std": raw_weight_clean,
-            "max": current_part_data.get('clean_重量上限'),
-            "min": current_part_data.get('clean_重量下限'),
-            "len_std": current_part_data.get('clean_標準長度'),
-            "len_max": current_part_data.get('clean_長度上限'),
-            "len_min": current_part_data.get('clean_長度下限')
-        })
-
-    # [3] Product Image (Standard)
-    product_img_filename = current_part_data.get('產品圖片')
-    if pd.notna(product_img_filename) and str(product_img_filename).strip():
-        import os
-        img_path = os.path.join("quality_images", str(product_img_filename).strip())
-        
-        # Keep expanded
-        with st.expander("🖼️ 產品標準圖 (Standard Image)", expanded=True):
-            if os.path.exists(img_path):
-                # [Request] "Too big, reduce by half" (approx 50%)
-                # Use columns [1, 2, 1] -> Middle column is 50% (2/4)
-                c1, c2, c3 = st.columns([1, 2, 1])
-                with c2:
-                    st.image(img_path, caption=f"標準圖: {product_img_filename}", use_container_width=True)
-            else:
-                st.warning(f"找不到圖片檔案: {product_img_filename}")
-
-    # [2] History Trend Charts
-    # Display side-by-side
-    chart_cols = st.columns(len(specs))
+    # --- Session State Management ---
+    if 'inspection_started' not in st.session_state:
+        st.session_state['inspection_started'] = False
     
-    for idx, sp in enumerate(specs):
-        with chart_cols[idx]:
-            chart_title = f"{selected_part_no}{sp['label']}"
-            # Weight Chart
-            with st.expander(f"📊 重量歷史: {chart_title}", expanded=True):
-                history_target_no = f"{selected_part_no}{sp['suffix']}"
-                history_data = drive_integration.fetch_history(history_target_no)
+    # --- State 1: Landing Page (Selection) ---
+    if not st.session_state['inspection_started']:
+        # Title
+        st.markdown("""
+            <h1 style='text-align: center; margin-bottom: 30px;'>
+                瑞全智慧巡檢系統
+            </h1>
+        """, unsafe_allow_html=True)
+        
+        # Container for Selection
+        with st.container():
+            col_sel1, col_sel2 = st.columns(2)
+            
+            with col_sel1:
+                st.subheader("1️⃣ 選擇車型")
+                car_models = df['車型'].unique()
+                # Default to previous selection if available
+                default_model_idx = 0
+                if 'saved_model' in st.session_state and st.session_state['saved_model'] in car_models:
+                    default_model_idx = list(car_models).index(st.session_state['saved_model'])
+                    
+                selected_model_landing = st.selectbox("車型", car_models, index=default_model_idx, key="landing_model")
+
+            # Filter Parts
+            filtered_df = data_manager.get_filtered_data(df, car_model=selected_model_landing)
+            part_numbers = filtered_df['品番'].unique()
+            
+            with col_sel2:
+                st.subheader("2️⃣ 選擇品番")
+                default_part_idx = 0
+                if 'saved_part' in st.session_state and st.session_state['saved_part'] in part_numbers:
+                     default_part_idx = list(part_numbers).index(st.session_state['saved_part'])
                 
-                if history_data:
-                    chart_df = pd.DataFrame(history_data)
-                    chart_df.replace("", pd.NA, inplace=True)
-                    chart_df['timestamp'] = pd.to_datetime(chart_df['timestamp'], errors='coerce')
-                    if chart_df['timestamp'].dt.tz is None:
-                            chart_df['timestamp'] = chart_df['timestamp'].dt.tz_localize('UTC')
-                    chart_df['timestamp'] = chart_df['timestamp'].dt.tz_convert('Asia/Taipei')
+                selected_part_landing = st.selectbox("品番", part_numbers, index=default_part_idx, key="landing_part")
+
+        # Preview Card
+        if selected_part_landing:
+            # Get selected row data
+            preview_data = filtered_df[filtered_df['品番'] == selected_part_landing].iloc[0]
+            
+            st.markdown("---")
+            st.subheader("📋 產品確認")
+            
+            # Preview Columns
+            p_col1, p_col2 = st.columns([1, 2])
+            
+            with p_col1:
+                # Show Image
+                product_img_filename = preview_data.get('產品圖片')
+                if pd.notna(product_img_filename) and str(product_img_filename).strip():
+                    img_path = os.path.join("quality_images", str(product_img_filename).strip())
+                    valid_img_path = check_image_availability(img_path)
                     
-                    chart_df['weight'] = pd.to_numeric(chart_df['weight'], errors='coerce')
-                    chart_df = chart_df.dropna(subset=['timestamp', 'weight'])
+                    if valid_img_path:
+                         st.image(valid_img_path, caption=f"{selected_part_landing}", use_container_width=True)
+                    else:
+                        st.warning("無標準圖")
+                else:
+                     st.info("未設定圖片")
+
+            with p_col2:
+                # Show Info
+                st.markdown(f"### {preview_data.get('品名', 'N/A')}")
+                st.markdown(f"**車型**: {selected_model_landing}")
+                st.markdown(f"**品番**: {selected_part_landing}")
+                st.markdown(f"**原料**: {preview_data.get('原料名稱', 'N/A')}")
+                
+                st.write("")
+                st.write("")
+                
+                # Big Start Button
+                if st.button("🚀 開始巡檢 (Start Inspection)", use_container_width=True, type="primary"):
+                    st.session_state['saved_model'] = selected_model_landing
+                    st.session_state['saved_part'] = selected_part_landing
+                    st.session_state['inspection_started'] = True
+                    st.rerun()
+
+    # --- State 2: Inspection Form ---
+    else:
+        # Retrieve selections
+        selected_model = st.session_state.get('saved_model')
+        selected_part_no = st.session_state.get('saved_part')
+        
+        # Safety Check (if state lost)
+        if not selected_model or not selected_part_no:
+             st.session_state['inspection_started'] = False
+             st.rerun()
+
+        # Navigation Bar
+        nav_col1, nav_col2 = st.columns([1, 4])
+        with nav_col1:
+            if st.button("⬅️ 返回選擇", use_container_width=True):
+                st.session_state['inspection_started'] = False
+                st.rerun()
+        with nav_col2:
+            st.markdown(f"### 巡檢: {selected_model} - {selected_part_no}")
+
+        # --- Re-fetch Data for Form ---
+        filtered_df = data_manager.get_filtered_data(df, car_model=selected_model)
+        # Ensure we get the specific part
+        current_part_data = filtered_df[filtered_df['品番'] == selected_part_no].iloc[0]
+
+        # --- Pre-process Dual Mode Logic ---
+        raw_weight_clean = current_part_data['clean_重量']
+        is_dual = isinstance(raw_weight_clean, list)
+
+        # Helper to get specific limit (Left/Right) or shared limit
+        def get_spec_val(col_name, idx):
+            val = current_part_data.get(col_name)
+            if isinstance(val, list):
+                return val[idx] if idx < len(val) else None
+            return val
+
+        # Prepare Specifications for 1 or 2 items
+        specs = [] # List of dicts: {suffix, label, std, max, min, len_std, len_max, len_min ...}
+        if is_dual:
+            specs.append({
+                "suffix": "_1", "label": " (右/R)", 
+                "std": raw_weight_clean[0],
+                "max": get_spec_val('clean_重量上限', 0),
+                "min": get_spec_val('clean_重量下限', 0),
+                "len_std": get_spec_val('clean_標準長度', 0),
+                "len_max": get_spec_val('clean_長度上限', 0),
+                "len_min": get_spec_val('clean_長度下限', 0)
+            })
+            specs.append({
+                "suffix": "_2", "label": " (左/L)", 
+                "std": raw_weight_clean[1], 
+                "max": get_spec_val('clean_重量上限', 1),
+                "min": get_spec_val('clean_重量下限', 1),
+                "len_std": get_spec_val('clean_標準長度', 1),
+                "len_max": get_spec_val('clean_長度上限', 1),
+                "len_min": get_spec_val('clean_長度下限', 1)
+            })
+        else:
+            specs.append({
+                "suffix": "", "label": "",
+                "std": raw_weight_clean,
+                "max": current_part_data.get('clean_重量上限'),
+                "min": current_part_data.get('clean_重量下限'),
+                "len_std": current_part_data.get('clean_標準長度'),
+                "len_max": current_part_data.get('clean_長度上限'),
+                "len_min": current_part_data.get('clean_長度下限')
+            })
+
+        # [3] Product Image (Standard) - KEEPING as per user habit
+        product_img_filename = current_part_data.get('產品圖片')
+        if pd.notna(product_img_filename) and str(product_img_filename).strip():
+            img_path = os.path.join("quality_images", str(product_img_filename).strip())
+            valid_img_path = check_image_availability(img_path)
+
+            with st.expander("🖼️ 產品標準圖 (Standard Image)", expanded=True):
+                if valid_img_path:
+                    # Compressed view
+                    c1, c2, c3 = st.columns([1, 2, 1])
+                    with c2:
+                        st.image(valid_img_path, caption=f"標準圖: {product_img_filename}", use_container_width=True)
+                else:
+                    st.warning(f"找不到圖片檔案或檔案損壞: {product_img_filename}")
+
+        # [2] History Trend Charts
+        chart_cols = st.columns(len(specs))
+        
+        for idx, sp in enumerate(specs):
+            with chart_cols[idx]:
+                chart_title = f"{selected_part_no}{sp['label']}"
+                # Weight Chart
+                with st.expander(f"📊 重量歷史: {chart_title}", expanded=True):
+                    history_target_no = f"{selected_part_no}{sp['suffix']}"
+                    history_data = drive_integration.fetch_history(history_target_no)
                     
-                    if not chart_df.empty:
-                        w_max_limit = sp['max']
-                        w_min_limit = sp['min']
-                        y_cols = ['weight']
-                        if w_max_limit is not None:
-                            chart_df['Limit H'] = float(w_max_limit)
-                            y_cols.append('Limit H')
-                        if w_min_limit is not None:
-                            chart_df['Limit L'] = float(w_min_limit)
-                            y_cols.append('Limit L')
+                    if history_data:
+                        chart_df = pd.DataFrame(history_data)
+                        chart_df.replace("", pd.NA, inplace=True)
+                        chart_df['timestamp'] = pd.to_datetime(chart_df['timestamp'], errors='coerce')
+                        if chart_df['timestamp'].dt.tz is None:
+                                chart_df['timestamp'] = chart_df['timestamp'].dt.tz_localize('UTC')
+                        chart_df['timestamp'] = chart_df['timestamp'].dt.tz_convert('Asia/Taipei')
                         
-                        chart_long = chart_df.melt('timestamp', value_vars=y_cols, var_name='MetricType', value_name='Value')
-                        y_min_val = chart_long['Value'].min(); y_max_val = chart_long['Value'].max()
-                        padding = (y_max_val - y_min_val) * 0.1 if y_max_val != y_min_val else 5
+                        chart_df['weight'] = pd.to_numeric(chart_df['weight'], errors='coerce')
+                        chart_df = chart_df.dropna(subset=['timestamp', 'weight'])
                         
-                        # Define explicit color mapping
-                        # Limits (H/L) -> Red/Orange, Weight -> Blue
-                        color_domain = ['Limit H', 'Limit L', 'weight']
-                        color_range = ['#FF6C6C', '#FF6C6C', '#457B9D'] 
-                        
-                        # Base Chart
-                        base = alt.Chart(chart_long).encode(
-                            x=alt.X('timestamp', title=None, axis=alt.Axis(format='%m/%d', ticks=False)),
-                            y=alt.Y('Value', title='g', scale=alt.Scale(domain=[y_min_val - padding, y_max_val + padding])),
-                            color=alt.Color('MetricType', legend=None, scale=alt.Scale(domain=color_domain, range=color_range)),
-                            tooltip=['timestamp', 'Value', 'MetricType']
-                        )
-                        
-                        # 1. Weight Line (Thick)
-                        line_w = base.transform_filter(
-                            alt.datum.MetricType == 'weight'
-                        ).mark_line(strokeWidth=3)
+                        if not chart_df.empty:
+                            w_max_limit = sp['max']
+                            w_min_limit = sp['min']
+                            y_cols = ['weight']
+                            if w_max_limit is not None:
+                                chart_df['Limit H'] = float(w_max_limit)
+                                y_cols.append('Limit H')
+                            if w_min_limit is not None:
+                                chart_df['Limit L'] = float(w_min_limit)
+                                y_cols.append('Limit L')
+                            
+                            chart_long = chart_df.melt('timestamp', value_vars=y_cols, var_name='MetricType', value_name='Value')
+                            y_min_val = chart_long['Value'].min(); y_max_val = chart_long['Value'].max()
+                            padding = (y_max_val - y_min_val) * 0.1 if y_max_val != y_min_val else 5
+                            
+                            color_domain = ['Limit H', 'Limit L', 'weight']
+                            color_range = ['#FF6C6C', '#FF6C6C', '#457B9D'] 
+                            
+                            base = alt.Chart(chart_long).encode(
+                                x=alt.X('timestamp', title=None, axis=alt.Axis(format='%m/%d', ticks=False)),
+                                y=alt.Y('Value', title='g', scale=alt.Scale(domain=[y_min_val - padding, y_max_val + padding])),
+                                color=alt.Color('MetricType', legend=None, scale=alt.Scale(domain=color_domain, range=color_range)),
+                                tooltip=['timestamp', 'Value', 'MetricType']
+                            )
+                            
+                            line_w = base.transform_filter(alt.datum.MetricType == 'weight').mark_line(strokeWidth=3)
+                            point_w = base.transform_filter(alt.datum.MetricType == 'weight').mark_point(size=60, filled=True)
+                            line_limits = base.transform_filter((alt.datum.MetricType == 'Limit H') | (alt.datum.MetricType == 'Limit L')).mark_line(strokeDash=[5, 5], opacity=0.8)
 
-                        # 2. Weight Points (Big Dots)
-                        point_w = base.transform_filter(
-                            alt.datum.MetricType == 'weight'
-                        ).mark_point(size=60, filled=True)
-
-                        # 3. Limit Lines (Dashed, NO Points)
-                        # Explicitly filter for Limit H and Limit L
-                        line_limits = base.transform_filter(
-                            (alt.datum.MetricType == 'Limit H') | (alt.datum.MetricType == 'Limit L')
-                        ).mark_line(strokeDash=[5, 5], opacity=0.8)
-
-                        st.altair_chart((line_w + point_w + line_limits).interactive(), use_container_width=True)
+                            st.altair_chart((line_w + point_w + line_limits).interactive(), use_container_width=True)
+                        else:
+                            st.caption("無數據")
                     else:
                         st.caption("無數據")
-                else:
-                    st.caption("無數據")
-            
-            # Length Chart if needed
-            if sp['len_std'] is not None and sp['len_std'] > 0:
-                    with st.expander(f"📏 長度歷史: {chart_title}", expanded=False):
-                        st.caption("長度趨勢圖 (請參考詳細數據)")
-
-
-    # [1] Standard Info Cards (Reference Info)
-    # [Moved UP above Defect History as requested]
-    st.info("ℹ️ 標準規格參考")
-    
-    # Custom Card Helper (Apple Style)
-    def display_info_card(col_obj, label, value_html):
-        col_obj.markdown(f"""
-        <div style="
-            background: rgba(28, 28, 30, 0.6);
-            backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            padding: 15px;
-            border-radius: 18px; /* Apple Rounded Corners */
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-            text-align: center;
-            margin-bottom: 10px;
-        ">
-            <div style="color: #86868b; font-size: 0.9rem; margin-bottom: 3px; font-weight: 500;">{label}</div>
-            <div style="color: #f5f5f7; font-size: 1.3rem; font-weight: 600; word-wrap: break-word; line-height: 1.2;">
-                {value_html}
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-
-    # Helper to format value with tolerance
-    def get_formatted_value_html(std_col, max_col, min_col, unit=""):
-        std_val = current_part_data.get(f'clean_{std_col}')
-        max_val = current_part_data.get(f'clean_{max_col}')
-        min_val = current_part_data.get(f'clean_{min_col}')
-
-        if not isinstance(std_val, list): std_val = [std_val]
-        if not isinstance(max_val, list): max_val = [max_val]
-        if not isinstance(min_val, list): min_val = [min_val]
-        
-        display_parts = []
-        count = max(len(std_val), len(max_val), len(min_val))
-        is_dual = (count > 1)
-        
-        for i in range(count):
-            s = std_val[i] if i < len(std_val) else None
-            mx = max_val[i] if i < len(max_val) else None
-            mn = min_val[i] if i < len(min_val) else None
-            
-            s_str = f"{s:g}" if isinstance(s, (float, int)) else str(s)
-            
-            val_str = s_str
-            if mx is not None and mn is not None:
-                # Use span for smaller font on tolerance
-                val_str += f'<span style="font-size: 0.8em; color: #ccc;"> ({mn:g}-{mx:g})</span>'
-            
-            if is_dual:
-                prefix = "R: " if i == 0 else "L: "
-                display_parts.append(f"<div><span style='font-size:0.6em; color:#888'>{prefix}</span>{val_str}</div>")
-            else:
-                display_parts.append(val_str)
                 
-        return "".join(display_parts)
+                # Length Chart
+                if sp['len_std'] is not None and sp['len_std'] > 0:
+                        with st.expander(f"📏 長度歷史: {chart_title}", expanded=False):
+                            st.caption("長度趨勢圖 (請參考詳細數據)")
 
-    ric1, ric2, ric3 = st.columns(3)
-    
-    # 1. Standard Weight
-    val_weight = get_formatted_value_html('重量', '重量上限', '重量下限')
-    display_info_card(ric1, "標準重量 (g)", val_weight)
-    
-    # 2. Material Name
-    mat_name = current_part_data.get('原料名稱')
-    if pd.isna(mat_name) or str(mat_name).strip() == "":
-        mat_name = current_part_data.get('原料編號', 'N/A')
-    display_info_card(ric2, "原料名稱", f"{mat_name}")
-    
-    # 3. Standard Length
-    has_length_field = False 
-    if any(s['len_std'] is not None and s['len_std'] > 0 for s in specs):
-        has_length_field = True
+
+        # --- [NEW] Historical Images Gallery ---
+        # Fetch all data and filter for images of this product
+        # 1. Fetch
+        # Note: fetch_all_data() might be heavy, but it's the only way to get image URLs currently
+        with st.expander("📸 歷史檢測照片 (Inspection History Images)", expanded=False):
+            with st.spinner("載入歷史照片中..."):
+                all_records = drive_integration.fetch_all_data()
                 
-    if has_length_field:
-        val_len = get_formatted_value_html('標準長度', '長度上限', '長度下限')
-        display_info_card(ric3, "標準長度 (mm)", val_len)
-    else:
-        display_info_card(ric3, "標準長度 (mm)", "<span style='color:#555;'>N/A</span>")
-
-    # [4] Defect History Images
-    defect_images = []
-    d1 = current_part_data.get('異常履歷寫真')
-    if pd.notna(d1) and str(d1).strip(): defect_images.append(("1", str(d1).strip()))
-    for i in range(2, 4):
-        col = f"異常履歷寫真{i}"
-        val = current_part_data.get(col)
-        if pd.notna(val) and str(val).strip():
-            defect_images.append((str(i), str(val).strip()))
-
-    if defect_images:
-        with st.expander("⚠️ 過去異常履歷 (Defect History)", expanded=True):
-            dh_cols = st.columns(3)
-            for idx, (label, fname) in enumerate(defect_images):
-                col_idx = idx % 3
-                img_path = os.path.join("quality_images", fname)
-                with dh_cols[col_idx]:
-                    if os.path.exists(img_path):
-                        st.image(img_path, caption=f"履歷-{label}", use_container_width=True)
-                    else:
-                        st.caption(f"履歷{label} 失效")
-
-    # --- Key Control Points (Reference only) ---
-    st.markdown("##### ⚠️ 重點管制項目")
-    valid_cps = []
-    for i in range(1, 4):
-        col_name = f"重點管制{i}"
-        val = current_part_data.get(col_name)
-        if pd.notna(val) and str(val).strip():
-            valid_cps.append(str(val).strip())
-            
-    if valid_cps:
-        for cp in valid_cps:
-            st.markdown(f"- 🔴 **{cp}**")
-        control_points_log = ["Viewed"] 
-    else:
-        st.caption("無重點管制項目")
-        control_points_log = []
-
-
-    # [5] Inputs & Operation
-    st.divider()
-    st.subheader("📝 巡檢輸入作業")
-    
-    inspection_type = st.radio("巡檢階段", ["首件", "中件", "末件"], horizontal=True)
-
-    user_inputs = {}
-    # Input Loop
-    for idx, sp in enumerate(specs):
-        st.markdown(f"**{sp['label'].strip(' ()') or '規格'}**")
-        
-        def get_hint(mn, mx):
-                return f" ({mn}~{mx})" if (mn is not None and mx is not None) else ""
-
-        # Weight
-        w_hint = get_hint(sp['min'], sp['max'])
-        w_input = st.number_input(f"重量 (g){w_hint}", min_value=0.0, step=0.1, format="%.1f", key=f"w_in_{idx}")
-        
-        # Length
-        l_input = None
-        if sp['len_std'] is not None and sp['len_std'] > 0:
-            l_hint = get_hint(sp['len_min'], sp['len_max'])
-            l_input = st.number_input(f"長度 (mm){l_hint}", min_value=0.0, step=0.1, format="%.1f", key=f"l_in_{idx}")
-            
-        user_inputs[idx] = {'weight': w_input, 'length': l_input}
-
-        # Validation Msg in Expandable to save space? Or just small text.
-        # Use columns for compact feedback
-        msg_cols = st.columns([1, 1])
-        # Weight Msg
-        if w_input > 0:
-            if sp['min'] is not None and sp['max'] is not None:
-                    if not (sp['min'] <= w_input <= sp['max']):
-                        st.error(f"⚠️ 重量NG")
-                    else:
-                        st.success("重量 OK")
-        # Length Msg
-        if l_input is not None and l_input > 0:
-            if sp['len_min'] is not None and sp['len_max'] is not None:
-                    if not (sp['len_min'] <= l_input <= sp['len_max']):
-                        st.error(f"⚠️ 長度NG")
-                    else:
-                        st.success("長度 OK")
-        st.markdown("---")
-
-    # Material Check
-    st.markdown("##### 📦 原料確認")
-    material_check = st.radio("原料狀態", ["OK", "NG"], horizontal=True, key="mat_check_radio")
-    material_ok = (material_check == "OK")
-
-    # Change Point
-    change_point = st.text_area("變化點說明 (選填)", placeholder="如有異常請說明...", height=100)
-
-    # Photo Input
-    input_method = st.radio("影像輸入", ["📸 網頁相機", "📂 上傳照片"], index=1, horizontal=True)
-    img_files = []
-    if input_method == "📸 網頁相機":
-        cam_file = st.camera_input("拍照")
-        if cam_file: img_files = [cam_file]
-    else:
-        uploaded_files = st.file_uploader("上傳照片", type=["jpg", "png"], accept_multiple_files=True)
-        if uploaded_files: img_files = uploaded_files
-
-    # Submit Button
-    st.write("") # Spacer
-    if st.button("🚀 提交巡檢數據", use_container_width=True, type="primary"):
-        # Check inputs
-        any_missing_weight = any(user_inputs[i]['weight'] == 0 for i in user_inputs)
-        
-        if any_missing_weight:
-            st.warning("請輸入所有重量數據")
-        elif not material_ok:
-            st.warning("原料確認為 NG!")
-        else:
-            with st.spinner("資料上傳中..."):
-                
-                tz = datetime.timezone(datetime.timedelta(hours=8))
-                timestamp = datetime.datetime.now(tz)
-                ts_str = timestamp.strftime("%Y%m%d_%H%M%S")
-                key_control_str = ", ".join(control_points_log) if control_points_log else "N/A"
-                all_success = True
-                fail_msg = ""
-                primary_img = img_files[0] if img_files else None
-                
-                for idx, sp in enumerate(specs):
-                    target_part_no = f"{selected_part_no}{sp['suffix']}"
-                    m_weight = user_inputs[idx]['weight']
-                    m_length = user_inputs[idx]['length']
+            if all_records:
+                df_history = pd.DataFrame(all_records)
+                # Filter by Model and Part No (or suffixes)
+                # Check column existence
+                if 'part_no' in df_history.columns and 'image_url' in df_history.columns:
+                    # Filter logic
+                    # Match exact part_no OR part_no + suffix (e.g. 62511-VU010 match 62511-VU010_1)
+                    # We can use the 'specs' to know the target part numbers
+                    target_parts = [f"{selected_part_no}{sp['suffix']}" for sp in specs]
                     
-                    current_status = "OK"
-                    if sp['min'] is not None and sp['max'] is not None:
-                        if not (sp['min'] <= m_weight <= sp['max']):
-                            current_status = "NG"
+                    df_filtered_imgs = df_history[
+                        df_history['part_no'].isin(target_parts) &
+                        df_history['image_url'].notna() &
+                        (df_history['image_url'] != "")
+                    ].copy()
                     
-                    filename = f"{selected_model}_{target_part_no}_{inspection_type}_{ts_str}.jpg"
-                    row_data = {
-                        "timestamp": timestamp.strftime("%Y-%m-%d %H:%M:%S"),
-                        "model": selected_model,
-                        "part_no": target_part_no,
-                        "inspection_type": inspection_type,
-                        "weight": m_weight,
-                        "length": m_length if m_length is not None else "",
-                        "material_ok": "OK" if material_ok else "NG",
-                        "change_point": change_point,
-                        "result": current_status,
-                        "key_control_status": key_control_str
-                    }
-                    
-                    img_to_send = primary_img
-                    if is_dual and idx > 0: img_to_send = None 
-                    if img_to_send and hasattr(img_to_send, 'seek'):
-                            try: img_to_send.seek(0)
-                            except: pass
+                    if not df_filtered_imgs.empty:
+                        # Sort by timestamp (newest first)
+                        if 'timestamp' in df_filtered_imgs.columns:
+                            df_filtered_imgs['timestamp'] = pd.to_datetime(df_filtered_imgs['timestamp'], errors='coerce')
+                            df_filtered_imgs = df_filtered_imgs.sort_values(by='timestamp', ascending=False)
                         
-                    success, message = drive_integration.upload_and_append(img_to_send, filename, row_data)
-                    if not success:
-                        all_success = False
-                        fail_msg += f"[{target_part_no} Err] "
-            
-            if all_success:
-                st.success("提交成功!")
-                st.balloons()
+                        # Limit to latest 12
+                        df_filtered_imgs = df_filtered_imgs.head(12)
+                        
+                        # Display
+                        img_cols = st.columns(3)
+                        for i, row in enumerate(df_filtered_imgs.itertuples()):
+                            col = img_cols[i % 3]
+                            try:
+                                ts_display = row.timestamp.strftime('%m/%d %H:%M') if pd.notnull(row.timestamp) else "N/A"
+                            except: ts_display = "N/A"
+                            
+                            col.image(row.image_url, caption=f"{ts_display} ({row.result})", use_container_width=True)
+                    else:
+                        st.info("此產品尚無歷史照片")
+                else:
+                    st.caption("無法讀取歷史資料 (資料欄位缺失)")
             else:
-                st.error(f"提交失敗: {fail_msg}")
+                st.caption("無歷史資料")
 
-    # --- Bottom: Abnormal Images (Removed - Moved to Top) ---
+
+        # [1] Standard Info Cards (Reference Info)
+        st.info("ℹ️ 標準規格參考")
+        
+        # Custom Card Helper (Apple Style)
+        # Redefined here because we are in a new block
+        def display_info_card(col_obj, label, value_html):
+            col_obj.markdown(f"""
+            <div style="
+                background: rgba(28, 28, 30, 0.6);
+                backdrop-filter: blur(20px);
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                padding: 15px;
+                border-radius: 18px; /* Apple Rounded Corners */
+                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+                text-align: center;
+                margin-bottom: 10px;
+            ">
+                <div style="color: #86868b; font-size: 0.9rem; margin-bottom: 3px; font-weight: 500;">{label}</div>
+                <div style="color: #f5f5f7; font-size: 1.3rem; font-weight: 600; word-wrap: break-word; line-height: 1.2;">
+                    {value_html}
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+
+        def get_formatted_value_html(std_col, max_col, min_col, unit=""):
+            std_val = current_part_data.get(f'clean_{std_col}')
+            max_val = current_part_data.get(f'clean_{max_col}')
+            min_val = current_part_data.get(f'clean_{min_col}')
+
+            if not isinstance(std_val, list): std_val = [std_val]
+            if not isinstance(max_val, list): max_val = [max_val]
+            if not isinstance(min_val, list): min_val = [min_val]
+            
+            display_parts = []
+            count = max(len(std_val), len(max_val), len(min_val))
+            is_dual_local = (count > 1)
+            
+            for i in range(count):
+                s = std_val[i] if i < len(std_val) else None
+                mx = max_val[i] if i < len(max_val) else None
+                mn = min_val[i] if i < len(min_val) else None
+                
+                s_str = f"{s:g}" if isinstance(s, (float, int)) else str(s)
+                
+                val_str = s_str
+                if mx is not None and mn is not None:
+                    val_str += f'<span style="font-size: 0.8em; color: #ccc;"> ({mn:g}-{mx:g})</span>'
+                
+                if is_dual_local:
+                    prefix = "R: " if i == 0 else "L: "
+                    display_parts.append(f"<div><span style='font-size:0.6em; color:#888'>{prefix}</span>{val_str}</div>")
+                else:
+                    display_parts.append(val_str)
+                    
+            return "".join(display_parts)
+
+        ric1, ric2, ric3 = st.columns(3)
+        
+        # 1. Standard Weight
+        val_weight = get_formatted_value_html('重量', '重量上限', '重量下限')
+        display_info_card(ric1, "標準重量 (g)", val_weight)
+        
+        # 2. Material Name
+        mat_name = current_part_data.get('原料名稱')
+        if pd.isna(mat_name) or str(mat_name).strip() == "":
+            mat_name = current_part_data.get('原料編號', 'N/A')
+        display_info_card(ric2, "原料名稱", f"{mat_name}")
+        
+        # 3. Standard Length
+        has_length_field = False 
+        if any(s['len_std'] is not None and s['len_std'] > 0 for s in specs):
+            has_length_field = True
+                    
+        if has_length_field:
+            val_len = get_formatted_value_html('標準長度', '長度上限', '長度下限')
+            display_info_card(ric3, "標準長度 (mm)", val_len)
+        else:
+            display_info_card(ric3, "標準長度 (mm)", "<span style='color:#555;'>N/A</span>")
+
+        # [4] Defect History Images (Static)
+        defect_images = []
+        d1 = current_part_data.get('異常履歷寫真')
+        if pd.notna(d1) and str(d1).strip(): defect_images.append(("1", str(d1).strip()))
+        for i in range(2, 4):
+            col = f"異常履歷寫真{i}"
+            val = current_part_data.get(col)
+            if pd.notna(val) and str(val).strip():
+                defect_images.append((str(i), str(val).strip()))
+
+        if defect_images:
+            with st.expander("⚠️ 過去異常履歷 (Defect History)", expanded=True):
+                dh_cols = st.columns(3)
+                for idx, (label, fname) in enumerate(defect_images):
+                    col_idx = idx % 3
+                    img_path = os.path.join("quality_images", fname)
+                    valid_img_path = check_image_availability(img_path)
+                    
+                    with dh_cols[col_idx]:
+                        if valid_img_path:
+                            st.image(valid_img_path, caption=f"履歷-{label}", use_container_width=True)
+                        else:
+                            st.caption(f"履歷{label} 讀取失敗")
+
+        # --- Key Control Points (Reference only) ---
+        st.markdown("##### ⚠️ 重點管制項目")
+        valid_cps = []
+        for i in range(1, 4):
+            col_name = f"重點管制{i}"
+            val = current_part_data.get(col_name)
+            if pd.notna(val) and str(val).strip():
+                valid_cps.append(str(val).strip())
+                
+        if valid_cps:
+            for cp in valid_cps:
+                st.markdown(f"- 🔴 **{cp}**")
+            control_points_log = ["Viewed"] 
+        else:
+            st.caption("無重點管制項目")
+            control_points_log = []
+
+
+        # [5] Inputs & Operation
+        st.divider()
+        st.subheader("📝 巡檢輸入作業")
+        
+        inspection_type = st.radio("巡檢階段", ["首件", "中件", "末件"], horizontal=True)
+
+        user_inputs = {}
+        # Input Loop
+        for idx, sp in enumerate(specs):
+            st.markdown(f"**{sp['label'].strip(' ()') or '規格'}**")
+            
+            def get_hint(mn, mx):
+                    return f" ({mn}~{mx})" if (mn is not None and mx is not None) else ""
+
+            # Weight
+            w_hint = get_hint(sp['min'], sp['max'])
+            w_input = st.number_input(f"重量 (g){w_hint}", min_value=0.0, step=0.1, format="%.1f", key=f"w_in_{idx}")
+            
+            # Length
+            l_input = None
+            if sp['len_std'] is not None and sp['len_std'] > 0:
+                l_hint = get_hint(sp['len_min'], sp['len_max'])
+                l_input = st.number_input(f"長度 (mm){l_hint}", min_value=0.0, step=0.1, format="%.1f", key=f"l_in_{idx}")
+                
+            user_inputs[idx] = {'weight': w_input, 'length': l_input}
+
+            # Validation Msg
+            msg_cols = st.columns([1, 1])
+            # Weight Msg
+            if w_input > 0:
+                if sp['min'] is not None and sp['max'] is not None:
+                        if not (sp['min'] <= w_input <= sp['max']):
+                            st.error(f"⚠️ 重量NG")
+                        else:
+                            st.success("重量 OK")
+            # Length Msg
+            if l_input is not None and l_input > 0:
+                if sp['len_min'] is not None and sp['len_max'] is not None:
+                        if not (sp['len_min'] <= l_input <= sp['len_max']):
+                            st.error(f"⚠️ 長度NG")
+                        else:
+                            st.success("長度 OK")
+            st.markdown("---")
+
+        # Material Check
+        st.markdown("##### 📦 原料確認")
+        material_check = st.radio("原料狀態", ["OK", "NG"], horizontal=True, key="mat_check_radio")
+        material_ok = (material_check == "OK")
+
+        # Change Point
+        change_point = st.text_area("變化點說明 (選填)", placeholder="如有異常請說明...", height=100)
+
+        # Photo Input
+        input_method = st.radio("影像輸入", ["📸 網頁相機", "📂 上傳照片"], index=1, horizontal=True)
+        img_files = []
+        if input_method == "📸 網頁相機":
+            cam_file = st.camera_input("拍照")
+            if cam_file: img_files = [cam_file]
+        else:
+            uploaded_files = st.file_uploader("上傳照片", type=["jpg", "png"], accept_multiple_files=True)
+            if uploaded_files: img_files = uploaded_files
+
+        # Submit Button
+        st.write("") # Spacer
+        if st.button("🚀 提交巡檢數據", use_container_width=True, type="primary"):
+            # Check inputs
+            any_missing_weight = any(user_inputs[i]['weight'] == 0 for i in user_inputs)
+            
+            if any_missing_weight:
+                st.warning("請輸入所有重量數據")
+            elif not material_ok:
+                st.warning("原料確認為 NG!")
+            else:
+                with st.spinner("資料上傳中..."):
+                    
+                    tz = datetime.timezone(datetime.timedelta(hours=8))
+                    timestamp = datetime.datetime.now(tz)
+                    ts_str = timestamp.strftime("%Y%m%d_%H%M%S")
+                    key_control_str = ", ".join(control_points_log) if control_points_log else "N/A"
+                    all_success = True
+                    fail_msg = ""
+                    primary_img = img_files[0] if img_files else None
+                    
+                    for idx, sp in enumerate(specs):
+                        target_part_no = f"{selected_part_no}{sp['suffix']}"
+                        m_weight = user_inputs[idx]['weight']
+                        m_length = user_inputs[idx]['length']
+                        
+                        current_status = "OK"
+                        if sp['min'] is not None and sp['max'] is not None:
+                            if not (sp['min'] <= m_weight <= sp['max']):
+                                current_status = "NG"
+                        
+                        filename = f"{selected_model}_{target_part_no}_{inspection_type}_{ts_str}.jpg"
+                        row_data = {
+                            "timestamp": timestamp.strftime("%Y-%m-%d %H:%M:%S"),
+                            "model": selected_model,
+                            "part_no": target_part_no,
+                            "inspection_type": inspection_type,
+                            "weight": m_weight,
+                            "length": m_length if m_length is not None else "",
+                            "material_ok": "OK" if material_ok else "NG",
+                            "change_point": change_point,
+                            "result": current_status,
+                            "key_control_status": key_control_str
+                        }
+                        
+                        img_to_send = primary_img
+                        if is_dual and idx > 0: img_to_send = None 
+                        if img_to_send and hasattr(img_to_send, 'seek'):
+                                try: img_to_send.seek(0)
+                                except: pass
+                            
+                        success, message = drive_integration.upload_and_append(img_to_send, filename, row_data)
+                        if not success:
+                            all_success = False
+                            fail_msg += f"[{target_part_no} Err] "
+                
+                if all_success:
+                    st.success("提交成功!")
+                    st.balloons()
+                else:
+                    st.error(f"提交失敗: {fail_msg}")
 
 elif mode == "📊 數據戰情室":
     st.header("📊 生產品質戰情室")
