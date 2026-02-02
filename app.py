@@ -703,70 +703,70 @@ if mode == "📝 巡檢輸入":
         
         with col_submit:
             if st.button("🚀 提交巡檢數據", use_container_width=True, type="primary"):
-            # Check inputs
-            any_missing_weight = any(user_inputs[i]['weight'] == 0 for i in user_inputs)
-            
-            if any_missing_weight:
-                st.warning("請輸入所有重量數據")
-            elif not material_ok:
-                st.warning("原料確認為 NG!")
-            else:
-                with st.spinner("資料上傳中..."):
-                    
-                    tz = datetime.timezone(datetime.timedelta(hours=8))
-                    timestamp = datetime.datetime.now(tz)
-                    ts_str = timestamp.strftime("%Y%m%d_%H%M%S")
-                    key_control_str = ", ".join(control_points_log) if control_points_log else "N/A"
-                    all_success = True
-                    fail_msg = ""
-                    primary_img = img_files[0] if img_files else None
-                    
-                    for idx, sp in enumerate(specs):
-                        target_part_no = f"{selected_part_no}{sp['suffix']}"
-                        m_weight = user_inputs[idx]['weight']
-                        m_length = user_inputs[idx]['length']
-                        
-                        current_status = "OK"
-                        if sp['min'] is not None and sp['max'] is not None:
-                            if not (sp['min'] <= m_weight <= sp['max']):
-                                current_status = "NG"
-                        
-                        filename = f"{selected_model}_{target_part_no}_{inspection_type}_{ts_str}.jpg"
-                        row_data = {
-                            "timestamp": timestamp.strftime("%Y-%m-%d %H:%M:%S"),
-                            "model": selected_model,
-                            "part_no": target_part_no,
-                            "inspection_type": inspection_type,
-                            "weight": m_weight,
-                            "length": m_length if m_length is not None else "",
-                            "material_ok": "OK" if material_ok else "NG",
-                            "change_point": change_point,
-                            "result": current_status,
-                            "key_control_status": key_control_str
-                        }
-                        
-                        img_to_send = primary_img
-                        if is_dual and idx > 0: img_to_send = None 
-                        if img_to_send and hasattr(img_to_send, 'seek'):
-                                try: img_to_send.seek(0)
-                                except: pass
-                            
-                        success, message = drive_integration.upload_and_append(img_to_send, filename, row_data)
-                        if not success:
-                            all_success = False
-                            fail_msg += f"[{target_part_no} Err] "
+                # Check inputs
+                any_missing_weight = any(user_inputs[i]['weight'] == 0 for i in user_inputs)
                 
-                if all_success:
-                    st.success("提交成功!")
-                    st.balloons()
-                    
-                    # --- Smart Cache Clearing ---
-                    drive_integration.fetch_history.clear()
-                    drive_integration.fetch_all_data.clear()
-                    st.toast("✅ 已清除快取，重新載入最新數據", icon="🔄")
-                    
+                if any_missing_weight:
+                    st.warning("請輸入所有重量數據")
+                elif not material_ok:
+                    st.warning("原料確認為 NG!")
                 else:
-                    st.error(f"提交失敗: {fail_msg}")
+                    with st.spinner("資料上傳中..."):
+                        
+                        tz = datetime.timezone(datetime.timedelta(hours=8))
+                        timestamp = datetime.datetime.now(tz)
+                        ts_str = timestamp.strftime("%Y%m%d_%H%M%S")
+                        key_control_str = ", ".join(control_points_log) if control_points_log else "N/A"
+                        all_success = True
+                        fail_msg = ""
+                        primary_img = img_files[0] if img_files else None
+                        
+                        for idx, sp in enumerate(specs):
+                            target_part_no = f"{selected_part_no}{sp['suffix']}"
+                            m_weight = user_inputs[idx]['weight']
+                            m_length = user_inputs[idx]['length']
+                            
+                            current_status = "OK"
+                            if sp['min'] is not None and sp['max'] is not None:
+                                if not (sp['min'] <= m_weight <= sp['max']):
+                                    current_status = "NG"
+                            
+                            filename = f"{selected_model}_{target_part_no}_{inspection_type}_{ts_str}.jpg"
+                            row_data = {
+                                "timestamp": timestamp.strftime("%Y-%m-%d %H:%M:%S"),
+                                "model": selected_model,
+                                "part_no": target_part_no,
+                                "inspection_type": inspection_type,
+                                "weight": m_weight,
+                                "length": m_length if m_length is not None else "",
+                                "material_ok": "OK" if material_ok else "NG",
+                                "change_point": change_point,
+                                "result": current_status,
+                                "key_control_status": key_control_str
+                            }
+                            
+                            img_to_send = primary_img
+                            if is_dual and idx > 0: img_to_send = None 
+                            if img_to_send and hasattr(img_to_send, 'seek'):
+                                    try: img_to_send.seek(0)
+                                    except: pass
+                                
+                            success, message = drive_integration.upload_and_append(img_to_send, filename, row_data)
+                            if not success:
+                                all_success = False
+                                fail_msg += f"[{target_part_no} Err] "
+                    
+                    if all_success:
+                        st.success("提交成功!")
+                        st.balloons()
+                        
+                        # --- Smart Cache Clearing ---
+                        drive_integration.fetch_history.clear()
+                        drive_integration.fetch_all_data.clear()
+                        st.toast("✅ 已清除快取，重新載入最新數據", icon="🔄")
+                        
+                    else:
+                        st.error(f"提交失敗: {fail_msg}")
 
 elif mode == "📊 數據戰情室":
     st.header("📊 生產品質戰情室")
