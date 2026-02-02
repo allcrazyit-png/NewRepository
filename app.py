@@ -299,7 +299,7 @@ if mode == "📝 巡檢輸入":
                     st.caption(f"{part_name}")
                     
                     # Select and Start Button
-                    if st.button("開始巡檢", key=f"btn_{part_no}", use_container_width=True):
+                    if st.button("登入巡檢資料", key=f"btn_{part_no}", use_container_width=True):
                         st.session_state['saved_model'] = selected_model_landing
                         st.session_state['saved_part'] = part_no
                         st.session_state['inspection_started'] = True
