@@ -590,12 +590,17 @@ if mode == "📝 巡檢輸入":
         st.divider()
         st.subheader("📝 巡檢輸入作業")
         
-        # [Feature] Quick Log Mode
-        quick_log_mode = st.toggle("⚡ 僅記錄變化點 (不輸入量測數據)", value=False)
-        if quick_log_mode:
-            st.info("ℹ️ 已開啟快速記錄模式：系統將自動略過重量與長度檢查。")
+        # [Feature] Work Mode Selector
+        mode_cols = st.columns([2, 1])
+        with mode_cols[0]:
+             work_mode = st.radio("作業模式", ["📏 標準巡檢 (量測+異常)", "⚡ 僅記錄變化點"], horizontal=True)
+        quick_log_mode = (work_mode == "⚡ 僅記錄變化點")
         
-        inspection_type = st.radio("巡檢階段", ["首件", "中件", "末件"], horizontal=True)
+        if quick_log_mode:
+            st.info("ℹ️ 快速模式：將自動填入標準值，僅需記錄異常。")
+            inspection_type = "變更點 (CP)"
+        else:
+            inspection_type = st.radio("巡檢階段", ["首件", "中件", "末件"], horizontal=True)
 
         user_inputs = {}
         # Input Loop
@@ -642,9 +647,12 @@ if mode == "📝 巡檢輸入":
             st.markdown("---")
 
         # Material Check
-        st.markdown("##### 📦 原料確認")
-        material_check = st.radio("原料狀態", ["OK", "NG"], horizontal=True, key="mat_check_radio")
-        material_ok = (material_check == "OK")
+        if not quick_log_mode:
+            st.markdown("##### 📦 原料確認")
+            material_check = st.radio("原料狀態", ["OK", "NG"], horizontal=True, key="mat_check_radio")
+            material_ok = (material_check == "OK")
+        else:
+            material_ok = True # Auto pass in Quick Mode
         # --- [Review Feature] Change Point History (Open & Closed) ---
         all_open_issues = []
         all_closed_issues = []
@@ -717,8 +725,14 @@ if mode == "📝 巡檢輸入":
 
 
         # Change Point Input
+        if quick_log_mode:
+             # Default to Issue in Quick Mode
+             cp_index = 1 
+        else:
+             cp_index = 0
+             
         st.markdown("##### 📝 變化點說明")
-        cp_opt = st.radio("變化點確認", ["無變化點 (Normal)", "有異常 (Issue)"], horizontal=True)
+        cp_opt = st.radio("變化點確認", ["無變化點 (Normal)", "有異常 (Issue)"], horizontal=True, index=cp_index)
         
         change_point = ""
         if cp_opt == "有異常 (Issue)":
@@ -768,7 +782,9 @@ if mode == "📝 巡檢輸入":
                             m_length = user_inputs[idx]['length']
                             
                             current_status = "OK"
-                            if sp['min'] is not None and sp['max'] is not None:
+                            if quick_log_mode:
+                                current_status = "CP" # Special status for Quick Mode
+                            elif sp['min'] is not None and sp['max'] is not None:
                                 if not (sp['min'] <= m_weight <= sp['max']):
                                     current_status = "NG"
                             
@@ -785,7 +801,7 @@ if mode == "📝 巡檢輸入":
                                 "inspection_type": inspection_type,
                                 "weight": m_weight,
                                 "length": m_length if m_length is not None else "",
-                                "material_ok": "OK" if material_ok else "NG",
+                                "material_ok": "OK" if material_ok else "N/A", # Use N/A for Quick Mode logic if preferred, or just Keep OK logic
                                 "change_point": change_point,
                                 "result": current_status,
                                 "status": final_status # [Feature] Explicit status logic
