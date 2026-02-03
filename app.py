@@ -735,8 +735,7 @@ if mode == "📝 巡檢輸入":
                                 "length": m_length if m_length is not None else "",
                                 "material_ok": "OK" if material_ok else "NG",
                                 "change_point": change_point,
-                                "result": current_status,
-                                "key_control_status": key_control_str
+                                "result": current_status
                             }
                             
                             img_to_send = primary_img
@@ -765,6 +764,9 @@ if mode == "📝 巡檢輸入":
 elif mode == "📊 數據戰情室":
     st.header("📊 生產品質戰情室")
     st.caption("即時同步 Google Sheet 雲端數據")
+    
+    # --- Dashboard Navigation ---
+    dash_page = st.sidebar.radio("功能切換", ["📈 重量趨勢追蹤", "🛡️ 變化點管理中心"], key="dash_nav")
 
     with st.spinner("正在連線至總部資料庫，請稍候..."):
         raw_data = drive_integration.fetch_all_data()
@@ -772,6 +774,129 @@ elif mode == "📊 數據戰情室":
     if not raw_data:
         st.warning("目前無數據或無法連線至 Google Sheet (請確認 GAS V4 是否部署成功)。")
     else:
+        df_dash = pd.DataFrame(raw_data)
+        
+        # --- Timezone Fix ---
+        if 'timestamp' in df_dash.columns:
+            df_dash['timestamp'] = pd.to_datetime(df_dash['timestamp'], errors='coerce')
+            if df_dash['timestamp'].dt.tz is None:
+                 df_dash['timestamp'] = df_dash['timestamp'].dt.tz_localize('UTC')
+            df_dash['timestamp'] = df_dash['timestamp'].dt.tz_convert('Asia/Taipei')
+            
+        # ==========================================
+        # 1. Weight Trend Tracking (Original Dashboard)
+        # ==========================================
+        if dash_page == "📈 重量趨勢追蹤":
+            # --- Filters ---
+            col_d1, col_d2, col_d3 = st.columns(3)
+            with col_d1:
+                models_dash = ["全部"] + list(df_dash['model'].unique())
+                filter_model = st.selectbox("篩選車型", models_dash)
+            with col_d2:
+                 if filter_model != "全部":
+                     parts_dash = ["全部"] + list(df_dash[df_dash['model'] == filter_model]['part_no'].unique())
+                 else:
+                     parts_dash = ["全部"] + list(df_dash['part_no'].unique())
+                 filter_part = st.selectbox("篩選品番", parts_dash)
+            with col_d3:
+                 results_dash = ["全部"] + list(df_dash['result'].unique())
+                 filter_result = st.selectbox("篩選結果", results_dash)
+            
+            # Apply filters
+            df_view = df_dash.copy()
+            if filter_model != "全部": df_view = df_view[df_view['model'] == filter_model]
+            if filter_part != "全部": df_view = df_view[df_view['part_no'] == filter_part]
+            if filter_result != "全部": df_view = df_view[df_view['result'] == filter_result]
+            
+            st.dataframe(df_view, use_container_width=True)
+            
+            if not df_view.empty:
+                st.subheader("📈 重量趨勢圖")
+                chart = alt.Chart(df_view).mark_line(point=True).encode(
+                    x=alt.X('timestamp', title='時間', axis=alt.Axis(format='%m/%d %H:%M')),
+                    y=alt.Y('weight', title='重量 (g)'),
+                    color='part_no',
+                    tooltip=['timestamp', 'model', 'part_no', 'weight', 'result']
+                ).interactive()
+                st.altair_chart(chart, use_container_width=True)
+
+        # ==========================================
+        # 2. Change Point Management Center
+        # ==========================================
+        elif dash_page == "🛡️ 變化點管理中心":
+            st.subheader("🛡️ 變化點管理中心")
+            
+            # Filter Logic: Only rows with Change Points
+            df_cp = df_dash[df_dash['change_point'].ne("") & df_dash['change_point'].notna()].copy()
+            
+            # Sort by Time Descending
+            df_cp = df_cp.sort_values(by='timestamp', ascending=False)
+            
+            # Filter Logic: Status
+            status_filter = st.radio("狀態篩選", ["待處理 (未審核/審核中)", "全部 (含結案)"], horizontal=True)
+            
+            if status_filter == "待處理 (未審核/審核中)":
+                df_cp = df_cp[~df_cp['status'].isin(["結案", "Closed"])]
+            
+            st.info(f"共發現 {len(df_cp)} 筆變化點記錄")
+            
+            for index, row in df_cp.iterrows():
+                # Define Status Colors
+                stat_color = "red"
+                if row['status'] == "審核中": stat_color = "orange"
+                elif row['status'] in ["結案", "Closed"]: stat_color = "green"
+                
+                with st.expander(f":{stat_color}[{row['status']}] {row['timestamp'].strftime('%Y-%m-%d %H:%M')} - {row['model']} {row['part_no']}", expanded=True):
+                    c1, c2 = st.columns([2, 1])
+                    with c1:
+                        st.markdown(f"**變化點內容:**")
+                        st.error(row['change_point'])
+                        st.caption(f"巡檢結果: {row['result']}")
+                    
+                    with c2:
+                        # Image logic
+                        if pd.notna(row.get('image')) and str(row.get('image')).strip():
+                             st.markdown(f"📄 照片ID: `{row.get('image')}`")
+                    
+                    st.divider()
+                    
+                    # --- Manager Actions ---
+                    m_col1, m_col2, m_col3 = st.columns([1, 2, 1])
+                    
+                    # Unique Key using timestamp + part_no to avoid conflicts
+                    u_key = f"{row['timestamp']}_{row['part_no']}"
+                    
+                    with m_col1:
+                        # Status Selector
+                        current_stat = row.get('status', '未審核')
+                        if not current_stat: current_stat = '未審核'
+                        
+                        target_index = 0
+                        opts = ["未審核", "審核中", "結案"]
+                        if current_stat in opts:
+                            target_index = opts.index(current_stat)
+                        
+                        new_status = st.selectbox("審核狀態", opts, index=target_index, key=f"stat_{u_key}")
+                    
+                    with m_col2:
+                         # Comment Input
+                         current_comment = row.get('manager_comment', '')
+                         if pd.isna(current_comment): current_comment = ""
+                         new_comment = st.text_input("主管留言", value=str(current_comment), key=f"comm_{u_key}")
+                    
+                    with m_col3:
+                        st.write("") # Spacer
+                        if st.button("💾 更新狀態", key=f"btn_upd_{u_key}", use_container_width=True):
+                            # Convert timestamp back to string for matching
+                            ts_str_for_api = row['timestamp'].strftime("%Y-%m-%d %H:%M:%S")
+                            
+                            with st.spinner("更新中..."):
+                                success, msg = drive_integration.update_status(ts_str_for_api, new_status, new_comment)
+                                if success:
+                                    st.toast("✅ 狀態已更新!", icon="💾")
+                                    st.rerun()
+                                else:
+                                    st.error(f"更新失敗: {msg}")
         df_dash = pd.DataFrame(raw_data)
         
         # --- Timezone Fix: Convert UTC to Taiwan Time ---

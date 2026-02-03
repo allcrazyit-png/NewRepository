@@ -143,14 +143,14 @@ def fetch_history(part_no):
 @st.cache_data(ttl=600) # Cache longer for full data
 def fetch_all_data():
     """
-    Fetches ALL data from GAS (Columns A-K) for the Dashboard.
+    Fetches ALL data from GAS for the Dashboard.
     Returns: List of dicts.
     """
     try:
         payload = {
-            "action": "get_all_data" # New V4 action
+            "action": "get_all_data" 
         }
-        response = requests.post(GAS_URL, json=payload, timeout=15) # Longer timeout for full data
+        response = requests.post(GAS_URL, json=payload, timeout=15)
         
         if response.status_code == 200:
             resp_json = response.json()
@@ -163,6 +163,33 @@ def fetch_all_data():
     except Exception as e:
         print(f"Error fetching dashboard data: {e}")
         return []
+
+def update_status(timestamp, status, comment):
+    """
+    Updates the status and manager comment for a specific record.
+    Args:
+        timestamp (str): The timestamp to identify the row.
+        status (str): New status (e.g., "審核中", "結案").
+        comment (str): Manager's comment.
+    """
+    try:
+        payload = {
+            "action": "update_status",
+            "timestamp": timestamp,
+            "status": status,
+            "manager_comment": comment
+        }
+        # Clear cache immediately since we are updating data
+        fetch_history.clear()
+        fetch_all_data.clear()
+        
+        response = requests.post(GAS_URL, json=payload, timeout=10)
+        if response.status_code == 200:
+            return True, "Update Success"
+        else:
+            return False, f"HTTP Error: {response.status_code}"
+    except Exception as e:
+        return False, str(e)
 
 # --- Deprecated / Unused Legacy Functions (Kept empty/mocked if imports exist somewhere) ---
 # We keep these signatures just in case app.py calls them individually during transition,
