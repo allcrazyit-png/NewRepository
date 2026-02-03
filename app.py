@@ -808,6 +808,12 @@ elif mode == "📊 數據戰情室":
                  else:
                      parts_dash = ["全部"] + list(df_dash['part_no'].unique())
                  filter_part = st.selectbox("篩選品番", parts_dash)
+                 
+                 # [FEATURE] Show small product image if filtered
+                 if filter_part != "全部":
+                     img_path = f"quality_images/{filter_part}_main.jpg"
+                     if check_image_availability(img_path):
+                         st.image(img_path, width=200, caption=filter_part)
             with col_d3:
                  results_dash = ["全部"] + list(df_dash['result'].unique())
                  filter_result = st.selectbox("篩選結果", results_dash)
