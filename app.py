@@ -700,7 +700,16 @@ if mode == "📝 巡檢輸入":
 
 
         # Change Point Input
-        change_point = st.text_area("變化點說明 (選填)", placeholder="如有異常請說明...", height=100)
+        st.markdown("##### 📝 變化點說明")
+        cp_opt = st.radio("變化點確認", ["無變化點 (Normal)", "有異常 (Issue)"], horizontal=True)
+        
+        change_point = ""
+        if cp_opt == "有異常 (Issue)":
+            change_point = st.text_area("請輸入異常說明", placeholder="例如: 模具損傷、原料更換...", height=100)
+            if not change_point.strip():
+                st.caption("⚠️ 請輸入說明，若空白將視為無異常")
+        else:
+            st.info("✅ 已選擇「無變化點」，本次巡檢將不會進入審核流程。")
 
         # Photo Input
         input_method = st.radio("影像輸入", ["📸 網頁相機", "📂 上傳照片"], index=1, horizontal=True)
