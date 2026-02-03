@@ -894,11 +894,59 @@ elif mode == "📊 數據戰情室":
             # Sort by Time Descending
             df_cp = df_cp.sort_values(by='timestamp', ascending=False)
             
-            # Filter Logic: Status
-            status_filter = st.radio("狀態篩選", ["待處理 (未審核/審核中)", "全部 (含結案)"], horizontal=True)
+            # --- Advanced Filters ---
+            st.markdown("##### 🔍 篩選條件")
+            f_col1, f_col2, f_col3, f_col4 = st.columns(4)
             
-            if status_filter == "待處理 (未審核/審核中)":
-                df_cp = df_cp[~df_cp['status'].isin(["結案", "Closed"])]
+            with f_col1:
+                # Date Range
+                # Default to last 30 days
+                today = datetime.date.today()
+                start_date = st.date_input("開始日期", today - datetime.timedelta(days=30))
+                end_date = st.date_input("結束日期", today)
+            
+            with f_col2:
+                # Model Filter
+                models_cp = ["全部"] + list(df_cp['model'].unique())
+                filter_cp_model = st.selectbox("車型 (Model)", models_cp, key="cp_model_filter")
+                
+            with f_col3:
+                # Part Filter (Dependent on Model)
+                if filter_cp_model != "全部":
+                    parts_cp = ["全部"] + list(df_cp[df_cp['model'] == filter_cp_model]['part_no'].unique())
+                else:
+                    parts_cp = ["全部"] + list(df_cp['part_no'].unique())
+                filter_cp_part = st.selectbox("品番 (Part No)", parts_cp, key="cp_part_filter")
+                
+            with f_col4:
+                # Status Filter (Multiselect)
+                status_opts = ["未審核", "審核中", "結案", "Closed"]
+                filter_cp_status = st.multiselect("狀態 (Status)", status_opts, default=["未審核", "審核中"])
+
+            # --- Apply Filters ---
+            # 1. Date
+            df_cp['date'] = df_cp['timestamp'].dt.date
+            df_cp = df_cp[
+                (df_cp['date'] >= start_date) & 
+                (df_cp['date'] <= end_date)
+            ]
+            
+            # 2. Model
+            if filter_cp_model != "全部":
+                df_cp = df_cp[df_cp['model'] == filter_cp_model]
+                
+            # 3. Part
+            if filter_cp_part != "全部":
+                df_cp = df_cp[df_cp['part_no'] == filter_cp_part]
+                
+            # 4. Status
+            if filter_cp_status:
+                # Handle "Closed" being same as "結案" in logic if needed, but here we filter by text
+                # Normalize user selection to match data if needed, or just strict match
+                df_cp = df_cp[df_cp['status'].isin(filter_cp_status)]
+            else:
+                st.warning("請選擇至少一種狀態")
+                df_cp = df_cp.iloc[0:0] # Return empty if no status selected (safe default)
             
             st.info(f"共發現 {len(df_cp)} 筆變化點記錄")
             
