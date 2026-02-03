@@ -981,8 +981,11 @@ elif mode == "📊 數據戰情室":
                         
                         if part_spec.empty:
                             # Try removing suffix like "_1", "_2"
-                            base_part_underscore = filter_part.split('_')[0]
-                            part_spec = df[df['品番'] == base_part_underscore]
+                            # [Fix] Use rsplit to only remove the LAST segment (suffix), preserving underscores in part name
+                            # e.g. "71861_2-VU010_1" -> "71861_2-VU010"
+                            if '_' in filter_part:
+                                base_part_underscore = filter_part.rsplit('_', 1)[0]
+                                part_spec = df[df['品番'] == base_part_underscore]
                             
                         if part_spec.empty:
                              # Try removing space suffix like " (R)"
