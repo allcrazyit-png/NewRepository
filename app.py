@@ -643,6 +643,12 @@ if mode == "📝 巡檢輸入":
              h_data = drive_integration.fetch_history(h_target)
              if h_data:
                  df_h = pd.DataFrame(h_data)
+                 
+                 # [Feature] Sort History Newest First
+                 if 'timestamp' in df_h.columns:
+                     df_h['timestamp'] = pd.to_datetime(df_h['timestamp'], errors='coerce')
+                     df_h = df_h.sort_values(by='timestamp', ascending=False)
+
                  # Safety for missing columns
                  if 'change_point' not in df_h.columns: df_h['change_point'] = ""
                  if 'status' not in df_h.columns: df_h['status'] = "未審核"
