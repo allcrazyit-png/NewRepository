@@ -897,8 +897,8 @@ elif mode == "📊 數據戰情室":
                     with m_col3:
                         st.write("") # Spacer
                         if st.button("💾 更新狀態", key=f"btn_upd_{u_key}", use_container_width=True):
-                            # Convert timestamp back to string for matching
-                            ts_str_for_api = row['timestamp'].strftime("%Y-%m-%d %H:%M:%S")
+                            # Use ISO format for robust date parsing in GAS
+                            ts_str_for_api = row['timestamp'].isoformat()
                             
                             with st.spinner("更新中..."):
                                 success, msg = drive_integration.update_status(ts_str_for_api, new_status, new_comment)
