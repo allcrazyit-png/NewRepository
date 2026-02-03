@@ -976,7 +976,19 @@ elif mode == "📊 數據戰情室":
                     y_cols = ['weight']
                     if filter_part != "全部":
                         # Lookup specs from the global df (loaded from parts_data.csv)
+                        # [Fix] Fuzzy Match for Suffixes (e.g., Part_1, Part_2)
                         part_spec = df[df['品番'] == filter_part]
+                        
+                        if part_spec.empty:
+                            # Try removing suffix like "_1", "_2"
+                            base_part_underscore = filter_part.split('_')[0]
+                            part_spec = df[df['品番'] == base_part_underscore]
+                            
+                        if part_spec.empty:
+                             # Try removing space suffix like " (R)"
+                             base_part_space = filter_part.split(' ')[0]
+                             part_spec = df[df['品番'] == base_part_space]
+                        
                         if not part_spec.empty:
                             spec_row = part_spec.iloc[0]
                             limit_h = spec_row.get('clean_重量上限')
