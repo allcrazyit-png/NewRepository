@@ -971,13 +971,56 @@ elif mode == "📊 數據戰情室":
                     chart_df['weight'] = pd.to_numeric(chart_df['weight'], errors='coerce')
                     chart_df = chart_df[chart_df['weight'] > 0]
 
-                chart = alt.Chart(chart_df).mark_line(point=True).encode(
-                    x=alt.X('timestamp', title='時間', axis=alt.Axis(format='%m/%d %H:%M')),
-                    y=alt.Y('weight', title='重量 (g)', scale=alt.Scale(zero=False)),
-                    color='part_no',
-                    tooltip=['timestamp', 'model', 'part_no', 'weight', 'result']
-                ).interactive()
-                st.altair_chart(chart, use_container_width=True)
+                if not chart_df.empty:
+                    # [Feature] Add Limit Lines if a specific part is selected
+                    y_cols = ['weight']
+                    if filter_part != "全部":
+                        # Lookup specs from the global df (loaded from parts_data.csv)
+                        part_spec = df[df['品番'] == filter_part]
+                        if not part_spec.empty:
+                            spec_row = part_spec.iloc[0]
+                            limit_h = spec_row.get('clean_重量上限')
+                            limit_l = spec_row.get('clean_重量下限')
+                            
+                            # Handle list values (Dual Mold) - Take first or average? 
+                            # Dashboard usually tracks overall trend. Let's take the first valid value for simplicity
+                            # or if list, maybe just don't plot limits to avoid confusion?
+                            # For consistency with single part logic, we try to take the primary limit.
+                            if isinstance(limit_h, list): limit_h = limit_h[0]
+                            if isinstance(limit_l, list): limit_l = limit_l[0]
+                            
+                            if limit_h is not None:
+                                chart_df['Limit H'] = float(limit_h)
+                                y_cols.append('Limit H')
+                            if limit_l is not None:
+                                chart_df['Limit L'] = float(limit_l)
+                                y_cols.append('Limit L')
+
+                    # Prepare Data for Altair (Long Format for Multi-Line)
+                    chart_long = chart_df.melt('timestamp', value_vars=y_cols, var_name='MetricType', value_name='Value')
+                    
+                    # Dynamic Y scale
+                    y_min_val = chart_long['Value'].min()
+                    y_max_val = chart_long['Value'].max()
+                    padding = (y_max_val - y_min_val) * 0.1 if y_max_val != y_min_val else 5
+                    
+                    # Colors
+                    color_domain = ['Limit H', 'Limit L', 'weight']
+                    color_range = ['#FF6C6C', '#FF6C6C', '#457B9D'] 
+                    
+                    base = alt.Chart(chart_long).encode(
+                        x=alt.X('timestamp', title='時間', axis=alt.Axis(format='%m/%d %H:%M')),
+                        y=alt.Y('Value', title='重量 (g)', scale=alt.Scale(domain=[y_min_val - padding, y_max_val + padding])),
+                        color=alt.Color('MetricType', legend=None, scale=alt.Scale(domain=color_domain, range=color_range)),
+                        tooltip=['timestamp', 'Value', 'MetricType']
+                    )
+                    
+                    line_w = base.transform_filter(alt.datum.MetricType == 'weight').mark_line(point=True)
+                    line_limits = base.transform_filter((alt.datum.MetricType == 'Limit H') | (alt.datum.MetricType == 'Limit L')).mark_line(strokeDash=[5, 5], opacity=0.8)
+                    
+                    st.altair_chart((line_w + line_limits).interactive(), use_container_width=True)
+                else:
+                    st.info("尚無有效數據 (已隱藏快速記錄的 CP 資料)")
 
         # ==========================================
         # 2. Change Point Management Center
