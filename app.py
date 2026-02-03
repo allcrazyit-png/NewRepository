@@ -7,6 +7,7 @@ import json
 import drive_integration
 import streamlit.components.v1 as components
 import os
+import time
 
 # --- Helper: Image Integrity Check ---
 @st.cache_data(show_spinner=False)
@@ -775,6 +776,10 @@ if mode == "📝 巡檢輸入":
                         drive_integration.fetch_history.clear()
                         drive_integration.fetch_all_data.clear()
                         st.toast("✅ 已清除快取，重新載入最新數據", icon="🔄")
+                        
+                        # [Fixed] Immediate Rerun to update data
+                        time.sleep(1.5)
+                        st.rerun()
                         
                     else:
                         st.error(f"提交失敗: {fail_msg}")
