@@ -109,6 +109,9 @@ def upload_and_append(image_file, filename, row_data):
         response = requests.post(GAS_URL, json=payload)
         
         if response.status_code == 200 and "Success" in response.text:
+            # Clear cache to reflect new data usage immediately
+            fetch_history.clear()
+            fetch_all_data.clear()
             return True, "成功"
         else:
             return False, f"GAS Error: {response.text}"
