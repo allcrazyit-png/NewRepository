@@ -730,23 +730,21 @@ if mode == "📝 巡檢輸入":
                     st.divider()
 
 
-        # Change Point Input
-        if quick_log_mode:
-             # Default to Issue in Quick Mode
-             cp_index = 1 
-        else:
-             cp_index = 0
-             
         st.markdown("##### 📝 變化點說明")
-        cp_opt = st.radio("變化點確認", ["無變化點 (Normal)", "有異常 (Issue)"], horizontal=True, index=cp_index)
+        
+        # [Design] Simplified to Checkbox
+        # Default checked if in Quick Mode (since Quick Mode implies reporting an issue)
+        is_issue = st.checkbox("⚠️ 回報異常 (Report Issue)", value=quick_log_mode)
         
         change_point = ""
-        if cp_opt == "有異常 (Issue)":
+        if is_issue:
             change_point = st.text_area("請輸入異常說明", placeholder="例如: 模具損傷、原料更換...", height=100)
             if not change_point.strip():
                 st.caption("⚠️ 請輸入說明，若空白將視為無異常")
         else:
-            st.info("✅ 已選擇「無變化點」，本次巡檢將不會進入審核流程。")
+            # Only show this info if explicitly unchecked in Quick Mode (unlikely) or just standard mode
+            if not quick_log_mode:
+                st.markdown("<span style='color: #888; font-size: 0.9em;'>✅ 無變化點 (Standard)</span>", unsafe_allow_html=True)
 
         # Photo Input
         input_method = st.radio("影像輸入", ["📸 網頁相機", "📂 上傳照片"], index=1, horizontal=True)
