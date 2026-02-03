@@ -420,6 +420,12 @@ if mode == "📝 巡檢輸入":
                         chart_df['weight'] = pd.to_numeric(chart_df['weight'], errors='coerce')
                         chart_df = chart_df.dropna(subset=['timestamp', 'weight'])
                         
+                        # [Fix] Filter out Quick Mode entries (Weight=0 or Result=CP)
+                        if 'result' in chart_df.columns:
+                            chart_df = chart_df[chart_df['result'] != 'CP']
+                        chart_df = chart_df[chart_df['weight'] > 0]
+                        
+                        
                         if not chart_df.empty:
                             w_max_limit = sp['max']
                             w_min_limit = sp['min']
@@ -956,9 +962,18 @@ elif mode == "📊 數據戰情室":
             
             if not df_view.empty:
                 st.subheader("📈 重量趨勢圖")
-                chart = alt.Chart(df_view).mark_line(point=True).encode(
+                
+                # [Fix] Filter out Quick Mode entries for Chart
+                chart_df = df_view.copy()
+                if 'result' in chart_df.columns:
+                    chart_df = chart_df[chart_df['result'] != 'CP']
+                if 'weight' in chart_df.columns:
+                    chart_df['weight'] = pd.to_numeric(chart_df['weight'], errors='coerce')
+                    chart_df = chart_df[chart_df['weight'] > 0]
+
+                chart = alt.Chart(chart_df).mark_line(point=True).encode(
                     x=alt.X('timestamp', title='時間', axis=alt.Axis(format='%m/%d %H:%M')),
-                    y=alt.Y('weight', title='重量 (g)'),
+                    y=alt.Y('weight', title='重量 (g)', scale=alt.Scale(zero=False)),
                     color='part_no',
                     tooltip=['timestamp', 'model', 'part_no', 'weight', 'result']
                 ).interactive()
