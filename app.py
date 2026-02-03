@@ -975,8 +975,11 @@ elif mode == "📊 數據戰情室":
                             st.image(prod_img_path, width=120, caption="產品示意圖")
 
                         # Image logic (Inspection Photo)
-                        if pd.notna(row.get('image')) and str(row.get('image')).strip():
-                             st.markdown(f"📄 照片ID: `{row.get('image')}`")
+                        img_id = str(row.get('image', '')).strip()
+                        if img_id and img_id.lower() != "nan":
+                             # Construct Drive URL
+                             img_url = f"https://drive.google.com/file/d/{img_id}/view?usp=sharing"
+                             st.markdown(f"📸 [查看巡檢照片]({img_url})")
                     
                     st.divider()
                     
