@@ -560,7 +560,7 @@ if mode == "📝 巡檢輸入":
                 defect_images.append((str(i), str(val).strip()))
 
         if defect_images:
-            with st.expander("⚠️ 過去異常履歷 (Defect History)", expanded=True):
+            with st.expander("⚠️ 過去異常履歷 (Defect History)", expanded=False):
                 # Use 5 columns to make images smaller (User Request)
                 dh_cols = st.columns(5)
                 for idx, (label, fname) in enumerate(defect_images):
