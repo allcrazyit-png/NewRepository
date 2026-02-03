@@ -705,8 +705,16 @@ if mode == "📝 巡檢輸入":
                         ts_disp = ts_obj.strftime('%Y/%m/%d %H:%M')
                     except: pass
                     
+                    
                     # Layout: Status | Time | Part
-                    st.markdown(f"**🔴 [{issue['status']}] {ts_disp} - {issue['part']}**")
+                    # Determine Color/Icon
+                    s_icon = "🔴"
+                    s_color = "red"
+                    if issue['status'] == "審核中":
+                        s_icon = "🟡" # Yellow light for Under Review
+                        s_color = "orange"
+                    
+                    st.markdown(f"**{s_icon} [:{s_color}[{issue['status']}]] {ts_disp} - {issue['part']}**")
                     st.info(f"💬 {issue['msg']}")
                     if issue['comment']:
                         st.caption(f"👨‍💼 主管回應: {issue['comment']}")
@@ -915,10 +923,15 @@ elif mode == "📊 數據戰情室":
             for index, row in df_cp.iterrows():
                 # Define Status Colors
                 stat_color = "red"
-                if row['status'] == "審核中": stat_color = "orange"
-                elif row['status'] in ["結案", "Closed"]: stat_color = "green"
+                stat_icon = "🔴"
+                if row['status'] == "審核中": 
+                    stat_color = "orange"
+                    stat_icon = "🟡"
+                elif row['status'] in ["結案", "Closed"]: 
+                    stat_color = "green"
+                    stat_icon = "🟢"
                 
-                with st.expander(f":{stat_color}[{row['status']}] {row['timestamp'].strftime('%Y-%m-%d %H:%M')} - {row['model']} {row['part_no']}", expanded=True):
+                with st.expander(f"{stat_icon} :{stat_color}[{row['status']}] {row['timestamp'].strftime('%Y-%m-%d %H:%M')} - {row['model']} {row['part_no']}", expanded=True):
                     c1, c2 = st.columns([2, 1])
                     with c1:
                         st.markdown(f"**變化點內容:**")
