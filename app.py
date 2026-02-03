@@ -754,6 +754,11 @@ if mode == "📝 巡檢輸入":
                                     current_status = "NG"
                             
                             filename = f"{selected_model}_{target_part_no}_{inspection_type}_{ts_str}.jpg"
+                            # Determine Status based on Change Point
+                            final_status = "未審核"
+                            if not change_point.strip():
+                                final_status = "結案"
+                            
                             row_data = {
                                 "timestamp": timestamp.strftime("%Y-%m-%d %H:%M:%S"),
                                 "model": selected_model,
@@ -763,7 +768,8 @@ if mode == "📝 巡檢輸入":
                                 "length": m_length if m_length is not None else "",
                                 "material_ok": "OK" if material_ok else "NG",
                                 "change_point": change_point,
-                                "result": current_status
+                                "result": current_status,
+                                "status": final_status # [Feature] Explicit status logic
                             }
                             
                             img_to_send = primary_img

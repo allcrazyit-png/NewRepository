@@ -102,6 +102,7 @@ def upload_and_append(image_file, filename, row_data):
             "material_ok": row_data.get("material_ok"),
             "change_point": row_data.get("change_point"),
             "result": row_data.get("result"),
+            "status": row_data.get("status"), # [Feature] Explicit status
             "key_control_status": row_data.get("key_control_status") 
         }
         
