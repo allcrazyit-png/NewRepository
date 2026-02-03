@@ -782,6 +782,16 @@ elif mode == "📊 數據戰情室":
             if df_dash['timestamp'].dt.tz is None:
                  df_dash['timestamp'] = df_dash['timestamp'].dt.tz_localize('UTC')
             df_dash['timestamp'] = df_dash['timestamp'].dt.tz_convert('Asia/Taipei')
+
+        # --- Schema Safety Check (Fix for Cache/Legacy Data) ---
+        if 'status' not in df_dash.columns:
+            df_dash['status'] = "未審核"
+        if 'manager_comment' not in df_dash.columns:
+            df_dash['manager_comment'] = ""
+        
+        # Ensure values are not NaN (fillna)
+        df_dash['status'] = df_dash['status'].fillna("未審核")
+        df_dash['manager_comment'] = df_dash['manager_comment'].fillna("")
             
         # ==========================================
         # 1. Weight Trend Tracking (Original Dashboard)
