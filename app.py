@@ -632,6 +632,7 @@ if mode == "📝 巡檢輸入":
         # Material Check
         st.markdown("##### 📦 原料確認")
         material_check = st.radio("原料狀態", ["OK", "NG"], horizontal=True, key="mat_check_radio")
+        material_ok = (material_check == "OK")
         # --- [Review Feature] Change Point History (Open & Closed) ---
         all_open_issues = []
         all_closed_issues = []
