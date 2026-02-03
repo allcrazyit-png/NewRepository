@@ -680,6 +680,50 @@ if mode == "📝 巡檢輸入":
         material_check = st.radio("原料狀態", ["OK", "NG"], horizontal=True, key="mat_check_radio")
         material_ok = (material_check == "OK")
 
+        # --- [New Feature] Open Change Point Alerts ---
+        # 顯示該部品 (含各模穴) 所有未結案的變化點，提醒作業員
+        all_open_issues = []
+        for sp in specs:
+             # Re-fetch (cached) to check for open issues
+             h_target = f"{selected_part_no}{sp['suffix']}"
+             h_data = drive_integration.fetch_history(h_target)
+             if h_data:
+                 df_h = pd.DataFrame(h_data)
+                 # Safety for missing columns
+                 if 'change_point' not in df_h.columns: df_h['change_point'] = ""
+                 if 'status' not in df_h.columns: df_h['status'] = "未審核"
+                 
+                 # Normalize status
+                 df_h['status'] = df_h['status'].fillna("未審核")
+                 
+                 # Filter: Change Point is not empty AND Status is not Closed
+                 issues = df_h[
+                     (df_h['change_point'].notna()) & 
+                     (df_h['change_point'] != "") & 
+                     (~df_h['status'].isin(["結案", "Closed"]))
+                 ]
+                 
+                 for _, issue in issues.iterrows():
+                     all_open_issues.append({
+                         "part": h_target,
+                         "ts": issue.get('timestamp', 'N/A'),
+                         "msg": issue['change_point'],
+                         "status": issue.get('status', '未審核')
+                     })
+
+        if all_open_issues:
+            st.error(f"⚠️ 警告：本部品共有 {len(all_open_issues)} 筆未結案變化點！請特別注意！")
+            with st.expander("🔻 點擊查看未結案變化點細節", expanded=True):
+                for issue in all_open_issues:
+                    # Format timestamp
+                    ts_disp = str(issue['ts'])
+                    try:
+                        ts_obj = pd.to_datetime(issue['ts'])
+                        ts_disp = ts_obj.strftime('%Y/%m/%d %H:%M')
+                    except: pass
+                    
+                    st.warning(f"🔴 [{issue['part']}] {ts_disp}\n\n💬 **{issue['msg']}**\n\n(狀態: {issue['status']})")
+
         # Change Point
         change_point = st.text_area("變化點說明 (選填)", placeholder="如有異常請說明...", height=100)
 
