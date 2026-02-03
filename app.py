@@ -460,54 +460,7 @@ if mode == "📝 巡檢輸入":
                             st.caption("長度趨勢圖 (請參考詳細數據)")
 
 
-        # --- [NEW] Historical Images Gallery ---
-        # Fetch all data and filter for images of this product
-        # 1. Fetch
-        # Note: fetch_all_data() might be heavy, but it's the only way to get image URLs currently
-        with st.expander("📸 歷史檢測照片 (Inspection History Images)", expanded=False):
-            with st.spinner("載入歷史照片中..."):
-                all_records = drive_integration.fetch_all_data()
-                
-            if all_records:
-                df_history = pd.DataFrame(all_records)
-                # Filter by Model and Part No (or suffixes)
-                # Check column existence
-                if 'part_no' in df_history.columns and 'image_url' in df_history.columns:
-                    # Filter logic
-                    # Match exact part_no OR part_no + suffix (e.g. 62511-VU010 match 62511-VU010_1)
-                    # We can use the 'specs' to know the target part numbers
-                    target_parts = [f"{selected_part_no}{sp['suffix']}" for sp in specs]
-                    
-                    df_filtered_imgs = df_history[
-                        df_history['part_no'].isin(target_parts) &
-                        df_history['image_url'].notna() &
-                        (df_history['image_url'] != "")
-                    ].copy()
-                    
-                    if not df_filtered_imgs.empty:
-                        # Sort by timestamp (newest first)
-                        if 'timestamp' in df_filtered_imgs.columns:
-                            df_filtered_imgs['timestamp'] = pd.to_datetime(df_filtered_imgs['timestamp'], errors='coerce')
-                            df_filtered_imgs = df_filtered_imgs.sort_values(by='timestamp', ascending=False)
-                        
-                        # Limit to latest 12
-                        df_filtered_imgs = df_filtered_imgs.head(12)
-                        
-                        # Display
-                        img_cols = st.columns(3)
-                        for i, row in enumerate(df_filtered_imgs.itertuples()):
-                            col = img_cols[i % 3]
-                            try:
-                                ts_display = row.timestamp.strftime('%m/%d %H:%M') if pd.notnull(row.timestamp) else "N/A"
-                            except: ts_display = "N/A"
-                            
-                            col.image(row.image_url, caption=f"{ts_display} ({row.result})", use_container_width=True)
-                    else:
-                        st.info("此產品尚無歷史照片")
-                else:
-                    st.caption("無法讀取歷史資料 (資料欄位缺失)")
-            else:
-                st.caption("無歷史資料")
+        # [4] Historical Images Gallery - REMOVED as per user request
 
 
         # [1] Standard Info Cards (Reference Info)
