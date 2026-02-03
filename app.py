@@ -895,7 +895,35 @@ elif mode == "📊 數據戰情室":
             if 'timestamp' in df_view.columns:
                  df_view = df_view.sort_values(by='timestamp', ascending=False)
             
-            st.dataframe(df_view, use_container_width=True)
+            # [Feature] Process Image Links for Dataframe
+            if 'image' in df_view.columns:
+                def make_drive_link(val):
+                    val_str = str(val).strip().replace('"', '').replace("'", "")
+                    if not val_str or val_str.lower() == 'nan': return None
+                    if val_str.startswith('http'): return val_str
+                    return f"https://drive.google.com/file/d/{val_str}/preview"
+                
+                df_view['image'] = df_view['image'].apply(make_drive_link)
+
+            st.dataframe(
+                df_view, 
+                use_container_width=True,
+                column_config={
+                    "image": st.column_config.LinkColumn(
+                        "巡檢照片", 
+                        display_text="📸 查看",
+                        help="點擊預覽照片"
+                    ),
+                    "timestamp": st.column_config.DatetimeColumn(
+                        "時間",
+                        format="MM/DD HH:mm"
+                    ),
+                    "weight": st.column_config.NumberColumn(
+                        "重量 (g)",
+                        format="%.2f"
+                    )
+                }
+            )
             
             if not df_view.empty:
                 st.subheader("📈 重量趨勢圖")
