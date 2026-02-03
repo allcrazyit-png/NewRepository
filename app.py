@@ -885,6 +885,10 @@ elif mode == "📊 數據戰情室":
             if filter_part != "全部": df_view = df_view[df_view['part_no'] == filter_part]
             if filter_result != "全部": df_view = df_view[df_view['result'] == filter_result]
             
+            # [Feature] Sort by Timestamp Descending (Newest First)
+            if 'timestamp' in df_view.columns:
+                 df_view = df_view.sort_values(by='timestamp', ascending=False)
+            
             st.dataframe(df_view, use_container_width=True)
             
             if not df_view.empty:
