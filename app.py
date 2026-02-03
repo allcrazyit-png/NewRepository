@@ -678,9 +678,7 @@ if mode == "📝 巡檢輸入":
         # Material Check
         st.markdown("##### 📦 原料確認")
         material_check = st.radio("原料狀態", ["OK", "NG"], horizontal=True, key="mat_check_radio")
-        material_ok = (material_check == "OK")
-
-        # --- [Feature] Change Point History (Open & Closed) ---
+        # --- [Review Feature] Change Point History (Open & Closed) ---
         all_open_issues = []
         all_closed_issues = []
         
@@ -689,9 +687,13 @@ if mode == "📝 巡檢輸入":
              h_data = drive_integration.fetch_history(h_target)
              if h_data:
                  df_h = pd.DataFrame(h_data)
+                 # Safety for missing columns
                  if 'change_point' not in df_h.columns: df_h['change_point'] = ""
                  if 'status' not in df_h.columns: df_h['status'] = "未審核"
+                 if 'manager_comment' not in df_h.columns: df_h['manager_comment'] = "" # Capture comment
+                 
                  df_h['status'] = df_h['status'].fillna("未審核")
+                 df_h['manager_comment'] = df_h['manager_comment'].fillna("")
                  
                  # valid rows with change point content
                  valid_issues = df_h[
@@ -704,7 +706,8 @@ if mode == "📝 巡檢輸入":
                          "part": h_target,
                          "ts": issue.get('timestamp', 'N/A'),
                          "msg": issue['change_point'],
-                         "status": issue.get('status', '未審核')
+                         "status": issue.get('status', '未審核'),
+                         "comment": issue.get('manager_comment', '')
                      }
                      
                      if item['status'] in ["結案", "Closed"]:
@@ -712,29 +715,25 @@ if mode == "📝 巡檢輸入":
                      else:
                          all_open_issues.append(item)
 
-        # 1. Open Issues (Default Collapsed)
+        # 1. Open Issues (Alert Top)
         if all_open_issues:
-            # Show a summary warning message outside to alert user there ARE issues
             st.error(f"⚠️ 注意：本部品尚有 {len(all_open_issues)} 筆未結案變化點")
             with st.expander("🔻 查看未結案細節 (Open Issues)", expanded=False):
                 for issue in all_open_issues:
+                    # Compact Display
                     ts_disp = str(issue['ts'])
-                    try:
+                    try: 
                         ts_obj = pd.to_datetime(issue['ts'])
                         ts_disp = ts_obj.strftime('%Y/%m/%d %H:%M')
                     except: pass
-                    st.warning(f"🔴 [{issue['part']}] {ts_disp}\n\n**{issue['msg']}**\n\n(Status: {issue['status']})")
-        
-        # 2. Closed Issues (Default Collapsed)
-        if all_closed_issues:
-            with st.expander("✅ 查看已結案歷史 (Closed History)", expanded=False):
-                for issue in all_closed_issues:
-                    ts_disp = str(issue['ts'])
-                    try:
-                        ts_obj = pd.to_datetime(issue['ts'])
-                        ts_disp = ts_obj.strftime('%Y/%m/%d %H:%M')
-                    except: pass
-                    st.success(f"🟢 [{issue['part']}] {ts_disp}\n\n**{issue['msg']}**\n\n(Status: {issue['status']})")
+                    
+                    # Layout: Status | Time | Part
+                    st.markdown(f"**🔴 [{issue['status']}] {ts_disp} - {issue['part']}**")
+                    st.info(f"💬 {issue['msg']}")
+                    if issue['comment']:
+                        st.caption(f"👨‍💼 主管回應: {issue['comment']}")
+                    st.divider()
+
 
         # Change Point Input
         change_point = st.text_area("變化點說明 (選填)", placeholder="如有異常請說明...", height=100)
@@ -816,6 +815,29 @@ if mode == "📝 巡檢輸入":
                         
                     else:
                         st.error(f"提交失敗: {fail_msg}")
+
+        # 2. Closed Issues (Moved to Bottom)
+        if all_closed_issues:
+            st.divider()
+            with st.expander("✅ 已結案歷史 (Closed History)", expanded=False):
+                for issue in all_closed_issues:
+                    # Compact Display
+                    ts_disp = str(issue['ts'])
+                    try: 
+                        ts_obj = pd.to_datetime(issue['ts'])
+                        ts_disp = ts_obj.strftime('%Y/%m/%d') # Short date
+                    except: pass
+                    
+                    c1, c2 = st.columns([1, 3])
+                    with c1:
+                        st.caption(f"🟢 {issue['status']}\n{ts_disp}")
+                    with c2:
+                        st.markdown(f"**{issue['msg']}**")
+                        if issue['comment']:
+                            st.caption(f"👨‍💼: {issue['comment']}")
+                        else:
+                            st.caption("(無留言)")
+                    st.divider()
 
 elif mode == "📊 數據戰情室":
     st.header("📊 生產品質戰情室")
