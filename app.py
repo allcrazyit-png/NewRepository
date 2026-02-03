@@ -984,10 +984,17 @@ elif mode == "📊 數據戰情室":
                             st.image(prod_img_path, width=120, caption="產品示意圖")
 
                         # Image logic (Inspection Photo)
-                        img_id = str(row.get('image', '')).strip()
-                        if img_id and img_id.lower() != "nan":
-                             # Construct Drive URL
-                             img_url = f"https://drive.google.com/file/d/{img_id}/view?usp=sharing"
+                        raw_img = str(row.get('image', '')).strip()
+                        # Clean potential artifacts like quotes
+                        raw_img = raw_img.replace('"', '').replace("'", "")
+                        
+                        if raw_img and raw_img.lower() != "nan":
+                             if raw_img.startswith("http"):
+                                 img_url = raw_img
+                             else:
+                                 # Assume it's an ID
+                                 img_url = f"https://drive.google.com/file/d/{raw_img}/preview" # Use preview for better UX
+                             
                              st.markdown(f"📸 [查看巡檢照片]({img_url})")
                     
                     st.divider()
