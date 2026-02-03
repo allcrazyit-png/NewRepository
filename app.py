@@ -757,7 +757,7 @@ if mode == "📝 巡檢輸入":
                             # Determine Status based on Change Point
                             final_status = "未審核"
                             if not change_point.strip():
-                                final_status = "結案"
+                                final_status = "無異常"
                             
                             row_data = {
                                 "timestamp": timestamp.strftime("%Y-%m-%d %H:%M:%S"),
@@ -935,7 +935,7 @@ elif mode == "📊 數據戰情室":
                 
             with f_col4:
                 # Status Filter (Multiselect)
-                status_opts = ["未審核", "審核中", "結案", "Closed"]
+                status_opts = ["未審核", "審核中", "結案", "Closed", "無異常"]
                 filter_cp_status = st.multiselect("狀態 (Status)", status_opts, default=["未審核", "審核中"])
 
             # --- Apply Filters ---
@@ -972,7 +972,7 @@ elif mode == "📊 數據戰情室":
                 if row['status'] == "審核中": 
                     stat_color = "orange"
                     stat_icon = "🟡"
-                elif row['status'] in ["結案", "Closed"]: 
+                elif row['status'] in ["結案", "Closed", "無異常"]: 
                     stat_color = "green"
                     stat_icon = "🟢"
                 
@@ -1017,7 +1017,7 @@ elif mode == "📊 數據戰情室":
                         if not current_stat: current_stat = '未審核'
                         
                         target_index = 0
-                        opts = ["未審核", "審核中", "結案"]
+                        opts = ["未審核", "審核中", "結案", "無異常"]
                         if current_stat in opts:
                             target_index = opts.index(current_stat)
                         
