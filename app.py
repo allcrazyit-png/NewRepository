@@ -590,6 +590,11 @@ if mode == "📝 巡檢輸入":
         st.divider()
         st.subheader("📝 巡檢輸入作業")
         
+        # [Feature] Quick Log Mode
+        quick_log_mode = st.toggle("⚡ 僅記錄變化點 (不輸入量測數據)", value=False)
+        if quick_log_mode:
+            st.info("ℹ️ 已開啟快速記錄模式：系統將自動略過重量與長度檢查。")
+        
         inspection_type = st.radio("巡檢階段", ["首件", "中件", "末件"], horizontal=True)
 
         user_inputs = {}
@@ -601,14 +606,20 @@ if mode == "📝 巡檢輸入":
                     return f" ({mn}~{mx})" if (mn is not None and mx is not None) else ""
 
             # Weight
-            w_hint = get_hint(sp['min'], sp['max'])
-            w_input = st.number_input(f"重量 (g){w_hint}", min_value=0.0, step=0.1, format="%.1f", key=f"w_in_{idx}")
+            if quick_log_mode:
+                 w_input = 0.0
+            else:
+                 w_hint = get_hint(sp['min'], sp['max'])
+                 w_input = st.number_input(f"重量 (g){w_hint}", min_value=0.0, step=0.1, format="%.1f", key=f"w_in_{idx}")
             
             # Length
             l_input = None
             if sp['len_std'] is not None and sp['len_std'] > 0:
-                l_hint = get_hint(sp['len_min'], sp['len_max'])
-                l_input = st.number_input(f"長度 (mm){l_hint}", min_value=0.0, step=0.1, format="%.1f", key=f"l_in_{idx}")
+                if quick_log_mode:
+                    l_input = 0.0
+                else:
+                    l_hint = get_hint(sp['len_min'], sp['len_max'])
+                    l_input = st.number_input(f"長度 (mm){l_hint}", min_value=0.0, step=0.1, format="%.1f", key=f"l_in_{idx}")
                 
             user_inputs[idx] = {'weight': w_input, 'length': l_input}
 
@@ -732,7 +743,9 @@ if mode == "📝 巡檢輸入":
         
         if st.button("🚀 提交巡檢數據", use_container_width=True, type="primary"):
                 # Check inputs
-                any_missing_weight = any(user_inputs[i]['weight'] == 0 for i in user_inputs)
+                any_missing_weight = False
+                if not quick_log_mode:
+                     any_missing_weight = any(user_inputs[i]['weight'] == 0 for i in user_inputs)
                 
                 if any_missing_weight:
                     st.warning("請輸入所有重量數據")
