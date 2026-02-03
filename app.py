@@ -969,7 +969,12 @@ elif mode == "📊 數據戰情室":
                         st.caption(f"巡檢結果: {row['result']}")
                     
                     with c2:
-                        # Image logic
+                        # [Feature] Product Image (Small)
+                        prod_img_path = f"quality_images/{row['part_no']}_main.jpg"
+                        if check_image_availability(prod_img_path):
+                            st.image(prod_img_path, width=120, caption="產品示意圖")
+
+                        # Image logic (Inspection Photo)
                         if pd.notna(row.get('image')) and str(row.get('image')).strip():
                              st.markdown(f"📄 照片ID: `{row.get('image')}`")
                     
