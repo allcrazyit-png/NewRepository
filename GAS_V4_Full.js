@@ -19,7 +19,8 @@ function doPost(e) {
                 var folder = DriveApp.getFolderById(folderId);
                 var file = folder.createFile(blob);
                 file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-                imageUrl = file.getId(); // Return ID for app to construct link
+                // imageUrl = file.getId(); 
+                imageUrl = "https://drive.google.com/file/d/" + file.getId() + "/view?usp=sharing"; // Save full link
             }
 
             // 2. Parse Status (Crucial Fix)
