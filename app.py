@@ -253,7 +253,7 @@ if df.empty:
 # --- Mode Selection ---
 # [Refactor]
 st.sidebar.title("🔧 巡檢系統")
-st.sidebar.caption("v.20250204.27-crash-fix") # Version Tag
+st.sidebar.caption("v.20250204.28-cp-edit") # Version Tag
 mode = st.sidebar.radio("功能選擇", ["📝 巡檢輸入", "📊 數據戰情室"], index=0)
 
 # --- Sidebar Footer ---
@@ -1083,6 +1083,12 @@ elif mode == "📊 數據戰情室":
                         new_status = st.selectbox("審核狀態", opts, index=target_index, key=f"stat_{u_key}")
                     
                     with m_col2:
+                    with m_col2:
+                         # [Feature] Change Point Description (Editable)
+                         current_cp_desc = row.get('change_point', '')
+                         if pd.isna(current_cp_desc): current_cp_desc = ""
+                         new_cp_desc = st.text_input("異常內容 / 變化點", value=str(current_cp_desc), key=f"cp_{u_key}")
+
                          # [Feature] Manager Comment
                          current_comment = row.get('manager_comment', '')
                          if pd.isna(current_comment): current_comment = ""
@@ -1098,7 +1104,14 @@ elif mode == "📊 數據戰情室":
                             ts_str_for_api = row['timestamp'].strftime('%Y-%m-%dT%H:%M:%S')
                             target_part = row['part_no']
                             with st.spinner("更新中..."):
-                                success, msg = drive_integration.update_status(ts_str_for_api, new_status, new_comment, target_part, apply_batch)
+                                success, msg = drive_integration.update_status(
+                                    ts_str_for_api, 
+                                    new_status, 
+                                    new_comment, 
+                                    target_part, 
+                                    apply_batch,
+                                    new_cp_desc # Pass new Change Point content
+                                )
                                 if success:
                                     st.success("更新成功!")
                                     time.sleep(1)

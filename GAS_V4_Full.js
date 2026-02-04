@@ -122,6 +122,7 @@ function doPost(e) {
             var targetPart = jsonData.part_no;
             var newStatus = jsonData.status;
             var newComment = jsonData.manager_comment;
+            var newCP = jsonData.change_point; // [Feature] Allow updating Change Point content
             var applyAll = jsonData.apply_all; // [Feature] Batch Update Flag
 
             var rows = sheet.getDataRange().getValues();
@@ -139,6 +140,10 @@ function doPost(e) {
                 // 1. If applyAll is true -> Only Time Match required
                 // 2. If applyAll is false -> Time AND Part Match required
                 if (isTimeMatch && (applyAll || isPartMatch)) {
+                    // Update Change Point (Col H -> index 7) if provided
+                    if (newCP !== undefined) {
+                        sheet.getRange(i + 1, 8).setValue(newCP);
+                    }
                     // Update Status (Col I -> index 8)
                     sheet.getRange(i + 1, 9).setValue(newStatus);
                     // Update Comment (Col J -> index 9)

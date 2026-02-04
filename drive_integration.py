@@ -168,7 +168,7 @@ def fetch_all_data():
         print(f"Error fetching dashboard data: {e}")
         return []
 
-def update_status(timestamp, status, comment, part_no="", apply_all=True):
+def update_status(timestamp, status, comment, part_no="", apply_all=True, change_point=None):
     """
     Updates status. 
     apply_all=True -> Update all rows with same timestamp (Batch).
@@ -183,6 +183,8 @@ def update_status(timestamp, status, comment, part_no="", apply_all=True):
             "part_no": part_no,
             "apply_all": apply_all
         }
+        if change_point is not None:
+            payload["change_point"] = change_point
         # Clear cache immediately since we are updating data
         fetch_history.clear()
         fetch_all_data.clear()
