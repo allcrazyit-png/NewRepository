@@ -1025,14 +1025,19 @@ elif mode == "📊 數據戰情室":
                     "weight": st.column_config.NumberColumn("重量 (g)", format="%.2f")
                 },
                 on_select="rerun",
-                selection_mode="single-row"
+                selection_mode="single-row",
+                key="dash_table_v40" # [Fix] Ensure State Persistence
             )
             
-            # [Interaction] Click Row to Filter Part
+            # [DEBUG]
+            # st.write(f"Selection Event: {event.selection}")
+
             # [Interaction] Click Row to Filter Part
             if len(event.selection.rows) > 0:
                 s_idx = event.selection.rows[0]
                 target_p = df_view.iloc[s_idx]['part_no']
+                
+                # st.write(f"Clicked Row {s_idx} -> {target_p}")
                 
                 # Update Source of Truth
                 if target_p != st.session_state.get('dash_target_part'):
@@ -1042,6 +1047,9 @@ elif mode == "📊 數據戰情室":
             
             if not df_view.empty:
                 st.subheader("📈 重量趨勢圖")
+                
+                # [DEBUG] Temporary verification
+                # st.write(f"Debug Info: State={st.session_state.get('dash_target_part')}, Filter={filter_part}, ViewRows={len(df_view)}")
                 
                 # [Fix] Hide Chart if "All" is selected
                 current_filter = st.session_state.get('dash_target_part', '全部')
