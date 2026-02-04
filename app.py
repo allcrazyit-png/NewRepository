@@ -952,8 +952,27 @@ elif mode == "📊 數據戰情室":
                      parts_dash = ["全部"] + list(df_dash[df_dash['model'] == filter_model]['part_no'].unique())
                  else:
                      parts_dash = ["全部"] + list(df_dash['part_no'].unique())
-                 # [Fix] Add Key for Interaction
-                 filter_part = st.selectbox("篩選品番", parts_dash, key="dash_part_select")
+                 
+                 # [Fix] Decoupled State for Interaction
+                 if 'dash_target_part' not in st.session_state:
+                     st.session_state['dash_target_part'] = "全部"
+                 
+                 # Calculate Index
+                 current_target = st.session_state['dash_target_part']
+                 try:
+                     f_index = parts_dash.index(current_target)
+                 except ValueError:
+                     f_index = 0
+                 
+                 # Render Widget with UI Key
+                 filter_part_ui = st.selectbox("篩選品番", parts_dash, index=f_index, key="_dash_part_ui")
+                 
+                 # Sync UI -> State
+                 if filter_part_ui != st.session_state['dash_target_part']:
+                     st.session_state['dash_target_part'] = filter_part_ui
+                     st.rerun()
+                 
+                 filter_part = filter_part_ui # Local var for legacy use below
                  
                  # Show small product image if filtered
                  if filter_part != "全部":
@@ -1007,14 +1026,14 @@ elif mode == "📊 數據戰情室":
             )
             
             # [Interaction] Click Row to Filter Part
+            # [Interaction] Click Row to Filter Part
             if len(event.selection.rows) > 0:
                 s_idx = event.selection.rows[0]
-                # Map back to original dataframe row
                 target_p = df_view.iloc[s_idx]['part_no']
                 
-                # Check current filter
-                if target_p != st.session_state.get('dash_part_select'):
-                     st.session_state['dash_part_select'] = target_p
+                # Update Source of Truth
+                if target_p != st.session_state.get('dash_target_part'):
+                     st.session_state['dash_target_part'] = target_p
                      st.toast(f"🔍 已篩選: {target_p}")
                      st.rerun()
             
@@ -1022,7 +1041,8 @@ elif mode == "📊 數據戰情室":
                 st.subheader("📈 重量趨勢圖")
                 
                 # [Fix] Hide Chart if "All" is selected
-                if filter_part == "全部":
+                current_filter = st.session_state.get('dash_target_part', '全部')
+                if current_filter == "全部":
                     st.info("👈 請在左側選單選擇單一品番，或在下方表格點選，以查看趨勢圖。")
                 else:
                     chart_df = df_view.copy() # Already filtered weight > 0
