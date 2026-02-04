@@ -252,7 +252,7 @@ if df.empty:
 # --- Mode Selection ---
 # [Refactor]
 st.sidebar.title("🔧 巡檢系統")
-st.sidebar.caption("v.20250204.14-csv-update") # Version Tag
+st.sidebar.caption("v.20250204.15-upload-fix") # Version Tag
 mode = st.sidebar.radio("功能選擇", ["📝 巡檢輸入", "📊 數據戰情室"], index=0)
 
 # --- Sidebar Footer ---
@@ -649,7 +649,18 @@ if mode == "📝 巡檢輸入":
                                     "manager_comment": ""
                                 }
                                 
-                                ok = drive_integration.upload_and_append(row_data, img_files if idx==0 else [])
+                                # Fix: Correct argument order for upload_and_append
+                                # Signature: (image_file, filename, row_data)
+                                current_img = None
+                                img_filename = ""
+                                
+                                if idx == 0 and img_files:
+                                    current_img = img_files[0]
+                                    # Safe filename: PartNo_Timestamp.jpg
+                                    safe_ts = row_data['timestamp'].replace(":", "").replace(" ", "_")
+                                    img_filename = f"{row_data['part_no']}_{safe_ts}.jpg"
+
+                                ok = drive_integration.upload_and_append(current_img, img_filename, row_data)
                                 if ok: success_count += 1
                                 
                             if success_count == len(specs):
