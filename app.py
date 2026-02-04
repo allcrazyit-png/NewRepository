@@ -211,7 +211,8 @@ if df.empty:
     st.stop()
 
 # --- Mode Selection ---
-mode = st.sidebar.radio("模式選擇", ["📝 巡檢輸入", "📊 數據戰情室"], index=0)
+# [Refactor] 3-Page Split
+mode = st.sidebar.radio("功能選擇", ["📝 即時輸入", "🛡️ 變化點看板", "📊 趨勢與履歷"], index=0)
 
 # --- Sidebar Footer ---
 st.sidebar.markdown("---")
@@ -230,7 +231,7 @@ st.sidebar.markdown(
     unsafe_allow_html=True
 )
 
-if mode == "📝 巡檢輸入":
+if mode == "📝 即時輸入":
     # --- Session State Management ---
     if 'inspection_started' not in st.session_state:
         st.session_state['inspection_started'] = False
@@ -398,73 +399,8 @@ if mode == "📝 巡檢輸入":
                 else:
                     st.warning(f"找不到圖片檔案或檔案損壞: {product_img_filename}")
 
-        # [2] History Trend Charts
-        chart_cols = st.columns(len(specs))
-        
-        for idx, sp in enumerate(specs):
-            with chart_cols[idx]:
-                chart_title = f"{selected_part_no}{sp['label']}"
-                # Weight Chart
-                with st.expander(f"📊 重量歷史: {chart_title}", expanded=True):
-                    history_target_no = f"{selected_part_no}{sp['suffix']}"
-                    history_data = drive_integration.fetch_history(history_target_no)
-                    
-                    if history_data:
-                        chart_df = pd.DataFrame(history_data)
-                        chart_df.replace("", pd.NA, inplace=True)
-                        chart_df['timestamp'] = pd.to_datetime(chart_df['timestamp'], errors='coerce')
-                        if chart_df['timestamp'].dt.tz is None:
-                                chart_df['timestamp'] = chart_df['timestamp'].dt.tz_localize('UTC')
-                        chart_df['timestamp'] = chart_df['timestamp'].dt.tz_convert('Asia/Taipei')
-                        
-                        chart_df['weight'] = pd.to_numeric(chart_df['weight'], errors='coerce')
-                        chart_df = chart_df.dropna(subset=['timestamp', 'weight'])
-                        
-                        # [Fix] Filter out Quick Mode entries (Weight=0 or Result=CP)
-                        if 'result' in chart_df.columns:
-                            chart_df = chart_df[chart_df['result'] != 'CP']
-                        chart_df = chart_df[chart_df['weight'] > 0]
-                        
-                        
-                        if not chart_df.empty:
-                            w_max_limit = sp['max']
-                            w_min_limit = sp['min']
-                            y_cols = ['weight']
-                            if w_max_limit is not None:
-                                chart_df['Limit H'] = float(w_max_limit)
-                                y_cols.append('Limit H')
-                            if w_min_limit is not None:
-                                chart_df['Limit L'] = float(w_min_limit)
-                                y_cols.append('Limit L')
-                            
-                            chart_long = chart_df.melt('timestamp', value_vars=y_cols, var_name='MetricType', value_name='Value')
-                            y_min_val = chart_long['Value'].min(); y_max_val = chart_long['Value'].max()
-                            padding = (y_max_val - y_min_val) * 0.1 if y_max_val != y_min_val else 5
-                            
-                            color_domain = ['Limit H', 'Limit L', 'weight']
-                            color_range = ['#FF6C6C', '#FF6C6C', '#457B9D'] 
-                            
-                            base = alt.Chart(chart_long).encode(
-                                x=alt.X('timestamp', title=None, axis=alt.Axis(format='%m/%d', ticks=False)),
-                                y=alt.Y('Value', title='g', scale=alt.Scale(domain=[y_min_val - padding, y_max_val + padding])),
-                                color=alt.Color('MetricType', legend=None, scale=alt.Scale(domain=color_domain, range=color_range)),
-                                tooltip=['timestamp', 'Value', 'MetricType']
-                            )
-                            
-                            line_w = base.transform_filter(alt.datum.MetricType == 'weight').mark_line(strokeWidth=3)
-                            point_w = base.transform_filter(alt.datum.MetricType == 'weight').mark_point(size=60, filled=True)
-                            line_limits = base.transform_filter((alt.datum.MetricType == 'Limit H') | (alt.datum.MetricType == 'Limit L')).mark_line(strokeDash=[5, 5], opacity=0.8)
-
-                            st.altair_chart((line_w + point_w + line_limits).interactive(), use_container_width=True)
-                        else:
-                            st.caption("無數據")
-                    else:
-                        st.caption("無數據")
-                
-                # Length Chart
-                if sp['len_std'] is not None and sp['len_std'] > 0:
-                        with st.expander(f"📏 長度歷史: {chart_title}", expanded=False):
-                            st.caption("長度趨勢圖 (請參考詳細數據)")
+        # [2] History Trend Charts - REMOVED for Page 1 Simplified View
+        # Moved to Page 3 "Trends"
 
 
         # [4] Historical Images Gallery - REMOVED as per user request
@@ -559,20 +495,8 @@ if mode == "📝 巡檢輸入":
             if pd.notna(val) and str(val).strip():
                 defect_images.append((str(i), str(val).strip()))
 
-        if defect_images:
-            with st.expander("⚠️ 過去異常履歷 (Defect History)", expanded=False):
-                # Use 5 columns to make images smaller (User Request)
-                dh_cols = st.columns(5)
-                for idx, (label, fname) in enumerate(defect_images):
-                    col_idx = idx % 5
-                    img_path = os.path.join("quality_images", fname)
-                    valid_img_path = check_image_availability(img_path)
-                    
-                    with dh_cols[col_idx]:
-                        if valid_img_path:
-                            st.image(valid_img_path, caption=f"履歷-{label}", use_container_width=True)
-                        else:
-                            st.caption(f"履歷{label} 讀取失敗")
+        # [4] Defect History Images - REMOVED for Page 1 Simplified View
+        # Moved to Page 3 "Trends"
 
         # --- Key Control Points (Reference only) ---
         st.markdown("##### ⚠️ 重點管制項目")
@@ -861,7 +785,293 @@ if mode == "📝 巡檢輸入":
                             st.caption("(無留言)")
                     st.divider()
 
-elif mode == "📊 數據戰情室":
+elif mode == "🛡️ 變化點看板":
+    st.header("🛡️ 變化點看板")
+    st.caption("即時同步 Google Sheet 雲端數據")
+    
+    with st.spinner("正在連線至總部資料庫，請稍候..."):
+        raw_data = drive_integration.fetch_all_data()
+
+    if not raw_data:
+        st.warning("目前無數據或無法連線至 Google Sheet (請確認 GAS V4 是否部署成功)。")
+    else:
+        df_dash = pd.DataFrame(raw_data)
+        
+        # --- Timezone Fix ---
+        if 'timestamp' in df_dash.columns:
+            df_dash['timestamp'] = pd.to_datetime(df_dash['timestamp'], errors='coerce')
+            if df_dash['timestamp'].dt.tz is None:
+                 df_dash['timestamp'] = df_dash['timestamp'].dt.tz_localize('UTC')
+            df_dash['timestamp'] = df_dash['timestamp'].dt.tz_convert('Asia/Taipei')
+
+        # --- Schema Safety Check ---
+        if 'status' not in df_dash.columns: df_dash['status'] = "未審核"
+        if 'manager_comment' not in df_dash.columns: df_dash['manager_comment'] = ""
+        df_dash['status'] = df_dash['status'].fillna("未審核")
+        df_dash['manager_comment'] = df_dash['manager_comment'].fillna("")
+        if 'change_point' not in df_dash.columns: df_dash['change_point'] = ""
+
+        # Filter Logic: Only rows with Change Points
+        df_cp = df_dash[df_dash['change_point'].ne("") & df_dash['change_point'].notna()].copy()
+        
+        # Sort by Time Descending
+        if 'timestamp' in df_cp.columns:
+            df_cp = df_cp.sort_values(by='timestamp', ascending=False)
+        
+        # --- Advanced Filters ---
+        st.markdown("##### 🔍 篩選條件")
+        f_col1, f_col2, f_col3, f_col4 = st.columns(4)
+        
+        with f_col1:
+            today = datetime.date.today()
+            start_date = st.date_input("開始日期", today - datetime.timedelta(days=30))
+            end_date = st.date_input("結束日期", today)
+        
+        with f_col2:
+            models_cp = ["全部"] + list(df_cp['model'].unique())
+            filter_cp_model = st.selectbox("車型 (Model)", models_cp, key="cp_model_filter")
+            
+        with f_col3:
+            if filter_cp_model != "全部":
+                parts_cp = ["全部"] + list(df_cp[df_cp['model'] == filter_cp_model]['part_no'].unique())
+            else:
+                parts_cp = ["全部"] + list(df_cp['part_no'].unique())
+            filter_cp_part = st.selectbox("品番 (Part No)", parts_cp, key="cp_part_filter")
+            
+        with f_col4:
+            status_opts = ["未審核", "審核中", "結案", "Closed", "無異常"]
+            filter_cp_status = st.multiselect("狀態 (Status)", status_opts, default=["未審核", "審核中"])
+
+        # --- Apply Filters ---
+        # 1. Date
+        if 'timestamp' in df_cp.columns:
+             df_cp['date'] = df_cp['timestamp'].dt.date
+             df_cp = df_cp[
+                 (df_cp['date'] >= start_date) & 
+                 (df_cp['date'] <= end_date)
+             ]
+        
+        # 2. Model
+        if filter_cp_model != "全部":
+            df_cp = df_cp[df_cp['model'] == filter_cp_model]
+            
+        # 3. Part
+        if filter_cp_part != "全部":
+            df_cp = df_cp[df_cp['part_no'] == filter_cp_part]
+            
+        # 4. Status
+        if filter_cp_status:
+            df_cp = df_cp[df_cp['status'].isin(filter_cp_status)]
+        else:
+            st.warning("請選擇至少一種狀態")
+            df_cp = df_cp.iloc[0:0] 
+        
+        st.info(f"共發現 {len(df_cp)} 筆變化點記錄")
+        
+        for index, row in df_cp.iterrows():
+            stat_color = "red"
+            stat_icon = "🔴"
+            if row['status'] == "審核中": 
+                stat_color = "orange"
+                stat_icon = "🟡"
+            elif row['status'] in ["結案", "Closed", "無異常"]: 
+                stat_color = "green"
+                stat_icon = "🟢"
+            
+            with st.expander(f"{stat_icon} :{stat_color}[{row['status']}] {row['timestamp'].strftime('%Y-%m-%d %H:%M')} - {row['model']} {row['part_no']}", expanded=True):
+                c1, c2 = st.columns([2, 1])
+                with c1:
+                    st.markdown(f"**變化點內容:**")
+                    st.error(row['change_point'])
+                    st.caption(f"巡檢結果: {row['result']}")
+                
+                with c2:
+                    prod_img_path = f"quality_images/{row['part_no']}_main.jpg"
+                    if check_image_availability(prod_img_path):
+                        st.image(prod_img_path, width=120, caption="產品示意圖")
+
+                    raw_img = str(row.get('image', '')).strip()
+                    raw_img = raw_img.replace('"', '').replace("'", "")
+                    
+                    if raw_img and raw_img.lower() != "nan":
+                         if raw_img.startswith("http"):
+                             img_url = raw_img
+                         else:
+                             img_url = f"https://drive.google.com/file/d/{raw_img}/preview"
+                         st.markdown(f"📸 [查看巡檢照片]({img_url})")
+                
+                st.divider()
+                
+                m_col1, m_col2, m_col3 = st.columns([1, 2, 1])
+                u_key = f"{row['timestamp']}_{row['part_no']}"
+                
+                with m_col1:
+                    current_stat = row.get('status', '未審核')
+                    if not current_stat: current_stat = '未審核'
+                    target_index = 0
+                    opts = ["未審核", "審核中", "結案", "無異常"]
+                    if current_stat in opts: target_index = opts.index(current_stat)
+                    new_status = st.selectbox("審核狀態", opts, index=target_index, key=f"stat_{u_key}")
+                
+                with m_col2:
+                     current_comment = row.get('manager_comment', '')
+                     if pd.isna(current_comment): current_comment = ""
+                     new_comment = st.text_input("主管留言", value=str(current_comment), key=f"comm_{u_key}")
+                
+                with m_col3:
+                    st.write("") 
+                    if st.button("💾 更新狀態", key=f"btn_upd_{u_key}", use_container_width=True):
+                        ts_str_for_api = row['timestamp'].isoformat()
+                        with st.spinner("更新中..."):
+                            success, msg = drive_integration.update_status(ts_str_for_api, new_status, new_comment)
+                            if success:
+                                st.toast("✅ 狀態已更新!", icon="💾")
+                                st.rerun()
+                            else:
+                                st.error(f"更新失敗: {msg}")
+
+
+elif mode == "📊 趨勢與履歷":
+    st.header("📊 生產品質趨勢")
+    
+    with st.spinner("正在連線至總部資料庫，請稍候..."):
+        raw_data = drive_integration.fetch_all_data()
+
+    if not raw_data:
+        st.warning("目前無數據或無法連線至 Google Sheet。")
+    else:
+        df_dash = pd.DataFrame(raw_data)
+        if 'timestamp' in df_dash.columns:
+            df_dash['timestamp'] = pd.to_datetime(df_dash['timestamp'], errors='coerce')
+            if df_dash['timestamp'].dt.tz is None:
+                 df_dash['timestamp'] = df_dash['timestamp'].dt.tz_localize('UTC')
+            df_dash['timestamp'] = df_dash['timestamp'].dt.tz_convert('Asia/Taipei')
+
+        # --- Filters ---
+        col_d1, col_d2, col_d3 = st.columns(3)
+        with col_d1:
+            models_dash = ["全部"] + list(df_dash['model'].unique())
+            filter_model = st.selectbox("篩選車型", models_dash)
+        with col_d2:
+             if filter_model != "全部":
+                 parts_dash = ["全部"] + list(df_dash[df_dash['model'] == filter_model]['part_no'].unique())
+             else:
+                 parts_dash = ["全部"] + list(df_dash['part_no'].unique())
+             filter_part = st.selectbox("篩選品番", parts_dash)
+             
+             # Show small product image if filtered
+             if filter_part != "全部":
+                 img_path = f"quality_images/{filter_part}_main.jpg"
+                 if check_image_availability(img_path):
+                     st.image(img_path, width=200, caption=filter_part)
+        with col_d3:
+             results_dash = ["全部"] + list(df_dash['result'].unique())
+             filter_result = st.selectbox("篩選結果", results_dash)
+        
+        # Apply filters
+        df_view = df_dash.copy()
+        if filter_model != "全部": df_view = df_view[df_view['model'] == filter_model]
+        if filter_part != "全部": df_view = df_view[df_view['part_no'] == filter_part]
+        if filter_result != "全部": df_view = df_view[df_view['result'] == filter_result]
+        
+        # Sort by Newest
+        if 'timestamp' in df_view.columns:
+             df_view = df_view.sort_values(by='timestamp', ascending=False)
+        
+        # Process Image Links
+        if 'image' in df_view.columns:
+            def make_drive_link(val):
+                val_str = str(val).strip().replace('"', '').replace("'", "")
+                if not val_str or val_str.lower() == 'nan': return None
+                if val_str.startswith('http'): return val_str
+                return f"https://drive.google.com/file/d/{val_str}/preview"
+            df_view['image'] = df_view['image'].apply(make_drive_link)
+
+        st.dataframe(
+            df_view, 
+            use_container_width=True,
+            column_config={
+                "image": st.column_config.LinkColumn("巡檢照片", display_text="📸 查看"),
+                "timestamp": st.column_config.DatetimeColumn("時間", format="MM/DD HH:mm"),
+                "weight": st.column_config.NumberColumn("重量 (g)", format="%.2f")
+            }
+        )
+        
+        if not df_view.empty:
+            st.subheader("📈 重量趨勢圖")
+            
+            chart_df = df_view.copy()
+            if 'result' in chart_df.columns:
+                chart_df = chart_df[chart_df['result'] != 'CP']
+            if 'weight' in chart_df.columns:
+                chart_df['weight'] = pd.to_numeric(chart_df['weight'], errors='coerce')
+                chart_df = chart_df[chart_df['weight'] > 0]
+
+            if not chart_df.empty:
+                y_cols = ['weight']
+                if filter_part != "全部":
+                    # [Fix] Fuzzy Match for Suffixes (e.g., Part_1, Part_2)
+                    part_spec = df[df['品番'] == filter_part]
+                    if part_spec.empty:
+                        if '_' in filter_part:
+                            base_part_underscore = filter_part.rsplit('_', 1)[0]
+                            part_spec = df[df['品番'] == base_part_underscore]
+                    if part_spec.empty:
+                         base_part_space = filter_part.split(' ')[0]
+                         part_spec = df[df['品番'] == base_part_space]
+                    
+                    if not part_spec.empty:
+                        spec_row = part_spec.iloc[0]
+                        limit_h = spec_row.get('clean_重量上限')
+                        limit_l = spec_row.get('clean_重量下限')
+                        if isinstance(limit_h, list): limit_h = limit_h[0]
+                        if isinstance(limit_l, list): limit_l = limit_l[0]
+                        if limit_h is not None:
+                            chart_df['Limit H'] = float(limit_h)
+                            y_cols.append('Limit H')
+                        if limit_l is not None:
+                             chart_df['Limit L'] = float(limit_l)
+                             y_cols.append('Limit L')
+                         
+                        # [Added] Show Defect History Images Logic Here for Context
+                        st.subheader("⚠️ 過去異常履歷 (Reference)")
+                        defect_images = []
+                        d1 = spec_row.get('異常履歷寫真')
+                        if pd.notna(d1) and str(d1).strip(): defect_images.append(("1", str(d1).strip()))
+                        for i in range(2, 4):
+                            col_n = f"異常履歷寫真{i}"
+                            val = spec_row.get(col_n)
+                            if pd.notna(val) and str(val).strip(): defect_images.append((str(i), str(val).strip()))
+                        
+                        if defect_images:
+                             dh_cols = st.columns(5)
+                             for idx, (label, fname) in enumerate(defect_images):
+                                 col_idx = idx % 5
+                                 img_path = os.path.join("quality_images", fname)
+                                 if check_image_availability(img_path):
+                                     dh_cols[col_idx].image(img_path, caption=f"履歷-{label}", use_container_width=True)
+
+
+                chart_long = chart_df.melt('timestamp', value_vars=y_cols, var_name='MetricType', value_name='Value')
+                y_min_val = chart_long['Value'].min(); y_max_val = chart_long['Value'].max()
+                padding = (y_max_val - y_min_val) * 0.1 if y_max_val != y_min_val else 5
+                
+                color_domain = ['Limit H', 'Limit L', 'weight']
+                color_range = ['#FF6C6C', '#FF6C6C', '#457B9D'] 
+                
+                base = alt.Chart(chart_long).encode(
+                    x=alt.X('timestamp', title='時間', axis=alt.Axis(format='%m/%d %H:%M')),
+                    y=alt.Y('Value', title='重量 (g)', scale=alt.Scale(domain=[y_min_val - padding, y_max_val + padding])),
+                    color=alt.Color('MetricType', legend=None, scale=alt.Scale(domain=color_domain, range=color_range)),
+                    tooltip=['timestamp', 'Value', 'MetricType']
+                )
+                
+                line_w = base.transform_filter(alt.datum.MetricType == 'weight').mark_line(point=True)
+                line_limits = base.transform_filter((alt.datum.MetricType == 'Limit H') | (alt.datum.MetricType == 'Limit L')).mark_line(strokeDash=[5, 5], opacity=0.8)
+                
+                st.altair_chart((line_w + line_limits).interactive(), use_container_width=True)
+            else:
+                st.info("尚無有效數據 (已隱藏快速記錄的 CP 資料)")
     st.header("📊 生產品質戰情室")
     st.caption("即時同步 Google Sheet 雲端數據")
     
@@ -893,291 +1103,5 @@ elif mode == "📊 數據戰情室":
         df_dash['status'] = df_dash['status'].fillna("未審核")
         df_dash['manager_comment'] = df_dash['manager_comment'].fillna("")
             
-        # ==========================================
-        # 1. Weight Trend Tracking (Original Dashboard)
-        # ==========================================
-        if dash_page == "📈 重量趨勢追蹤":
-            # --- Filters ---
-            col_d1, col_d2, col_d3 = st.columns(3)
-            with col_d1:
-                models_dash = ["全部"] + list(df_dash['model'].unique())
-                filter_model = st.selectbox("篩選車型", models_dash)
-            with col_d2:
-                 if filter_model != "全部":
-                     parts_dash = ["全部"] + list(df_dash[df_dash['model'] == filter_model]['part_no'].unique())
-                 else:
-                     parts_dash = ["全部"] + list(df_dash['part_no'].unique())
-                 filter_part = st.selectbox("篩選品番", parts_dash)
-                 
-                 # [FEATURE] Show small product image if filtered
-                 if filter_part != "全部":
-                     img_path = f"quality_images/{filter_part}_main.jpg"
-                     if check_image_availability(img_path):
-                         st.image(img_path, width=200, caption=filter_part)
-            with col_d3:
-                 results_dash = ["全部"] + list(df_dash['result'].unique())
-                 filter_result = st.selectbox("篩選結果", results_dash)
-            
-            # Apply filters
-            df_view = df_dash.copy()
-            if filter_model != "全部": df_view = df_view[df_view['model'] == filter_model]
-            if filter_part != "全部": df_view = df_view[df_view['part_no'] == filter_part]
-            if filter_result != "全部": df_view = df_view[df_view['result'] == filter_result]
-            
-            # [Feature] Sort by Timestamp Descending (Newest First)
-            if 'timestamp' in df_view.columns:
-                 df_view = df_view.sort_values(by='timestamp', ascending=False)
-            
-            # [Feature] Process Image Links for Dataframe
-            if 'image' in df_view.columns:
-                def make_drive_link(val):
-                    val_str = str(val).strip().replace('"', '').replace("'", "")
-                    if not val_str or val_str.lower() == 'nan': return None
-                    if val_str.startswith('http'): return val_str
-                    return f"https://drive.google.com/file/d/{val_str}/preview"
-                
-                df_view['image'] = df_view['image'].apply(make_drive_link)
 
-            st.dataframe(
-                df_view, 
-                use_container_width=True,
-                column_config={
-                    "image": st.column_config.LinkColumn(
-                        "巡檢照片", 
-                        display_text="📸 查看",
-                        help="點擊預覽照片"
-                    ),
-                    "timestamp": st.column_config.DatetimeColumn(
-                        "時間",
-                        format="MM/DD HH:mm"
-                    ),
-                    "weight": st.column_config.NumberColumn(
-                        "重量 (g)",
-                        format="%.2f"
-                    )
-                }
-            )
-            
-            if not df_view.empty:
-                st.subheader("📈 重量趨勢圖")
-                
-                # [Fix] Filter out Quick Mode entries for Chart
-                chart_df = df_view.copy()
-                if 'result' in chart_df.columns:
-                    chart_df = chart_df[chart_df['result'] != 'CP']
-                if 'weight' in chart_df.columns:
-                    chart_df['weight'] = pd.to_numeric(chart_df['weight'], errors='coerce')
-                    chart_df = chart_df[chart_df['weight'] > 0]
-
-                if not chart_df.empty:
-                    # [Feature] Add Limit Lines if a specific part is selected
-                    y_cols = ['weight']
-                    if filter_part != "全部":
-                        # Lookup specs from the global df (loaded from parts_data.csv)
-                        # [Fix] Fuzzy Match for Suffixes (e.g., Part_1, Part_2)
-                        part_spec = df[df['品番'] == filter_part]
-                        
-                        if part_spec.empty:
-                            # Try removing suffix like "_1", "_2"
-                            # [Fix] Use rsplit to only remove the LAST segment (suffix), preserving underscores in part name
-                            # e.g. "71861_2-VU010_1" -> "71861_2-VU010"
-                            if '_' in filter_part:
-                                base_part_underscore = filter_part.rsplit('_', 1)[0]
-                                part_spec = df[df['品番'] == base_part_underscore]
-                            
-                        if part_spec.empty:
-                             # Try removing space suffix like " (R)"
-                             base_part_space = filter_part.split(' ')[0]
-                             part_spec = df[df['品番'] == base_part_space]
-                        
-                        if not part_spec.empty:
-                            spec_row = part_spec.iloc[0]
-                            limit_h = spec_row.get('clean_重量上限')
-                            limit_l = spec_row.get('clean_重量下限')
-                            
-                            # Handle list values (Dual Mold) - Take first or average? 
-                            # Dashboard usually tracks overall trend. Let's take the first valid value for simplicity
-                            # or if list, maybe just don't plot limits to avoid confusion?
-                            # For consistency with single part logic, we try to take the primary limit.
-                            if isinstance(limit_h, list): limit_h = limit_h[0]
-                            if isinstance(limit_l, list): limit_l = limit_l[0]
-                            
-                            if limit_h is not None:
-                                chart_df['Limit H'] = float(limit_h)
-                                y_cols.append('Limit H')
-                            if limit_l is not None:
-                                chart_df['Limit L'] = float(limit_l)
-                                y_cols.append('Limit L')
-
-                    # Prepare Data for Altair (Long Format for Multi-Line)
-                    chart_long = chart_df.melt('timestamp', value_vars=y_cols, var_name='MetricType', value_name='Value')
-                    
-                    # Dynamic Y scale
-                    y_min_val = chart_long['Value'].min()
-                    y_max_val = chart_long['Value'].max()
-                    padding = (y_max_val - y_min_val) * 0.1 if y_max_val != y_min_val else 5
-                    
-                    # Colors
-                    color_domain = ['Limit H', 'Limit L', 'weight']
-                    color_range = ['#FF6C6C', '#FF6C6C', '#457B9D'] 
-                    
-                    base = alt.Chart(chart_long).encode(
-                        x=alt.X('timestamp', title='時間', axis=alt.Axis(format='%m/%d %H:%M')),
-                        y=alt.Y('Value', title='重量 (g)', scale=alt.Scale(domain=[y_min_val - padding, y_max_val + padding])),
-                        color=alt.Color('MetricType', legend=None, scale=alt.Scale(domain=color_domain, range=color_range)),
-                        tooltip=['timestamp', 'Value', 'MetricType']
-                    )
-                    
-                    line_w = base.transform_filter(alt.datum.MetricType == 'weight').mark_line(point=True)
-                    line_limits = base.transform_filter((alt.datum.MetricType == 'Limit H') | (alt.datum.MetricType == 'Limit L')).mark_line(strokeDash=[5, 5], opacity=0.8)
-                    
-                    st.altair_chart((line_w + line_limits).interactive(), use_container_width=True)
-                else:
-                    st.info("尚無有效數據 (已隱藏快速記錄的 CP 資料)")
-
-        # ==========================================
-        # 2. Change Point Management Center
-        # ==========================================
-        elif dash_page == "🛡️ 變化點管理中心":
-            st.subheader("🛡️ 變化點管理中心")
-            
-            # Filter Logic: Only rows with Change Points
-            df_cp = df_dash[df_dash['change_point'].ne("") & df_dash['change_point'].notna()].copy()
-            
-            # Sort by Time Descending
-            df_cp = df_cp.sort_values(by='timestamp', ascending=False)
-            
-            # --- Advanced Filters ---
-            st.markdown("##### 🔍 篩選條件")
-            f_col1, f_col2, f_col3, f_col4 = st.columns(4)
-            
-            with f_col1:
-                # Date Range
-                # Default to last 30 days
-                today = datetime.date.today()
-                start_date = st.date_input("開始日期", today - datetime.timedelta(days=30))
-                end_date = st.date_input("結束日期", today)
-            
-            with f_col2:
-                # Model Filter
-                models_cp = ["全部"] + list(df_cp['model'].unique())
-                filter_cp_model = st.selectbox("車型 (Model)", models_cp, key="cp_model_filter")
-                
-            with f_col3:
-                # Part Filter (Dependent on Model)
-                if filter_cp_model != "全部":
-                    parts_cp = ["全部"] + list(df_cp[df_cp['model'] == filter_cp_model]['part_no'].unique())
-                else:
-                    parts_cp = ["全部"] + list(df_cp['part_no'].unique())
-                filter_cp_part = st.selectbox("品番 (Part No)", parts_cp, key="cp_part_filter")
-                
-            with f_col4:
-                # Status Filter (Multiselect)
-                status_opts = ["未審核", "審核中", "結案", "Closed", "無異常"]
-                filter_cp_status = st.multiselect("狀態 (Status)", status_opts, default=["未審核", "審核中"])
-
-            # --- Apply Filters ---
-            # 1. Date
-            df_cp['date'] = df_cp['timestamp'].dt.date
-            df_cp = df_cp[
-                (df_cp['date'] >= start_date) & 
-                (df_cp['date'] <= end_date)
-            ]
-            
-            # 2. Model
-            if filter_cp_model != "全部":
-                df_cp = df_cp[df_cp['model'] == filter_cp_model]
-                
-            # 3. Part
-            if filter_cp_part != "全部":
-                df_cp = df_cp[df_cp['part_no'] == filter_cp_part]
-                
-            # 4. Status
-            if filter_cp_status:
-                # Handle "Closed" being same as "結案" in logic if needed, but here we filter by text
-                # Normalize user selection to match data if needed, or just strict match
-                df_cp = df_cp[df_cp['status'].isin(filter_cp_status)]
-            else:
-                st.warning("請選擇至少一種狀態")
-                df_cp = df_cp.iloc[0:0] # Return empty if no status selected (safe default)
-            
-            st.info(f"共發現 {len(df_cp)} 筆變化點記錄")
-            
-            for index, row in df_cp.iterrows():
-                # Define Status Colors
-                stat_color = "red"
-                stat_icon = "🔴"
-                if row['status'] == "審核中": 
-                    stat_color = "orange"
-                    stat_icon = "🟡"
-                elif row['status'] in ["結案", "Closed", "無異常"]: 
-                    stat_color = "green"
-                    stat_icon = "🟢"
-                
-                with st.expander(f"{stat_icon} :{stat_color}[{row['status']}] {row['timestamp'].strftime('%Y-%m-%d %H:%M')} - {row['model']} {row['part_no']}", expanded=True):
-                    c1, c2 = st.columns([2, 1])
-                    with c1:
-                        st.markdown(f"**變化點內容:**")
-                        st.error(row['change_point'])
-                        st.caption(f"巡檢結果: {row['result']}")
-                    
-                    with c2:
-                        # [Feature] Product Image (Small)
-                        prod_img_path = f"quality_images/{row['part_no']}_main.jpg"
-                        if check_image_availability(prod_img_path):
-                            st.image(prod_img_path, width=120, caption="產品示意圖")
-
-                        # Image logic (Inspection Photo)
-                        raw_img = str(row.get('image', '')).strip()
-                        # Clean potential artifacts like quotes
-                        raw_img = raw_img.replace('"', '').replace("'", "")
-                        
-                        if raw_img and raw_img.lower() != "nan":
-                             if raw_img.startswith("http"):
-                                 img_url = raw_img
-                             else:
-                                 # Assume it's an ID
-                                 img_url = f"https://drive.google.com/file/d/{raw_img}/preview" # Use preview for better UX
-                             
-                             st.markdown(f"📸 [查看巡檢照片]({img_url})")
-                    
-                    st.divider()
-                    
-                    # --- Manager Actions ---
-                    m_col1, m_col2, m_col3 = st.columns([1, 2, 1])
-                    
-                    # Unique Key using timestamp + part_no to avoid conflicts
-                    u_key = f"{row['timestamp']}_{row['part_no']}"
-                    
-                    with m_col1:
-                        # Status Selector
-                        current_stat = row.get('status', '未審核')
-                        if not current_stat: current_stat = '未審核'
-                        
-                        target_index = 0
-                        opts = ["未審核", "審核中", "結案", "無異常"]
-                        if current_stat in opts:
-                            target_index = opts.index(current_stat)
-                        
-                        new_status = st.selectbox("審核狀態", opts, index=target_index, key=f"stat_{u_key}")
-                    
-                    with m_col2:
-                         # Comment Input
-                         current_comment = row.get('manager_comment', '')
-                         if pd.isna(current_comment): current_comment = ""
-                         new_comment = st.text_input("主管留言", value=str(current_comment), key=f"comm_{u_key}")
-                    
-                    with m_col3:
-                        st.write("") # Spacer
-                        if st.button("💾 更新狀態", key=f"btn_upd_{u_key}", use_container_width=True):
-                            # Use ISO format for robust date parsing in GAS
-                            ts_str_for_api = row['timestamp'].isoformat()
-                            
-                            with st.spinner("更新中..."):
-                                success, msg = drive_integration.update_status(ts_str_for_api, new_status, new_comment)
-                                if success:
-                                    st.toast("✅ 狀態已更新!", icon="💾")
-                                    st.rerun()
-                                else:
-                                    st.error(f"更新失敗: {msg}")
 
