@@ -253,7 +253,7 @@ if df.empty:
 # --- Mode Selection ---
 # [Refactor]
 st.sidebar.title("🔧 巡檢系統")
-st.sidebar.caption("v.20250204.20-mgr-comment") # Version Tag
+st.sidebar.caption("v.20250204.21-cache-monitor") # Version Tag
 mode = st.sidebar.radio("功能選擇", ["📝 巡檢輸入", "📊 數據戰情室"], index=0)
 
 # --- Sidebar Footer ---
