@@ -253,7 +253,7 @@ if df.empty:
 # --- Mode Selection ---
 # [Refactor]
 st.sidebar.title("🔧 巡檢系統")
-st.sidebar.caption("v.20250204.31-merged-display") # Version Tag
+st.sidebar.caption("v.20250204.32-insp-merge") # Version Tag
 mode = st.sidebar.radio("功能選擇", ["📝 巡檢輸入", "📊 數據戰情室"], index=0)
 
 # --- Sidebar Footer ---
@@ -720,15 +720,34 @@ if mode == "📝 巡檢輸入":
                 # 1. Open Issues Section
                 if not open_issues.empty:
                     st.error(f"⚠️ 尚有 {len(open_issues)} 筆未結案異常！")
-                    for _, row in open_issues.iterrows():
+                    
+                    # Group by timestamp for display
+                    # Use a list of (ts, group_df) sorted by ts descending
+                    grouped_open = open_issues.groupby('timestamp', sort=False) 
+                    # sort=False because we already sorted df_local_cp
+                    
+                    for ts, group in grouped_open:
+                        cavity_count = len(group)
+                        
+                        # Find best row (prioritize one with Manager Comment)
+                        best_row = group.iloc[0]
+                        rows_with_cmt = group[group['manager_comment'].astype(str).str.strip() != ""]
+                        if not rows_with_cmt.empty:
+                            best_row = rows_with_cmt.iloc[0]
+
+                        row = best_row
                         stat = row.get('status', '未審核')
                         s_icon = "🔴" if stat == "未審核" else "🟡"
                         ts_str = row['timestamp'].strftime('%Y-%m-%d %H:%M') if pd.notna(row['timestamp']) else "N/A"
                         
+                        part_display = row.get('part_no')
+                        if cavity_count > 1:
+                            part_display = f"{str(part_display).split('_')[0]} (共{cavity_count}穴)"
+
                         st.markdown(f"#### {s_icon} [{stat}] {row.get('change_point')}")
-                        st.caption(f"📅 {ts_str} | Part: {row.get('part_no')}")
+                        st.caption(f"📅 {ts_str} | Part: {part_display}")
                         
-                        # [Fix] Robust check for Manager Comment
+                        # Manager Comment
                         mgr_cmt = row.get('manager_comment')
                         if pd.notna(mgr_cmt) and str(mgr_cmt).strip():
                             st.info(f"👨‍💼 主管: {str(mgr_cmt).strip()}")
@@ -740,11 +759,25 @@ if mode == "📝 巡檢輸入":
                 st.subheader("📜 歷史記錄 (已結案)")
                 if not closed_issues.empty:
                     with st.expander("查看已結案記錄", expanded=False):
-                        for _, row in closed_issues.iterrows():
+                        grouped_closed = closed_issues.groupby('timestamp', sort=False)
+                        for ts, group in grouped_closed:
+                            row = group.iloc[0]
+                            cavity_count = len(group)
+                            
                             stat = row.get('status', '結案')
                             ts_str = row['timestamp'].strftime('%Y-%m-%d') if pd.notna(row['timestamp']) else "N/A"
+                            
+                            part_display = row.get('part_no')
+                            if cavity_count > 1:
+                                part_display = f"{str(part_display).split('_')[0]} (共{cavity_count}穴)"
+                                
                             st.markdown(f"🟢 **{row.get('change_point')}**")
-                            st.caption(f"[{stat}] {ts_str}")
+                            st.caption(f"[{stat}] {ts_str} | {part_display}")
+                            
+                            mgr_cmt = row.get('manager_comment')
+                            if pd.notna(mgr_cmt) and str(mgr_cmt).strip():
+                                st.caption(f"主管: {str(mgr_cmt).strip()}")
+                                
                             st.divider()
                 else:
                     st.caption("無已結案記錄")
