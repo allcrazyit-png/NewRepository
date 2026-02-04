@@ -253,7 +253,7 @@ if df.empty:
 # --- Mode Selection ---
 # [Refactor]
 st.sidebar.title("🔧 巡檢系統")
-st.sidebar.caption("v.20250204.21-cache-monitor") # Version Tag
+st.sidebar.caption("v.20250204.22-disp-fix") # Version Tag
 mode = st.sidebar.radio("功能選擇", ["📝 巡檢輸入", "📊 數據戰情室"], index=0)
 
 # --- Sidebar Footer ---
@@ -727,8 +727,11 @@ if mode == "📝 巡檢輸入":
                         
                         st.markdown(f"#### {s_icon} [{stat}] {row.get('change_point')}")
                         st.caption(f"📅 {ts_str} | Part: {row.get('part_no')}")
-                        if row.get('manager_comment'):
-                            st.info(f"👨‍💼 主管: {row.get('manager_comment')}")
+                        
+                        # [Fix] Robust check for Manager Comment
+                        mgr_cmt = row.get('manager_comment')
+                        if pd.notna(mgr_cmt) and str(mgr_cmt).strip():
+                            st.info(f"👨‍💼 主管: {str(mgr_cmt).strip()}")
                         st.divider()
                 else:
                     st.success("✅ 目前無未結案異常")
