@@ -66,7 +66,8 @@ st.markdown("""
     
     h1 { font-size: 2.5rem !important; }
     h2 { font-size: 1.8rem !important; }
-    h3 { font-size: 1.4rem !important; }
+    h3 { font-size: 1.5rem !important; }
+    h4 { font-size: 1.4rem !important; font-weight: 700; color: #f5f5f7 !important; }
 
     /* --- 3. iOS "Island" Cards (Glassmorphism) --- */
     div[data-testid="stMetric"] {
@@ -91,13 +92,21 @@ st.markdown("""
     }
 
     /* --- 4. Inputs (Flat & Clean) --- */
+    /* Unified Label Size for ALL Inputs (Number, Text, Radio, Select) */
+    div[data-testid="stWidgetLabel"] label, .stRadio > label {
+        font-size: 1.3rem !important;
+        color: #f5f5f7 !important;
+        font-weight: 600 !important;
+        margin-bottom: 8px !important;
+    }
+    
     .stTextInput input, .stNumberInput input, .stSelectbox div[data-baseweb="select"] > div, .stTextArea textarea {
         background-color: #1c1c1e !important;
         color: #f5f5f7 !important;
         border: none !important;
         border-radius: 10px !important;
         height: 3.2rem !important;
-        font-size: 1.1rem !important;
+        font-size: 1.2rem !important; /* Bump input text size slightly */
         padding-left: 15px !important;
     }
     .stTextInput input:focus, .stNumberInput input:focus, .stTextArea textarea:focus {
@@ -105,7 +114,7 @@ st.markdown("""
     }
 
     /* --- 5. Segmented Controls (Radio Buttons - Larger) --- */
-    .stRadio > label { font-size: 1.5rem !important; color: #86868b !important; margin-bottom: 12px; }
+    /* .stRadio > label removed here as it is covered above */
     .stRadio div[role='radiogroup'] {
         background: #1c1c1e;
         padding: 6px;
@@ -122,7 +131,7 @@ st.markdown("""
         transition: all 0.2s ease;
         margin: 0 !important;
         box-shadow: none !important;
-        font-size: 1.3rem !important; /* Radio Option Text */
+        font-size: 1.2rem !important; /* Radio Option Text matched to Input */
     }
     .stRadio div[role='radiogroup'] > label:hover {
         color: #f5f5f7 !important;
@@ -253,7 +262,7 @@ if df.empty:
 # --- Mode Selection ---
 # [Refactor]
 st.sidebar.title("🔧 巡檢系統")
-st.sidebar.caption("v.20250204.49-header-clean") # Version Tag
+st.sidebar.caption("v.20250204.50-ui-font") # Version Tag
 mode = st.sidebar.radio("功能選擇", ["📝 巡檢輸入", "📊 數據戰情室"], index=0)
 
 # --- Sidebar Footer ---
