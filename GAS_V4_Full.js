@@ -131,9 +131,14 @@ function doPost(e) {
             for (var i = 1; i < rows.length; i++) {
                 var sheetDate = new Date(rows[i][0]);
                 var sheetPart = rows[i][2];
-                var targetDate = new Date(targetTs);
+                // var targetDate = new Date(targetTs); // [Deprecated] causing TZ issues
 
-                var isTimeMatch = (sheetDate.getTime() === targetDate.getTime());
+                // [Fix] Convert Sheet Date to String (Script TimeZone) to match input string directly
+                // This avoids "8 hour shift" issues if Script TZ matches expected input
+                var sheetDateStr = Utilities.formatDate(sheetDate, Session.getScriptTimeZone(), "yyyy-MM-dd HH:mm:ss");
+
+                // Input targetTs should be "yyyy-MM-dd HH:mm:ss"
+                var isTimeMatch = (sheetDateStr == targetTs);
                 var isPartMatch = (sheetPart == targetPart);
 
                 // Condition: 
