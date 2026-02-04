@@ -462,6 +462,12 @@ if mode == "📝 巡檢輸入":
 
             st.divider()
 
+            # [Restore] Key Control Points (重點管理項目)
+            kcp = current_part_data.get('重點管理項目')
+            if pd.notna(kcp) and str(kcp).strip():
+                with st.expander("⭐ 重點管理項目 (Key Control Points)", expanded=True):
+                    st.info(str(kcp).strip())
+
             user_inputs = {}
             # Input Loop
             for idx, sp in enumerate(specs):
