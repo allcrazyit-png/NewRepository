@@ -244,7 +244,7 @@ if df.empty:
 # --- Mode Selection ---
 # [Refactor]
 st.sidebar.title("🔧 巡檢系統")
-st.sidebar.caption("v.20250204.09-soft") # Version Tag
+st.sidebar.caption("v.20250204.10-clean") # Version Tag
 mode = st.sidebar.radio("功能選擇", ["📝 巡檢輸入", "📊 數據戰情室"], index=0)
 
 # --- Sidebar Footer ---
@@ -456,9 +456,9 @@ if mode == "📝 巡檢輸入":
 
             # Display with Softer Color (Blue) as requested
             if kcp_list:
-                with st.expander("⭐ 重點管制項目 (Key Control Points)", expanded=True):
+                with st.expander("⭐ 重點管制項目 (Key Control Points)", expanded=False):
                     for item in kcp_list:
-                        st.info(f"• {item}", icon="📌")
+                        st.info(f"• {item}")
 
         # [Refactor] Tabs for Inspection
         tab1, tab2, tab3 = st.tabs(["📝 輸入作業", "🛡️ 該品變化點", "📊 趨勢與履歷"])
