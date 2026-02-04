@@ -10,7 +10,8 @@ import os
 import time
 
 # --- Helper: Image Integrity Check ---
-@st.cache_data(show_spinner=False)
+# Helper: Image Integrity Check
+# [Fix] Removed cache to prevent false negatives when files are synced
 def check_image_availability(image_path):
     """
     Verifies if the image exists and is not empty (iCloud sync issue).
@@ -252,7 +253,7 @@ if df.empty:
 # --- Mode Selection ---
 # [Refactor]
 st.sidebar.title("🔧 巡檢系統")
-st.sidebar.caption("v.20250204.17-force-check") # Version Tag
+st.sidebar.caption("v.20250204.18-img-cache-fix") # Version Tag
 mode = st.sidebar.radio("功能選擇", ["📝 巡檢輸入", "📊 數據戰情室"], index=0)
 
 # --- Sidebar Footer ---
