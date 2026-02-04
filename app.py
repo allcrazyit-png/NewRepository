@@ -433,117 +433,9 @@ if mode == "📝 巡檢輸入":
         tab1, tab2, tab3 = st.tabs(["📝 輸入作業", "🛡️ 該品變化點", "📊 趨勢與履歷"])
 
         with tab1:
-            # [2] History Trend Charts - REMOVED for Page 1 Simplified View
-            # Moved to Page 3 "Trends"
+            st.write("") # Spacer
 
-
-            # [4] Historical Images Gallery - REMOVED as per user request
-
-
-            # [1] Standard Info Cards (Reference Info)
-            st.info("ℹ️ 標準規格參考")
-            
-            # Custom Card Helper (Apple Style)
-            # Redefined here because we are in a new block
-            def display_info_card(col_obj, label, value_html):
-                col_obj.markdown(f"""
-                <div style="
-                    background: rgba(28, 28, 30, 0.6);
-                    backdrop-filter: blur(20px);
-                    border: 1px solid rgba(255, 255, 255, 0.1);
-                    padding: 15px;
-                    border-radius: 18px; /* Apple Rounded Corners */
-                    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-                    text-align: center;
-                    margin-bottom: 10px;
-                ">
-                    <div style="color: #86868b; font-size: 1.0rem; margin-bottom: 5px; font-weight: 500;">{label}</div>
-                    <div style="color: #f5f5f7; font-size: 1.5rem; font-weight: 600; word-wrap: break-word; line-height: 1.2;">
-                        {value_html}
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
-
-            def get_formatted_value_html(std_col, max_col, min_col, unit=""):
-                std_val = current_part_data.get(f'clean_{std_col}')
-                max_val = current_part_data.get(f'clean_{max_col}')
-                min_val = current_part_data.get(f'clean_{min_col}')
-
-                if not isinstance(std_val, list): std_val = [std_val]
-                if not isinstance(max_val, list): max_val = [max_val]
-                if not isinstance(min_val, list): min_val = [min_val]
-                
-                display_parts = []
-                count = max(len(std_val), len(max_val), len(min_val))
-                is_dual_local = (count > 1)
-                
-                for i in range(count):
-                    s = std_val[i] if i < len(std_val) else None
-                    mx = max_val[i] if i < len(max_val) else None
-                    mn = min_val[i] if i < len(min_val) else None
-                    
-                    s_str = f"{s:g}" if isinstance(s, (float, int)) else str(s)
-                    
-                    val_str = s_str
-                    if mx is not None and mn is not None:
-                        val_str += f'<span style="font-size: 0.8em; color: #ccc;"> ({mn:g}-{mx:g})</span>'
-                    
-                    if is_dual_local:
-                        prefix = "R: " if i == 0 else "L: "
-                        display_parts.append(f"<div><span style='font-size:0.6em; color:#888'>{prefix}</span>{val_str}</div>")
-                    else:
-                        display_parts.append(val_str)
-                        
-                return "".join(display_parts)
-
-            ric1, ric2, ric3 = st.columns(3)
-            
-            # 1. Standard Weight
-            val_weight = get_formatted_value_html('重量', '重量上限', '重量下限')
-            display_info_card(ric1, "標準重量 (g)", val_weight)
-            
-            # 2. Material Name
-            mat_name = current_part_data.get('原料名稱')
-            if pd.isna(mat_name) or str(mat_name).strip() == "":
-                mat_name = current_part_data.get('原料編號', 'N/A')
-            display_info_card(ric2, "原料名稱", f"{mat_name}")
-            
-            # 3. Standard Length
-            has_length_field = False 
-            if any(s['len_std'] is not None and s['len_std'] > 0 for s in specs):
-                has_length_field = True
-                        
-            if has_length_field:
-                val_len = get_formatted_value_html('標準長度', '長度上限', '長度下限')
-                display_info_card(ric3, "標準長度 (mm)", val_len)
-            else:
-                display_info_card(ric3, "標準長度 (mm)", "<span style='color:#555;'>N/A</span>")
-
-            # [4] Defect History Images - REMOVED for Page 1 Simplified View
-            # Moved to Page 3 "Trends"
-
-            # --- Key Control Points (Reference only) ---
-            st.markdown("##### ⚠️ 重點管制項目")
-            valid_cps = []
-            for i in range(1, 4):
-                col_name = f"重點管制{i}"
-                val = current_part_data.get(col_name)
-                if pd.notna(val) and str(val).strip():
-                    valid_cps.append(str(val).strip())
-                    
-            if valid_cps:
-                for cp in valid_cps:
-                    st.markdown(f"- 🔴 **{cp}**")
-                control_points_log = ["Viewed"] 
-            else:
-                st.caption("無重點管制項目")
-                control_points_log = []
-
-
-            # [5] Inputs & Operation
-            st.divider()
-            st.subheader("📝 巡檢輸入作業")
-            
+            # [1] Inputs & Operation
             # [Feature] Work Mode Selector
             mode_cols = st.columns([2, 1])
             with mode_cols[0]:
@@ -559,26 +451,46 @@ if mode == "📝 巡檢輸入":
             user_inputs = {}
             # Input Loop
             for idx, sp in enumerate(specs):
-                st.markdown(f"**{sp['label'].strip(' ()') or '規格'}**")
+                # Construct Hint Label
+                std_hint = ""
+                # Weight Hint
+                w_std_val = sp.get('std')
+                w_min = sp.get('min')
+                w_max = sp.get('max')
                 
-                def get_hint(mn, mx):
-                        return f" ({mn}~{mx})" if (mn is not None and mx is not None) else ""
+                w_label_extra = ""
+                if w_std_val is not None:
+                     w_str = f"{w_std_val:g}" if isinstance(w_std_val, (float, int)) else str(w_std_val)
+                     w_label_extra += f" [Std: {w_str}"
+                     if w_min is not None and w_max is not None:
+                         w_label_extra += f" | {w_min:g}~{w_max:g}"
+                     w_label_extra += "]"
+                
+                st.markdown(f"**{sp['label'].strip(' ()') or '規格'}**")
 
-                # Weight
+                # Weight Input
                 if quick_log_mode:
                      w_input = 0.0
                 else:
-                     w_hint = get_hint(sp['min'], sp['max'])
-                     w_input = st.number_input(f"重量 (g){w_hint}", min_value=0.0, step=0.1, format="%.1f", key=f"w_in_{idx}")
+                     w_input = st.number_input(f"重量 (g){w_label_extra}", min_value=0.0, step=0.1, format="%.1f", key=f"w_in_{idx}")
                 
-                # Length
+                # Length Input
                 l_input = None
-                if sp['len_std'] is not None and sp['len_std'] > 0:
+                len_std_val = sp.get('len_std')
+                if len_std_val is not None and len_std_val > 0:
+                    l_label_extra = ""
+                    l_str = f"{len_std_val:g}" if isinstance(len_std_val, (float, int)) else str(len_std_val)
+                    l_label_extra += f" [Std: {l_str}"
+                    l_min = sp.get('len_min')
+                    l_max = sp.get('len_max')
+                    if l_min is not None and l_max is not None:
+                         l_label_extra += f" | {l_min:g}~{l_max:g}"
+                    l_label_extra += "]"
+
                     if quick_log_mode:
                         l_input = 0.0
                     else:
-                        l_hint = get_hint(sp['len_min'], sp['len_max'])
-                        l_input = st.number_input(f"長度 (mm){l_hint}", min_value=0.0, step=0.1, format="%.1f", key=f"l_in_{idx}")
+                        l_input = st.number_input(f"長度 (mm){l_label_extra}", min_value=0.0, step=0.1, format="%.1f", key=f"l_in_{idx}")
                     
                 user_inputs[idx] = {'weight': w_input, 'length': l_input}
 
@@ -600,70 +512,15 @@ if mode == "📝 巡檢輸入":
                                 st.success("長度 OK")
                 st.markdown("---")
 
-            # --- [Review Feature] Change Point History (Open & Closed) ---
-            all_open_issues = []
-            all_closed_issues = []
-            
-            for sp in specs:
-                 h_target = f"{selected_part_no}{sp['suffix']}"
-                 h_data = drive_integration.fetch_history(h_target)
-                 if h_data:
-                     df_h = pd.DataFrame(h_data)
-                     
-                     if 'timestamp' in df_h.columns:
-                         df_h['timestamp'] = pd.to_datetime(df_h['timestamp'], errors='coerce')
-                         df_h = df_h.sort_values(by='timestamp', ascending=False)
-
-                     if 'change_point' not in df_h.columns: df_h['change_point'] = ""
-                     if 'status' not in df_h.columns: df_h['status'] = "未審核"
-                     if 'manager_comment' not in df_h.columns: df_h['manager_comment'] = ""
-                     
-                     df_h['status'] = df_h['status'].fillna("未審核")
-                     df_h['manager_comment'] = df_h['manager_comment'].fillna("")
-                     
-                     valid_issues = df_h[
-                         (df_h['change_point'].notna()) & 
-                         (df_h['change_point'] != "")
-                     ]
-                     
-                     for _, issue in valid_issues.iterrows():
-                         item = {
-                             "part": h_target,
-                             "ts": issue.get('timestamp', 'N/A'),
-                             "msg": issue['change_point'],
-                             "status": issue.get('status', '未審核'),
-                             "comment": issue.get('manager_comment', '')
-                         }
-                         
-                         if item['status'] in ["結案", "Closed"]:
-                             all_closed_issues.append(item)
-                         else:
-                             all_open_issues.append(item)
-
-            # 1. Open Issues (Alert Top)
-            if all_open_issues:
-                st.error(f"⚠️ 注意：本部品尚有 {len(all_open_issues)} 筆未結案變化點")
-                with st.expander("🔻 查看未結案細節 (Open Issues)", expanded=False):
-                    for issue in all_open_issues:
-                        ts_disp = str(issue['ts'])
-                        try: 
-                            ts_obj = pd.to_datetime(issue['ts'])
-                            ts_disp = ts_obj.strftime('%Y/%m/%d %H:%M')
-                        except: pass
-                        
-                        s_icon = "🔴"
-                        s_color = "red"
-                        if issue['status'] == "審核中":
-                            s_icon = "🟡"; s_color = "orange"
-                        
-                        st.markdown(f"**{s_icon} [:{s_color}[{issue['status']}]] {ts_disp} - {issue['part']}**")
-                        st.info(f"💬 {issue['msg']}")
-                        if issue['comment']:
-                            st.caption(f"👨‍💼 主管回應: {issue['comment']}")
-                        st.divider()
+            # Material Check with Hint
             if not quick_log_mode:
+                mat_name = current_part_data.get('原料名稱')
+                if pd.isna(mat_name) or str(mat_name).strip() == "":
+                    mat_name = current_part_data.get('原料編號', 'N/A')
+                
                 st.markdown("##### 📦 原料確認")
-                material_check = st.radio("原料狀態", ["OK", "NG"], horizontal=True, key="mat_check_radio")
+                # Combined Label
+                material_check = st.radio(f"原料狀態 (標準: {mat_name})", ["OK", "NG"], horizontal=True, key="mat_check_radio")
                 material_ok = (material_check == "OK")
             else:
                 material_ok = True # Auto pass in Quick Mode
@@ -764,29 +621,6 @@ if mode == "📝 巡檢輸入":
                                 
                         except Exception as e:
                             st.error(f"系統錯誤: {str(e)}")
-
-        # 2. Closed Issues (Moved to Bottom if any)
-        if all_closed_issues:
-            st.divider()
-            with st.expander("✅ 已結案歷史 (Closed History)", expanded=False):
-                for issue in all_closed_issues:
-                    # Compact Display
-                    ts_disp = str(issue['ts'])
-                    try: 
-                        ts_obj = pd.to_datetime(issue['ts'])
-                        ts_disp = ts_obj.strftime('%Y/%m/%d') # Short date
-                    except: pass
-                    
-                    c1, c2 = st.columns([1, 3])
-                    with c1:
-                        st.caption(f"🟢 {issue['status']}\n{ts_disp}")
-                    with c2:
-                        st.markdown(f"**{issue['msg']}**")
-                        if issue['comment']:
-                            st.caption(f"👨‍💼: {issue['comment']}")
-                        else:
-                            st.caption("(無留言)")
-                    st.divider()
 
 elif mode == "📊 數據戰情室":
     st.header("📊 生產品質戰情室")
