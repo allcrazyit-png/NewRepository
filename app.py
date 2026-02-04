@@ -36,7 +36,7 @@ st.set_page_config(
     page_title="瑞全智慧巡檢",
     page_icon="🔧",
     layout="wide",
-    initial_sidebar_state="collapsed"
+    initial_sidebar_state="expanded"
 )
 
 # Custom CSS for Mobile Optimization / Aesthetics
@@ -212,7 +212,7 @@ if df.empty:
 
 # --- Mode Selection ---
 # [Refactor] 3-Page Split
-mode = st.sidebar.radio("功能選擇", ["📝 即時輸入", "🛡️ 變化點看板", "📊 趨勢與履歷"], index=0)
+mode = st.sidebar.radio("功能選擇", ["📝 巡檢輸入", "📊 數據戰情室"], index=0)
 
 # --- Sidebar Footer ---
 st.sidebar.markdown("---")
@@ -231,7 +231,7 @@ st.sidebar.markdown(
     unsafe_allow_html=True
 )
 
-if mode == "📝 即時輸入":
+if mode == "📝 巡檢輸入":
     # --- Session State Management ---
     if 'inspection_started' not in st.session_state:
         st.session_state['inspection_started'] = False
@@ -399,370 +399,283 @@ if mode == "📝 即時輸入":
                 else:
                     st.warning(f"找不到圖片檔案或檔案損壞: {product_img_filename}")
 
-        # [2] History Trend Charts - REMOVED for Page 1 Simplified View
-        # Moved to Page 3 "Trends"
+        # [Refactor] Tabs for Inspection
+        tab1, tab2, tab3 = st.tabs(["📝 輸入作業", "🛡️ 該品變化點", "📊 趨勢與履歷"])
+
+        with tab1:
+            # [2] History Trend Charts - REMOVED for Page 1 Simplified View
+            # Moved to Page 3 "Trends"
 
 
-        # [4] Historical Images Gallery - REMOVED as per user request
+            # [4] Historical Images Gallery - REMOVED as per user request
 
 
-        # [1] Standard Info Cards (Reference Info)
-        st.info("ℹ️ 標準規格參考")
-        
-        # Custom Card Helper (Apple Style)
-        # Redefined here because we are in a new block
-        def display_info_card(col_obj, label, value_html):
-            col_obj.markdown(f"""
-            <div style="
-                background: rgba(28, 28, 30, 0.6);
-                backdrop-filter: blur(20px);
-                border: 1px solid rgba(255, 255, 255, 0.1);
-                padding: 15px;
-                border-radius: 18px; /* Apple Rounded Corners */
-                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-                text-align: center;
-                margin-bottom: 10px;
-            ">
-                <div style="color: #86868b; font-size: 0.9rem; margin-bottom: 3px; font-weight: 500;">{label}</div>
-                <div style="color: #f5f5f7; font-size: 1.3rem; font-weight: 600; word-wrap: break-word; line-height: 1.2;">
-                    {value_html}
+            # [1] Standard Info Cards (Reference Info)
+            st.info("ℹ️ 標準規格參考")
+            
+            # Custom Card Helper (Apple Style)
+            # Redefined here because we are in a new block
+            def display_info_card(col_obj, label, value_html):
+                col_obj.markdown(f"""
+                <div style="
+                    background: rgba(28, 28, 30, 0.6);
+                    backdrop-filter: blur(20px);
+                    border: 1px solid rgba(255, 255, 255, 0.1);
+                    padding: 15px;
+                    border-radius: 18px; /* Apple Rounded Corners */
+                    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+                    text-align: center;
+                    margin-bottom: 10px;
+                ">
+                    <div style="color: #86868b; font-size: 0.9rem; margin-bottom: 3px; font-weight: 500;">{label}</div>
+                    <div style="color: #f5f5f7; font-size: 1.3rem; font-weight: 600; word-wrap: break-word; line-height: 1.2;">
+                        {value_html}
+                    </div>
                 </div>
-            </div>
-            """, unsafe_allow_html=True)
+                """, unsafe_allow_html=True)
 
-        def get_formatted_value_html(std_col, max_col, min_col, unit=""):
-            std_val = current_part_data.get(f'clean_{std_col}')
-            max_val = current_part_data.get(f'clean_{max_col}')
-            min_val = current_part_data.get(f'clean_{min_col}')
+            def get_formatted_value_html(std_col, max_col, min_col, unit=""):
+                std_val = current_part_data.get(f'clean_{std_col}')
+                max_val = current_part_data.get(f'clean_{max_col}')
+                min_val = current_part_data.get(f'clean_{min_col}')
 
-            if not isinstance(std_val, list): std_val = [std_val]
-            if not isinstance(max_val, list): max_val = [max_val]
-            if not isinstance(min_val, list): min_val = [min_val]
-            
-            display_parts = []
-            count = max(len(std_val), len(max_val), len(min_val))
-            is_dual_local = (count > 1)
-            
-            for i in range(count):
-                s = std_val[i] if i < len(std_val) else None
-                mx = max_val[i] if i < len(max_val) else None
-                mn = min_val[i] if i < len(min_val) else None
+                if not isinstance(std_val, list): std_val = [std_val]
+                if not isinstance(max_val, list): max_val = [max_val]
+                if not isinstance(min_val, list): min_val = [min_val]
                 
-                s_str = f"{s:g}" if isinstance(s, (float, int)) else str(s)
+                display_parts = []
+                count = max(len(std_val), len(max_val), len(min_val))
+                is_dual_local = (count > 1)
                 
-                val_str = s_str
-                if mx is not None and mn is not None:
-                    val_str += f'<span style="font-size: 0.8em; color: #ccc;"> ({mn:g}-{mx:g})</span>'
-                
-                if is_dual_local:
-                    prefix = "R: " if i == 0 else "L: "
-                    display_parts.append(f"<div><span style='font-size:0.6em; color:#888'>{prefix}</span>{val_str}</div>")
-                else:
-                    display_parts.append(val_str)
+                for i in range(count):
+                    s = std_val[i] if i < len(std_val) else None
+                    mx = max_val[i] if i < len(max_val) else None
+                    mn = min_val[i] if i < len(min_val) else None
                     
-            return "".join(display_parts)
-
-        ric1, ric2, ric3 = st.columns(3)
-        
-        # 1. Standard Weight
-        val_weight = get_formatted_value_html('重量', '重量上限', '重量下限')
-        display_info_card(ric1, "標準重量 (g)", val_weight)
-        
-        # 2. Material Name
-        mat_name = current_part_data.get('原料名稱')
-        if pd.isna(mat_name) or str(mat_name).strip() == "":
-            mat_name = current_part_data.get('原料編號', 'N/A')
-        display_info_card(ric2, "原料名稱", f"{mat_name}")
-        
-        # 3. Standard Length
-        has_length_field = False 
-        if any(s['len_std'] is not None and s['len_std'] > 0 for s in specs):
-            has_length_field = True
+                    s_str = f"{s:g}" if isinstance(s, (float, int)) else str(s)
                     
-        if has_length_field:
-            val_len = get_formatted_value_html('標準長度', '長度上限', '長度下限')
-            display_info_card(ric3, "標準長度 (mm)", val_len)
-        else:
-            display_info_card(ric3, "標準長度 (mm)", "<span style='color:#555;'>N/A</span>")
+                    val_str = s_str
+                    if mx is not None and mn is not None:
+                        val_str += f'<span style="font-size: 0.8em; color: #ccc;"> ({mn:g}-{mx:g})</span>'
+                    
+                    if is_dual_local:
+                        prefix = "R: " if i == 0 else "L: "
+                        display_parts.append(f"<div><span style='font-size:0.6em; color:#888'>{prefix}</span>{val_str}</div>")
+                    else:
+                        display_parts.append(val_str)
+                        
+                return "".join(display_parts)
 
-        # [4] Defect History Images (Static) - Restored & Smaller
-        defect_images = []
-        d1 = current_part_data.get('異常履歷寫真')
-        if pd.notna(d1) and str(d1).strip(): defect_images.append(("1", str(d1).strip()))
-        for i in range(2, 4):
-            col = f"異常履歷寫真{i}"
-            val = current_part_data.get(col)
-            if pd.notna(val) and str(val).strip():
-                defect_images.append((str(i), str(val).strip()))
-
-        # [4] Defect History Images - REMOVED for Page 1 Simplified View
-        # Moved to Page 3 "Trends"
-
-        # --- Key Control Points (Reference only) ---
-        st.markdown("##### ⚠️ 重點管制項目")
-        valid_cps = []
-        for i in range(1, 4):
-            col_name = f"重點管制{i}"
-            val = current_part_data.get(col_name)
-            if pd.notna(val) and str(val).strip():
-                valid_cps.append(str(val).strip())
-                
-        if valid_cps:
-            for cp in valid_cps:
-                st.markdown(f"- 🔴 **{cp}**")
-            control_points_log = ["Viewed"] 
-        else:
-            st.caption("無重點管制項目")
-            control_points_log = []
-
-
-        # [5] Inputs & Operation
-        st.divider()
-        st.subheader("📝 巡檢輸入作業")
-        
-        # [Feature] Work Mode Selector
-        mode_cols = st.columns([2, 1])
-        with mode_cols[0]:
-             work_mode = st.radio("作業模式", ["📏 標準巡檢 (量測+異常)", "⚡ 僅記錄變化點"], horizontal=True)
-        quick_log_mode = (work_mode == "⚡ 僅記錄變化點")
-        
-        if quick_log_mode:
-            st.info("ℹ️ 快速模式：將自動填入標準值，僅需記錄異常。")
-            inspection_type = "變更點 (CP)"
-        else:
-            inspection_type = st.radio("巡檢階段", ["首件", "中件", "末件"], horizontal=True)
-
-        user_inputs = {}
-        # Input Loop
-        for idx, sp in enumerate(specs):
-            st.markdown(f"**{sp['label'].strip(' ()') or '規格'}**")
+            ric1, ric2, ric3 = st.columns(3)
             
-            def get_hint(mn, mx):
-                    return f" ({mn}~{mx})" if (mn is not None and mx is not None) else ""
-
-            # Weight
-            if quick_log_mode:
-                 w_input = 0.0
+            # 1. Standard Weight
+            val_weight = get_formatted_value_html('重量', '重量上限', '重量下限')
+            display_info_card(ric1, "標準重量 (g)", val_weight)
+            
+            # 2. Material Name
+            mat_name = current_part_data.get('原料名稱')
+            if pd.isna(mat_name) or str(mat_name).strip() == "":
+                mat_name = current_part_data.get('原料編號', 'N/A')
+            display_info_card(ric2, "原料名稱", f"{mat_name}")
+            
+            # 3. Standard Length
+            has_length_field = False 
+            if any(s['len_std'] is not None and s['len_std'] > 0 for s in specs):
+                has_length_field = True
+                        
+            if has_length_field:
+                val_len = get_formatted_value_html('標準長度', '長度上限', '長度下限')
+                display_info_card(ric3, "標準長度 (mm)", val_len)
             else:
-                 w_hint = get_hint(sp['min'], sp['max'])
-                 w_input = st.number_input(f"重量 (g){w_hint}", min_value=0.0, step=0.1, format="%.1f", key=f"w_in_{idx}")
+                display_info_card(ric3, "標準長度 (mm)", "<span style='color:#555;'>N/A</span>")
+
+            # [4] Defect History Images - REMOVED for Page 1 Simplified View
+            # Moved to Page 3 "Trends"
+
+            # --- Key Control Points (Reference only) ---
+            st.markdown("##### ⚠️ 重點管制項目")
+            valid_cps = []
+            for i in range(1, 4):
+                col_name = f"重點管制{i}"
+                val = current_part_data.get(col_name)
+                if pd.notna(val) and str(val).strip():
+                    valid_cps.append(str(val).strip())
+                    
+            if valid_cps:
+                for cp in valid_cps:
+                    st.markdown(f"- 🔴 **{cp}**")
+                control_points_log = ["Viewed"] 
+            else:
+                st.caption("無重點管制項目")
+                control_points_log = []
+
+
+            # [5] Inputs & Operation
+            st.divider()
+            st.subheader("📝 巡檢輸入作業")
             
-            # Length
-            l_input = None
-            if sp['len_std'] is not None and sp['len_std'] > 0:
-                if quick_log_mode:
-                    l_input = 0.0
-                else:
-                    l_hint = get_hint(sp['len_min'], sp['len_max'])
-                    l_input = st.number_input(f"長度 (mm){l_hint}", min_value=0.0, step=0.1, format="%.1f", key=f"l_in_{idx}")
+            # [Feature] Work Mode Selector
+            mode_cols = st.columns([2, 1])
+            with mode_cols[0]:
+                 work_mode = st.radio("作業模式", ["📏 標準巡檢 (量測+異常)", "⚡ 僅記錄變化點"], horizontal=True)
+            quick_log_mode = (work_mode == "⚡ 僅記錄變化點")
+            
+            if quick_log_mode:
+                st.info("ℹ️ 快速模式：將自動填入標準值，僅需記錄異常。")
+                inspection_type = "變更點 (CP)"
+            else:
+                inspection_type = st.radio("巡檢階段", ["首件", "中件", "末件"], horizontal=True)
+
+            user_inputs = {}
+            # Input Loop
+            for idx, sp in enumerate(specs):
+                st.markdown(f"**{sp['label'].strip(' ()') or '規格'}**")
                 
-            user_inputs[idx] = {'weight': w_input, 'length': l_input}
+                def get_hint(mn, mx):
+                        return f" ({mn}~{mx})" if (mn is not None and mx is not None) else ""
 
-            # Validation Msg
-            msg_cols = st.columns([1, 1])
-            # Weight Msg
-            if w_input > 0:
-                if sp['min'] is not None and sp['max'] is not None:
-                        if not (sp['min'] <= w_input <= sp['max']):
-                            st.error(f"⚠️ 重量NG")
-                        else:
-                            st.success("重量 OK")
-            # Length Msg
-            if l_input is not None and l_input > 0:
-                if sp['len_min'] is not None and sp['len_max'] is not None:
-                        if not (sp['len_min'] <= l_input <= sp['len_max']):
-                            st.error(f"⚠️ 長度NG")
-                        else:
-                            st.success("長度 OK")
-            st.markdown("---")
-
-        # Material Check
-        if not quick_log_mode:
-            st.markdown("##### 📦 原料確認")
-            material_check = st.radio("原料狀態", ["OK", "NG"], horizontal=True, key="mat_check_radio")
-            material_ok = (material_check == "OK")
-        else:
-            material_ok = True # Auto pass in Quick Mode
-        # --- [Review Feature] Change Point History (Open & Closed) ---
-        all_open_issues = []
-        all_closed_issues = []
-        
-        for sp in specs:
-             h_target = f"{selected_part_no}{sp['suffix']}"
-             h_data = drive_integration.fetch_history(h_target)
-             if h_data:
-                 df_h = pd.DataFrame(h_data)
-                 
-                 # [Feature] Sort History Newest First
-                 if 'timestamp' in df_h.columns:
-                     df_h['timestamp'] = pd.to_datetime(df_h['timestamp'], errors='coerce')
-                     df_h = df_h.sort_values(by='timestamp', ascending=False)
-
-                 # Safety for missing columns
-                 if 'change_point' not in df_h.columns: df_h['change_point'] = ""
-                 if 'status' not in df_h.columns: df_h['status'] = "未審核"
-                 if 'manager_comment' not in df_h.columns: df_h['manager_comment'] = "" # Capture comment
-                 
-                 df_h['status'] = df_h['status'].fillna("未審核")
-                 df_h['manager_comment'] = df_h['manager_comment'].fillna("")
-                 
-                 # valid rows with change point content
-                 valid_issues = df_h[
-                     (df_h['change_point'].notna()) & 
-                     (df_h['change_point'] != "")
-                 ]
-                 
-                 for _, issue in valid_issues.iterrows():
-                     item = {
-                         "part": h_target,
-                         "ts": issue.get('timestamp', 'N/A'),
-                         "msg": issue['change_point'],
-                         "status": issue.get('status', '未審核'),
-                         "comment": issue.get('manager_comment', '')
-                     }
-                     
-                     if item['status'] in ["結案", "Closed"]:
-                         all_closed_issues.append(item)
-                     else:
-                         all_open_issues.append(item)
-
-        # 1. Open Issues (Alert Top)
-        if all_open_issues:
-            st.error(f"⚠️ 注意：本部品尚有 {len(all_open_issues)} 筆未結案變化點")
-            with st.expander("🔻 查看未結案細節 (Open Issues)", expanded=False):
-                for issue in all_open_issues:
-                    # Compact Display
-                    ts_disp = str(issue['ts'])
-                    try: 
-                        ts_obj = pd.to_datetime(issue['ts'])
-                        ts_disp = ts_obj.strftime('%Y/%m/%d %H:%M')
-                    except: pass
+                # Weight
+                if quick_log_mode:
+                     w_input = 0.0
+                else:
+                     w_hint = get_hint(sp['min'], sp['max'])
+                     w_input = st.number_input(f"重量 (g){w_hint}", min_value=0.0, step=0.1, format="%.1f", key=f"w_in_{idx}")
+                
+                # Length
+                l_input = None
+                if sp['len_std'] is not None and sp['len_std'] > 0:
+                    if quick_log_mode:
+                        l_input = 0.0
+                    else:
+                        l_hint = get_hint(sp['len_min'], sp['len_max'])
+                        l_input = st.number_input(f"長度 (mm){l_hint}", min_value=0.0, step=0.1, format="%.1f", key=f"l_in_{idx}")
                     
-                    
-                    # Layout: Status | Time | Part
-                    # Determine Color/Icon
-                    s_icon = "🔴"
-                    s_color = "red"
-                    if issue['status'] == "審核中":
-                        s_icon = "🟡" # Yellow light for Under Review
-                        s_color = "orange"
-                    
-                    st.markdown(f"**{s_icon} [:{s_color}[{issue['status']}]] {ts_disp} - {issue['part']}**")
-                    st.info(f"💬 {issue['msg']}")
-                    if issue['comment']:
-                        st.caption(f"👨‍💼 主管回應: {issue['comment']}")
-                    st.divider()
+                user_inputs[idx] = {'weight': w_input, 'length': l_input}
 
+                # Validation Msg
+                msg_cols = st.columns([1, 1])
+                # Weight Msg
+                if w_input > 0:
+                    if sp['min'] is not None and sp['max'] is not None:
+                            if not (sp['min'] <= w_input <= sp['max']):
+                                st.error(f"⚠️ 重量NG")
+                            else:
+                                st.success("重量 OK")
+                # Length Msg
+                if l_input is not None and l_input > 0:
+                    if sp['len_min'] is not None and sp['len_max'] is not None:
+                            if not (sp['len_min'] <= l_input <= sp['len_max']):
+                                st.error(f"⚠️ 長度NG")
+                            else:
+                                st.success("長度 OK")
+                st.markdown("---")
 
-        st.markdown("##### 📝 變化點說明")
-        
-        # [Design] Simplified to Checkbox
-        # Default checked if in Quick Mode (since Quick Mode implies reporting an issue)
-        is_issue = st.checkbox("⚠️ 回報異常 (Report Issue)", value=quick_log_mode)
-        
-        change_point = ""
-        if is_issue:
-            change_point = st.text_area("請輸入異常說明", placeholder="例如: 模具損傷、原料更換...", height=100)
-            if not change_point.strip():
-                st.caption("⚠️ 請輸入說明，若空白將視為無異常")
-        else:
-            # Only show this info if explicitly unchecked in Quick Mode (unlikely) or just standard mode
+            # Material Check
             if not quick_log_mode:
-                st.markdown("<span style='color: #888; font-size: 0.9em;'>✅ 無變化點 (Standard)</span>", unsafe_allow_html=True)
+                st.markdown("##### 📦 原料確認")
+                material_check = st.radio("原料狀態", ["OK", "NG"], horizontal=True, key="mat_check_radio")
+                material_ok = (material_check == "OK")
+            else:
+                material_ok = True # Auto pass in Quick Mode
 
-        # Photo Input
-        input_method = st.radio("影像輸入", ["📸 網頁相機", "📂 上傳照片"], index=1, horizontal=True)
-        img_files = []
-        if input_method == "📸 網頁相機":
-            cam_file = st.camera_input("拍照")
-            if cam_file: img_files = [cam_file]
-        else:
-            uploaded_files = st.file_uploader("上傳照片", type=["jpg", "png"], accept_multiple_files=True)
-            if uploaded_files: img_files = uploaded_files
+            st.markdown("##### 📝 變化點說明")
+            
+            # [Design] Simplified to Checkbox
+            is_issue = st.checkbox("⚠️ 回報異常 (Report Issue)", value=quick_log_mode)
+            
+            change_point = ""
+            if is_issue:
+                change_point = st.text_area("請輸入異常說明", placeholder="例如: 模具損傷、原料更換...", height=100)
+                if not change_point.strip():
+                    st.caption("⚠️ 請輸入說明，若空白將視為無異常")
+            else:
+                if not quick_log_mode:
+                    st.markdown("<span style='color: #888; font-size: 0.9em;'>✅ 無變化點 (Standard)</span>", unsafe_allow_html=True)
 
-        # Actions
-        st.write("") # Spacer
-        
-        if st.button("🚀 提交巡檢數據", use_container_width=True, type="primary"):
-                # Check inputs
+            # Photo Input
+            input_method = st.radio("影像輸入", ["📸 網頁相機", "📂 上傳照片"], index=1, horizontal=True)
+            img_files = []
+            if input_method == "📸 網頁相機":
+                cam_file = st.camera_input("拍照")
+                if cam_file: img_files = [cam_file]
+            else:
+                uploaded_files = st.file_uploader("上傳照片", type=["jpg", "png"], accept_multiple_files=True)
+                if uploaded_files: img_files = uploaded_files
+
+            # --- Submit Button ---
+            submit_btn = st.button("🚀 提交巡檢報告", use_container_width=True)
+            
+            if submit_btn:
                 any_missing_weight = False
                 if not quick_log_mode:
                      any_missing_weight = any(user_inputs[i]['weight'] == 0 for i in user_inputs)
-                
-                if any_missing_weight:
-                    st.warning("請輸入所有重量數據")
-                elif not material_ok:
-                    st.warning("原料確認為 NG!")
-                else:
-                    with st.spinner("資料上傳中..."):
-                        
-                        tz = datetime.timezone(datetime.timedelta(hours=8))
-                        timestamp = datetime.datetime.now(tz)
-                        ts_str = timestamp.strftime("%Y%m%d_%H%M%S")
-                        key_control_str = ", ".join(control_points_log) if control_points_log else "N/A"
-                        all_success = True
-                        fail_msg = ""
-                        primary_img = img_files[0] if img_files else None
-                        
-                        for idx, sp in enumerate(specs):
-                            target_part_no = f"{selected_part_no}{sp['suffix']}"
-                            m_weight = user_inputs[idx]['weight']
-                            m_length = user_inputs[idx]['length']
-                            
-                            current_status = "OK"
-                            if quick_log_mode:
-                                current_status = "CP" # Special status for Quick Mode
-                            elif sp['min'] is not None and sp['max'] is not None:
-                                if not (sp['min'] <= m_weight <= sp['max']):
-                                    current_status = "NG"
-                            
-                            filename = f"{selected_model}_{target_part_no}_{inspection_type}_{ts_str}.jpg"
-                            # Determine Status based on Change Point
-                            final_status = "未審核"
-                            if not change_point.strip():
-                                final_status = "無異常"
-                            
-                            row_data = {
-                                "timestamp": timestamp.strftime("%Y-%m-%d %H:%M:%S"),
-                                "model": selected_model,
-                                "part_no": target_part_no,
-                                "inspection_type": inspection_type,
-                                "weight": m_weight,
-                                "length": m_length if m_length is not None else "",
-                                "material_ok": "OK" if material_ok else "N/A", # Use N/A for Quick Mode logic if preferred, or just Keep OK logic
-                                "change_point": change_point,
-                                "result": current_status,
-                                "status": final_status # [Feature] Explicit status logic
-                            }
-                            
-                            img_to_send = primary_img
-                            if is_dual and idx > 0: img_to_send = None 
-                            if img_to_send and hasattr(img_to_send, 'seek'):
-                                    try: img_to_send.seek(0)
-                                    except: pass
-                                
-                            success, message = drive_integration.upload_and_append(img_to_send, filename, row_data)
-                            if not success:
-                                all_success = False
-                                fail_msg += f"[{target_part_no} Err] "
-                    
-                    if all_success:
-                        st.success("提交成功!")
-                        st.balloons()
-                        
-                        # --- Smart Cache Clearing ---
-                        drive_integration.fetch_history.clear()
-                        drive_integration.fetch_all_data.clear()
-                        st.toast("✅ 已清除快取，重新載入最新數據", icon="🔄")
-                        
-                        # [Fixed] Immediate Rerun to update data
-                        time.sleep(1.5)
-                        st.rerun()
-                        
-                    else:
-                        st.error(f"提交失敗: {fail_msg}")
 
-        # 2. Closed Issues (Moved to Bottom)
+                if (any_missing_weight) and not quick_log_mode:
+                    st.warning("⚠️ 請填寫所有重量數據 (Quick Mode 可跳過)")
+                elif not material_ok:
+                    st.error("❌ 原料狀態異常，請復歸後再提交")
+                else:
+                    with st.spinner("資料上傳中 (Uploading)..."):
+                        try:
+                            timestamp_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                            success_count = 0
+                            
+                            # Log Logic: One row per spec (L/R)
+                            for idx, sp in enumerate(specs):
+                                u_in = user_inputs[idx]
+                                
+                                # Prepare inputs
+                                final_weight = u_in['weight']
+                                final_len = u_in['length'] if u_in['length'] is not None else ""
+                                
+                                # Status Determination
+                                final_res = "PASS"
+                                if quick_log_mode:
+                                     final_res = "CP" # Change Point
+                                else:
+                                     # Weight Check
+                                     if sp['min'] is not None and sp['max'] is not None:
+                                         if not (sp['min'] <= final_weight <= sp['max']): final_res = "NG"
+                                     # Length Check
+                                     if sp['len_min'] is not None and sp['len_max'] is not None and final_len != "":
+                                         if not (sp['len_min'] <= final_len <= sp['len_max']): final_res = "NG"
+                                
+                                # CP Status for Manager
+                                initial_status = "未審核" if change_point.strip() else "無異常"
+
+                                row_data = {
+                                    "timestamp": timestamp_str,
+                                    "model": selected_model,
+                                    "part_no": f"{selected_part_no}{sp['suffix']}",
+                                    "part_name": current_part_data.get('品名', ''),
+                                    "inspection_type": inspection_type,
+                                    "material_check": "OK" if material_ok else "NG",
+                                    "weight": final_weight,
+                                    "width": "", 
+                                    "length": final_len,
+                                    "result": final_res,
+                                    "change_point": change_point if idx == 0 else "", 
+                                    "status": initial_status,
+                                    "manager_comment": ""
+                                }
+                                
+                                ok = drive_integration.upload_and_append(row_data, img_files if idx==0 else [])
+                                if ok: success_count += 1
+                                
+                            if success_count == len(specs):
+                                st.success("✅ 提交成功!")
+                                drive_integration.fetch_history.clear()
+                                drive_integration.fetch_all_data.clear()
+                                time.sleep(1)
+                                st.session_state['inspection_started'] = False
+                                st.rerun()
+                            else:
+                                st.error("部份資料上傳失敗，請重試")
+                                
+                        except Exception as e:
+                            st.error(f"系統錯誤: {str(e)}")
+
+        # 2. Closed Issues (Moved to Bottom if any)
         if all_closed_issues:
             st.divider()
             with st.expander("✅ 已結案歷史 (Closed History)", expanded=False):
@@ -785,7 +698,258 @@ if mode == "📝 即時輸入":
                             st.caption("(無留言)")
                     st.divider()
 
-elif mode == "🛡️ 變化點看板":
+elif mode == "📊 數據戰情室":
+    st.header("📊 生產品質戰情室")
+    st.caption("即時同步 Google Sheet 雲端數據")
+    
+    # --- Dashboard Navigation ---
+    dash_page = st.sidebar.radio("功能切換", ["📈 重量趨勢追蹤", "🛡️ 變化點管理中心"], key="dash_nav")
+
+    with st.spinner("正在連線至總部資料庫，請稍候..."):
+        raw_data = drive_integration.fetch_all_data()
+
+    if not raw_data:
+        st.warning("目前無數據或無法連線至 Google Sheet (請確認 GAS V4 是否部署成功)。")
+    else:
+        df_dash = pd.DataFrame(raw_data)
+        
+        # --- Timezone Fix ---
+        if 'timestamp' in df_dash.columns:
+            df_dash['timestamp'] = pd.to_datetime(df_dash['timestamp'], errors='coerce')
+            if df_dash['timestamp'].dt.tz is None:
+                 df_dash['timestamp'] = df_dash['timestamp'].dt.tz_localize('UTC')
+            df_dash['timestamp'] = df_dash['timestamp'].dt.tz_convert('Asia/Taipei')
+
+        # --- Schema Safety Check (Fix for Cache/Legacy Data) ---
+        if 'status' not in df_dash.columns: df_dash['status'] = "未審核"
+        if 'manager_comment' not in df_dash.columns: df_dash['manager_comment'] = ""
+        df_dash['status'] = df_dash['status'].fillna("未審核")
+        df_dash['manager_comment'] = df_dash['manager_comment'].fillna("")
+        if 'change_point' not in df_dash.columns: df_dash['change_point'] = ""
+
+        # ==========================================
+        # 1. Weight Trend Tracking
+        # ==========================================
+        if dash_page == "📈 重量趨勢追蹤":
+            # --- Filters ---
+            col_d1, col_d2, col_d3 = st.columns(3)
+            with col_d1:
+                models_dash = ["全部"] + list(df_dash['model'].unique())
+                filter_model = st.selectbox("篩選車型", models_dash)
+            with col_d2:
+                 if filter_model != "全部":
+                     parts_dash = ["全部"] + list(df_dash[df_dash['model'] == filter_model]['part_no'].unique())
+                 else:
+                     parts_dash = ["全部"] + list(df_dash['part_no'].unique())
+                 filter_part = st.selectbox("篩選品番", parts_dash)
+                 
+                 # Show small product image if filtered
+                 if filter_part != "全部":
+                     img_path = f"quality_images/{filter_part}_main.jpg"
+                     if check_image_availability(img_path):
+                         st.image(img_path, width=200, caption=filter_part)
+            with col_d3:
+                 results_dash = ["全部"] + list(df_dash['result'].unique())
+                 filter_result = st.selectbox("篩選結果", results_dash)
+            
+            # Apply filters
+            df_view = df_dash.copy()
+            if filter_model != "全部": df_view = df_view[df_view['model'] == filter_model]
+            if filter_part != "全部": df_view = df_view[df_view['part_no'] == filter_part]
+            if filter_result != "全部": df_view = df_view[df_view['result'] == filter_result]
+            
+            # Sort by Newest
+            if 'timestamp' in df_view.columns:
+                 df_view = df_view.sort_values(by='timestamp', ascending=False)
+            
+            # Process Image Links
+            if 'image' in df_view.columns:
+                def make_drive_link(val):
+                    val_str = str(val).strip().replace('"', '').replace("'", "")
+                    if not val_str or val_str.lower() == 'nan': return None
+                    if val_str.startswith('http'): return val_str
+                    return f"https://drive.google.com/file/d/{val_str}/preview"
+                df_view['image'] = df_view['image'].apply(make_drive_link)
+
+            st.dataframe(
+                df_view, 
+                use_container_width=True,
+                column_config={
+                    "image": st.column_config.LinkColumn("巡檢照片", display_text="📸 查看"),
+                    "timestamp": st.column_config.DatetimeColumn("時間", format="MM/DD HH:mm"),
+                    "weight": st.column_config.NumberColumn("重量 (g)", format="%.2f")
+                }
+            )
+            
+            if not df_view.empty:
+                st.subheader("📈 重量趨勢圖")
+                
+                chart_df = df_view.copy()
+                if 'result' in chart_df.columns:
+                    chart_df = chart_df[chart_df['result'] != 'CP']
+                if 'weight' in chart_df.columns:
+                    chart_df['weight'] = pd.to_numeric(chart_df['weight'], errors='coerce')
+                    chart_df = chart_df[chart_df['weight'] > 0]
+
+                if not chart_df.empty:
+                    y_cols = ['weight']
+                    if filter_part != "全部":
+                        # [Fix] Fuzzy Match for Suffixes (e.g., Part_1, Part_2)
+                        part_spec = df[df['品番'] == filter_part]
+                        if part_spec.empty:
+                            if '_' in filter_part:
+                                base_part_underscore = filter_part.rsplit('_', 1)[0]
+                                part_spec = df[df['品番'] == base_part_underscore]
+                        if part_spec.empty:
+                             base_part_space = filter_part.split(' ')[0]
+                             part_spec = df[df['品番'] == base_part_space]
+                        
+                        if not part_spec.empty:
+                            spec_row = part_spec.iloc[0]
+                            limit_h = spec_row.get('clean_重量上限')
+                            limit_l = spec_row.get('clean_重量下限')
+                            if isinstance(limit_h, list): limit_h = limit_h[0]
+                            if isinstance(limit_l, list): limit_l = limit_l[0]
+                            if limit_h is not None:
+                                chart_df['Limit H'] = float(limit_h)
+                                y_cols.append('Limit H')
+                            if limit_l is not None:
+                                 chart_df['Limit L'] = float(limit_l)
+                                 y_cols.append('Limit L')
+                             
+                            # Show Defect History Images Logic
+                            st.subheader("⚠️ 過去異常履歷 (Reference)")
+                            defect_images = []
+                            d1 = spec_row.get('異常履歷寫真')
+                            if pd.notna(d1) and str(d1).strip(): defect_images.append(("1", str(d1).strip()))
+                            for i in range(2, 4):
+                                col_n = f"異常履歷寫真{i}"
+                                val = spec_row.get(col_n)
+                                if pd.notna(val) and str(val).strip(): defect_images.append((str(i), str(val).strip()))
+                            
+                            if defect_images:
+                                 dh_cols = st.columns(5)
+                                 for idx, (label, fname) in enumerate(defect_images):
+                                     col_idx = idx % 5
+                                     img_path = os.path.join("quality_images", fname)
+                                     if check_image_availability(img_path):
+                                         dh_cols[col_idx].image(img_path, caption=f"履歷-{label}", use_container_width=True)
+
+
+                    chart_long = chart_df.melt('timestamp', value_vars=y_cols, var_name='MetricType', value_name='Value')
+                    y_min_val = chart_long['Value'].min(); y_max_val = chart_long['Value'].max()
+                    padding = (y_max_val - y_min_val) * 0.1 if y_max_val != y_min_val else 5
+                    
+                    color_domain = ['Limit H', 'Limit L', 'weight']
+                    color_range = ['#FF6C6C', '#FF6C6C', '#457B9D'] 
+                    
+                    base = alt.Chart(chart_long).encode(
+                        x=alt.X('timestamp', title='時間', axis=alt.Axis(format='%m/%d %H:%M')),
+                        y=alt.Y('Value', title='重量 (g)', scale=alt.Scale(domain=[y_min_val - padding, y_max_val + padding])),
+                        color=alt.Color('MetricType', legend=None, scale=alt.Scale(domain=color_domain, range=color_range)),
+                        tooltip=['timestamp', 'Value', 'MetricType']
+                    )
+                    
+                    line_w = base.transform_filter(alt.datum.MetricType == 'weight').mark_line(point=True)
+                    line_limits = base.transform_filter((alt.datum.MetricType == 'Limit H') | (alt.datum.MetricType == 'Limit L')).mark_line(strokeDash=[5, 5], opacity=0.8)
+                    
+                    st.altair_chart((line_w + line_limits).interactive(), use_container_width=True)
+                else:
+                    st.info("尚無有效數據 (已隱藏快速記錄的 CP 資料)")
+
+        # ==========================================
+        # 2. Change Point Management Center
+        # ==========================================
+        elif dash_page == "🛡️ 變化點管理中心":
+            st.subheader("🛡️ 變化點管理中心")
+            
+            # Filter Logic
+            df_cp = df_dash[df_dash['change_point'].ne("") & df_dash['change_point'].notna()].copy()
+            df_cp = df_cp.sort_values(by='timestamp', ascending=False)
+            
+            # --- Filters ---
+            st.markdown("##### 🔍 篩選條件")
+            f_col1, f_col2, f_col3, f_col4 = st.columns(4)
+            with f_col1:
+                today = datetime.date.today()
+                start_date = st.date_input("開始日期", today - datetime.timedelta(days=30))
+                end_date = st.date_input("結束日期", today)
+            with f_col2:
+                models_cp = ["全部"] + list(df_cp['model'].unique())
+                filter_cp_model = st.selectbox("車型 (Model)", models_cp, key="cp_model_filter")
+            with f_col3:
+                if filter_cp_model != "全部":
+                    parts_cp = ["全部"] + list(df_cp[df_cp['model'] == filter_cp_model]['part_no'].unique())
+                else:
+                    parts_cp = ["全部"] + list(df_cp['part_no'].unique())
+                filter_cp_part = st.selectbox("品番 (Part No)", parts_cp, key="cp_part_filter")
+            with f_col4:
+                status_opts = ["未審核", "審核中", "結案", "Closed", "無異常"]
+                filter_cp_status = st.multiselect("狀態 (Status)", status_opts, default=["未審核", "審核中"])
+
+            # Apply Filters
+            if 'timestamp' in df_cp.columns:
+                 df_cp['date'] = df_cp['timestamp'].dt.date
+                 df_cp = df_cp[(df_cp['date'] >= start_date) & (df_cp['date'] <= end_date)]
+            if filter_cp_model != "全部": df_cp = df_cp[df_cp['model'] == filter_cp_model]
+            if filter_cp_part != "全部": df_cp = df_cp[df_cp['part_no'] == filter_cp_part]
+            if filter_cp_status: df_cp = df_cp[df_cp['status'].isin(filter_cp_status)]
+            else:
+                st.warning("請選擇至少一種狀態")
+                df_cp = df_cp.iloc[0:0] 
+            
+            st.info(f"共發現 {len(df_cp)} 筆變化點記錄")
+            
+            for index, row in df_cp.iterrows():
+                stat_color = "red"; stat_icon = "🔴"
+                if row['status'] == "審核中": stat_color = "orange"; stat_icon = "🟡"
+                elif row['status'] in ["結案", "Closed", "無異常"]: stat_color = "green"; stat_icon = "🟢"
+                
+                with st.expander(f"{stat_icon} :{stat_color}[{row['status']}] {row['timestamp'].strftime('%Y-%m-%d %H:%M')} - {row['model']} {row['part_no']}", expanded=True):
+                    c1, c2 = st.columns([2, 1])
+                    with c1:
+                        st.markdown(f"**變化點內容:**")
+                        st.error(row['change_point'])
+                        st.caption(f"巡檢結果: {row['result']}")
+                    with c2:
+                        prod_img_path = f"quality_images/{row['part_no']}_main.jpg"
+                        if check_image_availability(prod_img_path): st.image(prod_img_path, width=120, caption="產品示意圖")
+                        
+                        raw_img = str(row.get('image', '')).strip().replace('"', '').replace("'", "")
+                        if raw_img and raw_img.lower() != "nan":
+                             if raw_img.startswith("http"): img_url = raw_img
+                             else: img_url = f"https://drive.google.com/file/d/{raw_img}/preview"
+                             st.markdown(f"📸 [查看巡檢照片]({img_url})")
+                    
+                    st.divider()
+                    
+                    # Manager Actions
+                    m_col1, m_col2, m_col3 = st.columns([1, 2, 1])
+                    u_key = f"{row['timestamp']}_{row['part_no']}"
+                    
+                    with m_col1:
+                        current_stat = row.get('status', '未審核')
+                        if not current_stat: current_stat = '未審核'
+                        target_index = 0
+                        opts = ["未審核", "審核中", "結案", "無異常"]
+                        if current_stat in opts: target_index = opts.index(current_stat)
+                        new_status = st.selectbox("審核狀態", opts, index=target_index, key=f"stat_{u_key}")
+                    
+                    with m_col2:
+                         current_comment = row.get('manager_comment', '')
+                         new_comment = st.text_input("主管留言", value=str(current_comment) if pd.notna(current_comment) else "", key=f"comm_{u_key}")
+                    
+                    with m_col3:
+                        st.write("") 
+                        if st.button("💾 更新", key=f"btn_upd_{u_key}", use_container_width=True):
+                            ts_str_for_api = row['timestamp'].isoformat()
+                            with st.spinner("更新中..."):
+                                success, msg = drive_integration.update_status(ts_str_for_api, new_status, new_comment)
+                                if success:
+                                    st.toast("✅ 更新成功!", icon="💾")
+                                    st.rerun()
+                                else:
+                                    st.error(f"更新失敗: {msg}")
     st.header("🛡️ 變化點看板")
     st.caption("即時同步 Google Sheet 雲端數據")
     
