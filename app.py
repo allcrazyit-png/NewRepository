@@ -984,10 +984,11 @@ elif mode == "📊 數據戰情室":
                  filter_part = filter_part_ui # Local var for legacy use below
                  
                  # Show small product image if filtered
-                 if filter_part != "全部":
-                     img_path = f"quality_images/{filter_part}_main.jpg"
-                     if check_image_availability(img_path):
-                         st.image(img_path, width=200, caption=filter_part)
+                 # [User Request] Remove Image Display
+                 # if filter_part != "全部":
+                 #     img_path = f"quality_images/{filter_part}_main.jpg"
+                 #     if check_image_availability(img_path):
+                 #         st.image(img_path, width=200, caption=filter_part)
             with col_d3:
                  results_dash = ["全部"] + list(df_dash['result'].unique())
                  filter_result = st.selectbox("篩選結果", results_dash)
@@ -1038,9 +1039,6 @@ elif mode == "📊 數據戰情室":
                 key="dash_table_v40" # [Fix] Ensure State Persistence
             )
             
-            # [DEBUG]
-            # st.write(f"Selection Event: {event.selection}")
-
             # [Interaction] Click Row to Filter Part
             if len(event.selection.rows) > 0:
                 s_idx = event.selection.rows[0]
@@ -1061,9 +1059,6 @@ elif mode == "📊 數據戰情室":
             
             if not df_view.empty:
                 st.subheader("📈 重量趨勢圖")
-                
-                # [DEBUG] Temporary verification
-                # st.write(f"Debug Info: State={st.session_state.get('dash_target_part')}, Filter={filter_part}, ViewRows={len(df_view)}")
                 
                 # [Fix] Hide Chart if "All" is selected
                 current_filter = st.session_state.get('dash_target_part', '全部')
