@@ -880,8 +880,14 @@ elif mode == "📊 數據戰情室":
                     return f"https://drive.google.com/file/d/{val_str}/preview"
                 df_view['image'] = df_view['image'].apply(make_drive_link)
 
+            # [View] Select only relevant columns for Weight Tracking (Hide CP info)
+            cols_to_show = ['timestamp', 'model', 'part_no', 'inspection_type', 'weight', 'result', 'image']
+            # intersection to avoid KeyErrors if columns missing
+            final_cols = [c for c in cols_to_show if c in df_view.columns]
+            df_view_final = df_view[final_cols]
+            
             st.dataframe(
-                df_view, 
+                df_view_final, 
                 use_container_width=True,
                 column_config={
                     "image": st.column_config.LinkColumn("巡檢照片", display_text="📸 查看"),
