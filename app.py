@@ -253,7 +253,7 @@ if df.empty:
 # --- Mode Selection ---
 # [Refactor]
 st.sidebar.title("🔧 巡檢系統")
-st.sidebar.caption("v.20250204.44-revert-label") # Version Tag
+st.sidebar.caption("v.20250204.45-hide-len") # Version Tag
 mode = st.sidebar.radio("功能選擇", ["📝 巡檢輸入", "📊 數據戰情室"], index=0)
 
 # --- Sidebar Footer ---
@@ -513,7 +513,16 @@ if mode == "📝 巡檢輸入":
                     # Header for the specific cavity
                     st.markdown(f"#### 🟢 穴號: {sp['suffix'] or '單穴'}")
                     
-                    c1, c2 = st.columns(2)
+                    # Check if Length Spec exists (Robust)
+                    len_std_val = sp.get('len_std')
+                    has_len_spec = (len_std_val is not None) and (str(len_std_val).lower() != 'nan') and (str(len_std_val).strip() != '')
+
+                    if has_len_spec:
+                        c1, c2 = st.columns(2)
+                    else:
+                        c1 = st.container()
+                        c2 = None
+
                     with c1:
                         # Weight Input
                         w_std_val = sp.get('std', '-')
@@ -542,36 +551,33 @@ if mode == "📝 巡檢輸入":
                                 key=f"w_in_{idx}"
                             )
 
-                    with c2:
-                        # Length Input
-                        len_std_val = sp.get('len_std')
-                        l_label = "長度 (mm)"
-                        
-                        if len_std_val is not None:
-                             l_min = sp.get('len_min')
-                             l_max = sp.get('len_max')
+                    l_input = None
+                    if has_len_spec and c2:
+                        with c2:
+                            # Length Input
+                            l_label = "長度 (mm)"
+                            l_min = sp.get('len_min')
+                            l_max = sp.get('len_max')
                              
-                             l_str = f"{len_std_val:g}" if isinstance(len_std_val, (float, int)) else str(len_std_val)
-                             l_extra = f" [Std: {l_str}"
-                             if l_min is not None and l_max is not None:
+                            l_str = f"{len_std_val:g}" if isinstance(len_std_val, (float, int)) else str(len_std_val)
+                            l_extra = f" [Std: {l_str}"
+                            if l_min is not None and l_max is not None:
                                   l_extra += f" | {l_min:g}~{l_max:g}"
-                             l_extra += "]"
-                             l_label += l_extra
-                        else:
-                             l_label += " [選填]"
-                        
-                        if quick_log_mode:
-                            l_input = 0.0
-                        else:
-                            l_input = st.number_input(
-                                l_label,
-                                min_value=0.0,
-                                max_value=500.0,
-                                step=0.01,
-                                format="%.2f",
-                                key=f"l_in_{idx}",
-                                value=None
-                            )
+                            l_extra += "]"
+                            l_label += l_extra
+                            
+                            if quick_log_mode:
+                                l_input = 0.0
+                            else:
+                                l_input = st.number_input(
+                                    l_label,
+                                    min_value=0.0,
+                                    max_value=500.0,
+                                    step=0.01,
+                                    format="%.2f",
+                                    key=f"l_in_{idx}",
+                                    value=None
+                                )
 
                     user_inputs[idx] = {'weight': w_input, 'length': l_input}
 
@@ -582,7 +588,8 @@ if mode == "📝 巡檢輸入":
                                  st.error(f"⚠️ 重量 NG")
                              else:
                                  st.success("重量 OK")
-                    if l_input is not None and l_input > 0:
+                    
+                    if l_input is not None and l_input > 0 and has_len_spec:
                           if sp['len_min'] is not None and sp['len_max'] is not None:
                                if not (sp['len_min'] <= l_input <= sp['len_max']):
                                    st.error(f"⚠️ 長度 NG")
