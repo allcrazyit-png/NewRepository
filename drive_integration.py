@@ -144,7 +144,7 @@ def fetch_history(part_no):
     except Exception:
         return []
 
-@st.cache_data(ttl=60) # Cache 60s for responsiveness, but updates faster
+@st.cache_data(ttl=600) # Cache 10min as requested
 def fetch_all_data():
     """
     Fetches ALL data from GAS for the Dashboard.
