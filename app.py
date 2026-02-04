@@ -253,7 +253,7 @@ if df.empty:
 # --- Mode Selection ---
 # [Refactor]
 st.sidebar.title("🔧 巡檢系統")
-st.sidebar.caption("v.20250204.25-gas-update") # Version Tag
+st.sidebar.caption("v.20250204.26-ts-sync") # Version Tag
 mode = st.sidebar.radio("功能選擇", ["📝 巡檢輸入", "📊 數據戰情室"], index=0)
 
 # --- Sidebar Footer ---
@@ -1093,7 +1093,8 @@ elif mode == "📊 數據戰情室":
                     with m_col3:
                         st.write("") 
                         if st.button("💾 更新", key=f"btn_upd_{u_key}", use_container_width=True):
-                            ts_str_for_api = row['timestamp'].isoformat()
+                            # [Fix] Use simple ISO format to avoid Timezone offset mismatch with GAS
+                            ts_str_for_api = row['timestamp'].strftime('%Y-%m-%dT%H:%M:%S')
                             target_part = row['part_no']
                             with st.spinner("更新中..."):
                                 success, msg = drive_integration.update_status(ts_str_for_api, new_status, new_comment, target_part, apply_batch)
