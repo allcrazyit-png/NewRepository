@@ -125,13 +125,17 @@ function doPost(e) {
             // Find row by Timestamp (iso-string match usually works best)
             // Python sends ISO string, Sheet has formatted date. We might need fuzzy match or strict string match.
             // Assuming straightforward comparison for now.
+            var targetPart = jsonData.part_no; // [Fix] Add Part No Match
+
+            // Find row by Timestamp AND Part No
             for (var i = 1; i < rows.length; i++) {
                 // Convert Sheet Date to ISO string or simplified check
                 var sheetDate = new Date(rows[i][0]);
+                var sheetPart = rows[i][2]; // Column C is Part No
                 var targetDate = new Date(targetTs);
 
-                // Compare time value (ms)
-                if (sheetDate.getTime() === targetDate.getTime()) {
+                // Compare time value (ms) AND Part No
+                if (sheetPart == targetPart && sheetDate.getTime() === targetDate.getTime()) {
                     rowIndex = i + 1; // 1-based index
                     break;
                 }
