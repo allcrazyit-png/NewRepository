@@ -253,7 +253,7 @@ if df.empty:
 # --- Mode Selection ---
 # [Refactor]
 st.sidebar.title("🔧 巡檢系統")
-st.sidebar.caption("v.20250204.42-sync-fix") # Version Tag
+st.sidebar.caption("v.20250204.43-dynamic-key") # Version Tag
 mode = st.sidebar.radio("功能選擇", ["📝 巡檢輸入", "📊 數據戰情室"], index=0)
 
 # --- Sidebar Footer ---
@@ -954,8 +954,13 @@ elif mode == "📊 數據戰情室":
                      parts_dash = ["全部"] + list(df_dash['part_no'].unique())
                  
                  # [Fix] Decoupled State for Interaction
+                 # [Fix] Decoupled State for Interaction
                  if 'dash_target_part' not in st.session_state:
                      st.session_state['dash_target_part'] = "全部"
+                 
+                 # [Fix] Dynamic Key for Sidebar Widget
+                 if 'dash_ui_rev' not in st.session_state:
+                     st.session_state['dash_ui_rev'] = 0
                  
                  # Calculate Index
                  current_target = st.session_state['dash_target_part']
@@ -964,11 +969,15 @@ elif mode == "📊 數據戰情室":
                  except ValueError:
                      f_index = 0
                  
-                 # Render Widget with UI Key
-                 filter_part_ui = st.selectbox("篩選品番", parts_dash, index=f_index, key="_dash_part_ui")
+                 # Render Widget with Dynamic Key
+                 # This forces widget to reset when dash_ui_rev changes
+                 dynamic_key = f"dash_part_ui_{st.session_state['dash_ui_rev']}"
+                 filter_part_ui = st.selectbox("篩選品番", parts_dash, index=f_index, key=dynamic_key)
                  
-                 # Sync UI -> State
+                 # Sync UI -> State (Only if User Changed Sidebar directly)
                  if filter_part_ui != st.session_state['dash_target_part']:
+                     # Check if change came from user (rev matches) or just init mismatch
+                     # Actually, if user changes manually, we should update state
                      st.session_state['dash_target_part'] = filter_part_ui
                      st.rerun()
                  
@@ -1042,8 +1051,11 @@ elif mode == "📊 數據戰情室":
                 # Update Source of Truth
                 if target_p != st.session_state.get('dash_target_part'):
                      st.session_state['dash_target_part'] = target_p
-                     # [Fix] Force Widget State Update (Widget Key Precedence)
-                     st.session_state['_dash_part_ui'] = target_p
+                     
+                     # [Fix] Dynamic Key Reset Pattern
+                     # Increment revision to force sidebar widget to re-mount with new default index
+                     st.session_state['dash_ui_rev'] = st.session_state.get('dash_ui_rev', 0) + 1
+                     
                      st.toast(f"🔍 已篩選: {target_p}")
                      st.rerun()
             
