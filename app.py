@@ -253,7 +253,7 @@ if df.empty:
 # --- Mode Selection ---
 # [Refactor]
 st.sidebar.title("🔧 巡檢系統")
-st.sidebar.caption("v.20250204.30-cache-bust") # Version Tag
+st.sidebar.caption("v.20250204.31-merged-display") # Version Tag
 mode = st.sidebar.radio("功能選擇", ["📝 巡檢輸入", "📊 數據戰情室"], index=0)
 
 # --- Sidebar Footer ---
@@ -1045,14 +1045,38 @@ elif mode == "📊 數據戰情室":
                 st.warning("請選擇至少一種狀態")
                 df_cp = df_cp.iloc[0:0] 
             
-            st.info(f"共發現 {len(df_cp)} 筆變化點記錄")
+            # [Feature] Group by Timestamp (Deduplicate Multi-Cavity)
+            # If multiple rows have same timestamp, show only one representative
+            if not df_cp.empty:
+                # Identify duplicates
+                dup_counts = df_cp.groupby('timestamp').size()
+                
+                # Create a display copy, keeping only the first occurrence per timestamp
+                df_display = df_cp.drop_duplicates(subset=['timestamp']).copy()
+                
+                st.info(f"共發現 {len(df_display)} 筆異常事件 (已合併多穴資料)")
+            else:
+                df_display = df_cp # Empty
             
-            for index, row in df_cp.iterrows():
+            for index, row in df_display.iterrows():
+                # Check if this is a multi-cavity group
+                ts_key = row['timestamp']
+                is_multi = False
+                cavity_count = 1
+                if ts_key in dup_counts:
+                    cavity_count = dup_counts[ts_key]
+                    if cavity_count > 1: is_multi = True
+                
                 stat_color = "red"; stat_icon = "🔴"
                 if row['status'] == "審核中": stat_color = "orange"; stat_icon = "🟡"
                 elif row['status'] in ["結案", "Closed", "無異常"]: stat_color = "green"; stat_icon = "🟢"
                 
-                with st.expander(f"{stat_icon} :{stat_color}[{row['status']}] {row['timestamp'].strftime('%Y-%m-%d %H:%M')} - {row['model']} {row['part_no']}", expanded=True):
+                # Display Title
+                part_display = row['part_no']
+                if is_multi:
+                    part_display = f"{row['part_no'].split('_')[0]} (共{cavity_count}穴)"
+                
+                with st.expander(f"{stat_icon} :{stat_color}[{row['status']}] {row['timestamp'].strftime('%Y-%m-%d %H:%M')} - {row['model']} {part_display}", expanded=True):
                     c1, c2 = st.columns([2, 1])
                     with c1:
                         st.markdown(f"**變化點內容:**")
@@ -1094,7 +1118,10 @@ elif mode == "📊 數據戰情室":
                          new_comment = st.text_area("主管留言 / 處理對策", value=str(current_comment), height=100, key=f"comm_{u_key}")
                          
                          # [Feature] Batch Update Checkbox
-                         apply_batch = st.checkbox("同步更新同批次 (一模多穴)", value=True, key=f"batch_{u_key}")
+                         batch_label = "同步更新同批次 (一模多穴)"
+                         if is_multi: batch_label += f" [偵測到 {cavity_count} 筆關聯資料]"
+                         
+                         apply_batch = st.checkbox(batch_label, value=True, key=f"batch_{u_key}")
                     
                     with m_col3:
                         st.write("") 
