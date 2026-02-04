@@ -168,14 +168,11 @@ def fetch_all_data():
         print(f"Error fetching dashboard data: {e}")
         return []
 
-def update_status(timestamp, status, comment, part_no=""):
+def update_status(timestamp, status, comment, part_no="", apply_all=True):
     """
-    Updates the status and manager comment for a specific record.
-    Args:
-        timestamp (str): The timestamp to identify the row.
-        status (str): New status (e.g., "審核中", "結案").
-        comment (str): Manager's comment.
-        part_no (str): Part number (optional but recommended for uniqueness).
+    Updates status. 
+    apply_all=True -> Update all rows with same timestamp (Batch).
+    apply_all=False -> Update only specific part_no.
     """
     try:
         payload = {
@@ -183,7 +180,8 @@ def update_status(timestamp, status, comment, part_no=""):
             "timestamp": timestamp,
             "status": status,
             "manager_comment": comment,
-            "part_no": part_no # [Fix] Add Part No for uniqueness
+            "part_no": part_no,
+            "apply_all": apply_all
         }
         # Clear cache immediately since we are updating data
         fetch_history.clear()

@@ -118,42 +118,46 @@ function doPost(e) {
 
         // --- Action 3: Update Status ---
         else if (action == "update_status") {
+            var targetTs = jsonData.timestamp;
+            var targetPart = jsonData.part_no;
+            var newStatus = jsonData.status;
+            var newComment = jsonData.manager_comment;
+            var applyAll = jsonData.apply_all; // [Feature] Batch Update Flag
+
             var rows = sheet.getDataRange().getValues();
-            var targetTs = jsonData.timestamp; // We use strict Timestamp match
-            var rowIndex = -1;
+            var updatedCount = 0;
 
-            // Find row by Timestamp (iso-string match usually works best)
-            // Python sends ISO string, Sheet has formatted date. We might need fuzzy match or strict string match.
-            // Assuming straightforward comparison for now.
-            var targetPart = jsonData.part_no; // [Fix] Add Part No Match
-
-            // Find row by Timestamp AND Part No
             for (var i = 1; i < rows.length; i++) {
-                // Convert Sheet Date to ISO string or simplified check
                 var sheetDate = new Date(rows[i][0]);
-                var sheetPart = rows[i][2]; // Column C is Part No
+                var sheetPart = rows[i][2];
                 var targetDate = new Date(targetTs);
 
-                // Compare time value (ms) AND Part No
-                if (sheetPart == targetPart && sheetDate.getTime() === targetDate.getTime()) {
-                    rowIndex = i + 1; // 1-based index
-                    break;
+                var isTimeMatch = (sheetDate.getTime() === targetDate.getTime());
+                var isPartMatch = (sheetPart == targetPart);
+
+                // Condition: 
+                // 1. If applyAll is true -> Only Time Match required
+                // 2. If applyAll is false -> Time AND Part Match required
+                if (isTimeMatch && (applyAll || isPartMatch)) {
+                    // Update Status (Col I -> index 8)
+                    sheet.getRange(i + 1, 9).setValue(newStatus);
+                    // Update Comment (Col J -> index 9)
+                    sheet.getRange(i + 1, 10).setValue(newComment);
+                    updatedCount++;
+
+                    if (!applyAll) break; // Stop if strictly one
                 }
             }
 
-            if (rowIndex > -1) {
-                // Update Status (Col 9 / I) and Comment (Col 10 / J)
-                if (jsonData.status) sheet.getRange(rowIndex, 9).setValue(jsonData.status);
-                if (jsonData.manager_comment) sheet.getRange(rowIndex, 10).setValue(jsonData.manager_comment);
-
+            if (updatedCount > 0) {
                 return ContentService.createTextOutput(JSON.stringify({
                     "status": "Success",
-                    "message": "Updated row " + rowIndex
+                    "message": "Updated " + updatedCount + " rows"
                 })).setMimeType(ContentService.MimeType.JSON);
             } else {
                 return ContentService.createTextOutput(JSON.stringify({
                     "status": "Error",
-                    "message": "Row not found for TS: " + targetTs
+                    "message": "Row not found"
                 })).setMimeType(ContentService.MimeType.JSON);
             }
         }

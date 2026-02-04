@@ -253,7 +253,7 @@ if df.empty:
 # --- Mode Selection ---
 # [Refactor]
 st.sidebar.title("🔧 巡檢系統")
-st.sidebar.caption("v.20250204.23-gas-unique") # Version Tag
+st.sidebar.caption("v.20250204.24-batch-sync") # Version Tag
 mode = st.sidebar.radio("功能選擇", ["📝 巡檢輸入", "📊 數據戰情室"], index=0)
 
 # --- Sidebar Footer ---
@@ -1084,9 +1084,11 @@ elif mode == "📊 數據戰情室":
                     
                     with m_col2:
                          # [Feature] Manager Comment
-                         current_comment = row.get('manager_comment', '')
                          if pd.isna(current_comment): current_comment = ""
                          new_comment = st.text_area("主管留言 / 處理對策", value=str(current_comment), height=100, key=f"comm_{u_key}")
+                         
+                         # [Feature] Batch Update Checkbox
+                         apply_batch = st.checkbox("同步更新同批次 (一模多穴)", value=True, key=f"batch_{u_key}")
                     
                     with m_col3:
                         st.write("") 
@@ -1094,7 +1096,7 @@ elif mode == "📊 數據戰情室":
                             ts_str_for_api = row['timestamp'].isoformat()
                             target_part = row['part_no']
                             with st.spinner("更新中..."):
-                                success, msg = drive_integration.update_status(ts_str_for_api, new_status, new_comment, target_part)
+                                success, msg = drive_integration.update_status(ts_str_for_api, new_status, new_comment, target_part, apply_batch)
                                 if success:
                                     st.success("更新成功!")
                                     time.sleep(1)
