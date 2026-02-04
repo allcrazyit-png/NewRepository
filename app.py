@@ -252,7 +252,7 @@ if df.empty:
 # --- Mode Selection ---
 # [Refactor]
 st.sidebar.title("🔧 巡檢系統")
-st.sidebar.caption("v.20250204.16-refresh-fix") # Version Tag
+st.sidebar.caption("v.20250204.17-force-check") # Version Tag
 mode = st.sidebar.radio("功能選擇", ["📝 巡檢輸入", "📊 數據戰情室"], index=0)
 
 # --- Sidebar Footer ---
@@ -495,7 +495,9 @@ if mode == "📝 巡檢輸入":
                     mat_name = current_part_data.get('原料編號', 'N/A')
                 
                 # Combined Label (No Header)
-                material_check = st.radio(f"原料確認 (標準: {mat_name})", ["OK", "NG"], horizontal=True, key="mat_check_radio")
+                material_check = st.radio(f"原料確認 (標準: {mat_name})", ["OK", "NG"], horizontal=True, index=None, key="mat_check_radio")
+                
+                # Validation Logic handled at Submit
                 material_ok = (material_check == "OK")
             else:
                 material_ok = True # Auto pass in Quick Mode
