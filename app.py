@@ -570,7 +570,67 @@ if mode == "📝 巡檢輸入":
                                 st.success("長度 OK")
                 st.markdown("---")
 
-            # Material Check
+            # --- [Review Feature] Change Point History (Open & Closed) ---
+            all_open_issues = []
+            all_closed_issues = []
+            
+            for sp in specs:
+                 h_target = f"{selected_part_no}{sp['suffix']}"
+                 h_data = drive_integration.fetch_history(h_target)
+                 if h_data:
+                     df_h = pd.DataFrame(h_data)
+                     
+                     if 'timestamp' in df_h.columns:
+                         df_h['timestamp'] = pd.to_datetime(df_h['timestamp'], errors='coerce')
+                         df_h = df_h.sort_values(by='timestamp', ascending=False)
+
+                     if 'change_point' not in df_h.columns: df_h['change_point'] = ""
+                     if 'status' not in df_h.columns: df_h['status'] = "未審核"
+                     if 'manager_comment' not in df_h.columns: df_h['manager_comment'] = ""
+                     
+                     df_h['status'] = df_h['status'].fillna("未審核")
+                     df_h['manager_comment'] = df_h['manager_comment'].fillna("")
+                     
+                     valid_issues = df_h[
+                         (df_h['change_point'].notna()) & 
+                         (df_h['change_point'] != "")
+                     ]
+                     
+                     for _, issue in valid_issues.iterrows():
+                         item = {
+                             "part": h_target,
+                             "ts": issue.get('timestamp', 'N/A'),
+                             "msg": issue['change_point'],
+                             "status": issue.get('status', '未審核'),
+                             "comment": issue.get('manager_comment', '')
+                         }
+                         
+                         if item['status'] in ["結案", "Closed"]:
+                             all_closed_issues.append(item)
+                         else:
+                             all_open_issues.append(item)
+
+            # 1. Open Issues (Alert Top)
+            if all_open_issues:
+                st.error(f"⚠️ 注意：本部品尚有 {len(all_open_issues)} 筆未結案變化點")
+                with st.expander("🔻 查看未結案細節 (Open Issues)", expanded=False):
+                    for issue in all_open_issues:
+                        ts_disp = str(issue['ts'])
+                        try: 
+                            ts_obj = pd.to_datetime(issue['ts'])
+                            ts_disp = ts_obj.strftime('%Y/%m/%d %H:%M')
+                        except: pass
+                        
+                        s_icon = "🔴"
+                        s_color = "red"
+                        if issue['status'] == "審核中":
+                            s_icon = "🟡"; s_color = "orange"
+                        
+                        st.markdown(f"**{s_icon} [:{s_color}[{issue['status']}]] {ts_disp} - {issue['part']}**")
+                        st.info(f"💬 {issue['msg']}")
+                        if issue['comment']:
+                            st.caption(f"👨‍💼 主管回應: {issue['comment']}")
+                        st.divider()
             if not quick_log_mode:
                 st.markdown("##### 📦 原料確認")
                 material_check = st.radio("原料狀態", ["OK", "NG"], horizontal=True, key="mat_check_radio")
