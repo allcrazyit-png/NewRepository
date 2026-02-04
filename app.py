@@ -180,6 +180,36 @@ st.markdown("""
         color: #f5f5f7 !important;
     }
     
+    /* --- 6. Scrollbars (Sleek) --- */
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: #000; }
+    ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #555; }
+
+    /* --- 7. Tab Styling (Larger & Clearer) --- */
+    button[data-baseweb="tab"] {
+        font-size: 1.25rem !important; /* Larger text ~20px */
+        font-weight: 600 !important;
+        padding: 12px 24px !important;
+        gap: 8px;
+        border-radius: 8px !important;
+        color: #86868b !important; /* Default Gray */
+        background-color: transparent !important;
+    }
+    button[data-baseweb="tab"]:hover {
+        color: #f5f5f7 !important;
+        background-color: rgba(255, 255, 255, 0.05) !important;
+    }
+    button[data-baseweb="tab"][aria-selected="true"] {
+        color: #0A84FF !important; /* Active Blue */
+        background-color: rgba(10, 132, 255, 0.1) !important;
+        border-bottom: 2px solid #0A84FF !important;
+    }
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 10px;
+        padding-bottom: 5px;
+    }
+
     /* ENLARGE INPUTS for Mobile */
     div[data-testid="stNumberInput"] input {
         font-size: 20px !important;
@@ -427,8 +457,8 @@ if mode == "📝 巡檢輸入":
                     text-align: center;
                     margin-bottom: 10px;
                 ">
-                    <div style="color: #86868b; font-size: 0.9rem; margin-bottom: 3px; font-weight: 500;">{label}</div>
-                    <div style="color: #f5f5f7; font-size: 1.3rem; font-weight: 600; word-wrap: break-word; line-height: 1.2;">
+                    <div style="color: #86868b; font-size: 1.0rem; margin-bottom: 5px; font-weight: 500;">{label}</div>
+                    <div style="color: #f5f5f7; font-size: 1.5rem; font-weight: 600; word-wrap: break-word; line-height: 1.2;">
                         {value_html}
                     </div>
                 </div>
