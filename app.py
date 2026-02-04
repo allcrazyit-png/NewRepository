@@ -244,7 +244,7 @@ if df.empty:
 # --- Mode Selection ---
 # [Refactor]
 st.sidebar.title("🔧 巡檢系統")
-st.sidebar.caption("v.20250204.06") # Version Tag
+st.sidebar.caption("v.20250204.07") # Version Tag
 mode = st.sidebar.radio("功能選擇", ["📝 巡檢輸入", "📊 數據戰情室"], index=0)
 
 # --- Sidebar Footer ---
@@ -465,20 +465,32 @@ if mode == "📝 巡檢輸入":
 
             st.divider()
 
-            # [Restore] Key Control Points (重點管制)
-            kcp_val = current_part_data.get('重點管制')
+            # [Restore] Key Control Points (重點管制 1~3+)
+            kcp_list = []
             
-            # Fallback
-            if pd.isna(kcp_val) or str(kcp_val).strip() == "":
-                 kcp_val = current_part_data.get('重點管理項目')
+            # 1. Check single column "重點管制"
+            val_single = current_part_data.get('重點管制')
+            if pd.notna(val_single) and str(val_single).strip():
+                kcp_list.append(str(val_single).strip())
 
-            # [Debug V6] Always show block to confirm update
-            with st.expander(f"⭐ 重點管制項目 (Debug v.06)", expanded=True):
-                if pd.notna(kcp_val) and str(kcp_val).strip():
-                    st.info(str(kcp_val).strip())
-                else:
-                    st.warning("⚠️ 此產品目前無設定「重點管制」內容 (Data is empty)")
-                    st.caption(f"欄位偵測: 重點管制={current_part_data.get('重點管制')} | 重點管理項目={current_part_data.get('重點管理項目')}")
+            # 2. Check numbered columns "重點管制1" ~ "重點管制3"
+            for i in range(1, 6): # Check up to 5 just in case
+                col_name = f"重點管制{i}"
+                val = current_part_data.get(col_name)
+                if pd.notna(val) and str(val).strip():
+                    kcp_list.append(str(val).strip())
+            
+            # 3. Fallback to "重點管理項目" if absolutely nothing found
+            if not kcp_list:
+                val_legacy = current_part_data.get('重點管理項目')
+                if pd.notna(val_legacy) and str(val_legacy).strip():
+                    kcp_list.append(str(val_legacy).strip())
+
+            # Display
+            if kcp_list:
+                with st.expander("⭐ 重點管制項目 (Key Control Points)", expanded=True):
+                    for item in kcp_list:
+                        st.info(f"• {item}")
 
             user_inputs = {}
             # Input Loop
