@@ -997,7 +997,8 @@ elif mode == "📊 數據戰情室":
             
             # [Double Check] Explicitly hide 'CP' result if any leaked
             if 'result' in df_view.columns:
-                 df_view = df_view[df_view['result'] != 'CP']
+                 # df_view = df_view[df_view['result'] != 'CP'] <--- Removed to show CP in Table
+                 pass
                  
             # Sort by Newest
             if 'timestamp' in df_view.columns:
@@ -1014,6 +1015,7 @@ elif mode == "📊 數據戰情室":
 
             # [View] Revert to showing all columns (User Request)
             # [View] Interactive Table with Click-to-Filter
+            st.caption(f"📊 搜尋結果：共 {len(df_view)} 筆資料")
             event = st.dataframe(
                 df_view, 
                 use_container_width=True,
