@@ -253,7 +253,7 @@ if df.empty:
 # --- Mode Selection ---
 # [Refactor]
 st.sidebar.title("🔧 巡檢系統")
-st.sidebar.caption("v.20250204.37-display-match") # Version Tag
+st.sidebar.caption("v.20250204.38-upload-fix") # Version Tag
 mode = st.sidebar.radio("功能選擇", ["📝 巡檢輸入", "📊 數據戰情室"], index=0)
 
 # --- Sidebar Footer ---
@@ -611,7 +611,10 @@ if mode == "📝 巡檢輸入":
                 else:
                     with st.spinner("資料上傳中 (Uploading)..."):
                         try:
-                            timestamp_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                            # [Fix] Force Asia/Taipei Time for Upload
+                            import pytz
+                            tz_tw = pytz.timezone('Asia/Taipei')
+                            timestamp_str = datetime.datetime.now(tz_tw).strftime("%Y-%m-%d %H:%M:%S")
                             success_count = 0
                             
                             # Log Logic: One row per spec (L/R)
