@@ -990,9 +990,10 @@ elif mode == "📊 數據戰情室":
             if filter_result != "全部": df_view = df_view[df_view['result'] == filter_result]
             
             # [Filter] Hide Change Point records (Pure CP has weight=0)
+            # [Refactor] Don't filter global view, only filter for Chart
             if 'weight' in df_view.columns:
                  df_view['weight'] = pd.to_numeric(df_view['weight'], errors='coerce')
-                 df_view = df_view[df_view['weight'] > 0]
+                 # df_view = df_view[df_view['weight'] > 0] <--- Removed to show CP in Table
             
             # [Double Check] Explicitly hide 'CP' result if any leaked
             if 'result' in df_view.columns:
@@ -1046,7 +1047,10 @@ elif mode == "📊 數據戰情室":
                     st.info("👈 請在左側選單選擇單一品番，或在下方表格點選，以查看趨勢圖。")
                     chart_df = pd.DataFrame()
                 else:
-                    chart_df = df_view.copy() # Already filtered weight > 0
+                    chart_df = df_view.copy() 
+                    # Filter for Chart Only (Hide 0 weight)
+                    if 'weight' in chart_df.columns:
+                        chart_df = chart_df[chart_df['weight'] > 0]
                 
                 if not chart_df.empty:
                     y_cols = ['weight']
@@ -1093,7 +1097,10 @@ elif mode == "📊 數據戰情室":
                     
                     st.altair_chart((line_w + line_limits).interactive(), use_container_width=True)
                 else:
-                    st.info("尚無有效數據 (已隱藏快速記錄的 CP 資料)")
+                    if filter_part != "全部":
+                        st.info(f"ℹ️ 產品 [{filter_part}] 目前無「重量數據」。(記錄可能均為快速模式/CP，重量=0)")
+                    else:
+                        st.write("") # Should be covered above, but safe fallback
         
         # [Legacy/Duplicate Code Removed]
         # Previous versions had a fallback block here that caused "Change Point Board" to appear twice.
