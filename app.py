@@ -244,7 +244,7 @@ if df.empty:
 # --- Mode Selection ---
 # [Refactor]
 st.sidebar.title("🔧 巡檢系統")
-st.sidebar.caption("v.20250204.08-color") # Version Tag
+st.sidebar.caption("v.20250204.09-soft") # Version Tag
 mode = st.sidebar.radio("功能選擇", ["📝 巡檢輸入", "📊 數據戰情室"], index=0)
 
 # --- Sidebar Footer ---
@@ -454,18 +454,18 @@ if mode == "📝 巡檢輸入":
                 if pd.notna(val_legacy) and str(val_legacy).strip():
                     kcp_list.append(str(val_legacy).strip())
 
-            # Display with Warning Color (Orange/Yellow) for Attention
+            # Display with Softer Color (Blue) as requested
             if kcp_list:
                 with st.expander("⭐ 重點管制項目 (Key Control Points)", expanded=True):
                     for item in kcp_list:
-                        st.warning(f"• {item}", icon="⚠️")
+                        st.info(f"• {item}", icon="📌")
 
         # [Refactor] Tabs for Inspection
         tab1, tab2, tab3 = st.tabs(["📝 輸入作業", "🛡️ 該品變化點", "📊 趨勢與履歷"])
 
         with tab1:
-            st.write("") # Spacer
-
+            # [Design] Removed spacer for cleaner/tighter layout "盡量簡單"
+            
             # [1] Inputs & Operation
             # [Feature] Work Mode Selector
             mode_cols = st.columns([2, 1])
