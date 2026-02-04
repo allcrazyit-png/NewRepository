@@ -244,7 +244,7 @@ if df.empty:
 # --- Mode Selection ---
 # [Refactor]
 st.sidebar.title("🔧 巡檢系統")
-st.sidebar.caption("v.20250204.03") # Version Tag
+st.sidebar.caption("v.20250204.04-debug") # Version Tag
 mode = st.sidebar.radio("功能選擇", ["📝 巡檢輸入", "📊 數據戰情室"], index=0)
 
 # --- Sidebar Footer ---
@@ -466,16 +466,19 @@ if mode == "📝 巡檢輸入":
             st.divider()
 
             # [Restore] Key Control Points (重點管理項目)
-            # DEBUG BLOCK
-            # st.caption(f"DEBUG Keys: {list(current_part_data.index)}")
-            # st.caption(f"DEBUG KCP Raw: {current_part_data.get('重點管理項目')}")
-            
             kcp = current_part_data.get('重點管理項目')
             
             # Additional fallback check
             if pd.isna(kcp) or str(kcp).strip() == "":
                  kcp = current_part_data.get('Key Control Points')
             
+            # --- DEBUG: Show all data to find the correct column name ---
+            with st.expander("🔍 Debug: 查看所有欄位資料 (請截圖給開發者)", expanded=True):
+                st.write("目前抓取到的欄位與數值:")
+                st.json(current_part_data.to_dict())
+                st.caption(f"嘗試抓取 '重點管理項目': {kcp}")
+            # -------------------------------------------------------
+
             if pd.notna(kcp) and str(kcp).strip():
                 with st.expander("⭐ 重點管理項目 (Key Control Points)", expanded=True):
                     st.info(str(kcp).strip())
