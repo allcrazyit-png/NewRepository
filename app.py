@@ -1044,6 +1044,7 @@ elif mode == "📊 數據戰情室":
                 current_filter = st.session_state.get('dash_target_part', '全部')
                 if current_filter == "全部":
                     st.info("👈 請在左側選單選擇單一品番，或在下方表格點選，以查看趨勢圖。")
+                    chart_df = pd.DataFrame()
                 else:
                     chart_df = df_view.copy() # Already filtered weight > 0
                 
