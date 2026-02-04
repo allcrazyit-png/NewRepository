@@ -103,24 +103,25 @@ st.markdown("""
         box-shadow: 0 0 0 2px #0A84FF !important; /* System Blue Focus Ring */
     }
 
-    /* --- 5. Segmented Controls (Radio Buttons) --- */
-    .stRadio > label { font-size: 1.1rem !important; color: #86868b !important; margin-bottom: 8px; }
+    /* --- 5. Segmented Controls (Radio Buttons - Larger) --- */
+    .stRadio > label { font-size: 1.5rem !important; color: #86868b !important; margin-bottom: 12px; }
     .stRadio div[role='radiogroup'] {
         background: #1c1c1e;
-        padding: 4px;
-        border-radius: 12px;
+        padding: 6px;
+        border-radius: 14px;
         display: inline-flex;
         gap: 0px;
     }
     .stRadio div[role='radiogroup'] > label { 
         background-color: transparent !important;
-        padding: 8px 20px !important;
-        border-radius: 8px !important;
+        padding: 12px 24px !important;
+        border-radius: 10px !important;
         border: none !important;
         color: #86868b !important;
         transition: all 0.2s ease;
         margin: 0 !important;
         box-shadow: none !important;
+        font-size: 1.3rem !important; /* Radio Option Text */
     }
     .stRadio div[role='radiogroup'] > label:hover {
         color: #f5f5f7 !important;
@@ -144,18 +145,19 @@ st.markdown("""
         background: transparent !important;
         text-align: left !important;
         padding: 10px 10px !important;
+        font-size: 1.1rem !important; /* Keep Sidebar Checkbox smaller */
     }
     section[data-testid="stSidebar"] div[role='radiogroup'] > label[data-checked='true'] {
         background-color: rgba(10, 132, 255, 0.2) !important; /* Transparent Blue */
         color: #0A84FF !important;
     }
 
-    /* --- 6. Buttons (Apple Blue Pills) --- */
+    /* --- 6. Buttons (Apple Blue Pills - Larger) --- */
     div.stButton > button:first-child {
         background-color: #0A84FF !important; /* System Blue */
         color: white !important;
-        font-size: 1.2rem !important;
-        height: 3.5rem !important;
+        font-size: 1.4rem !important;
+        height: 4.0rem !important;
         border-radius: 40px !important;
         border: none !important;
         font-weight: 600;
@@ -178,6 +180,7 @@ st.markdown("""
         border-radius: 12px !important;
         border: none !important;
         color: #f5f5f7 !important;
+        font-size: 1.2rem !important;
     }
     
     /* --- 6. Scrollbars (Sleek) --- */
@@ -188,11 +191,11 @@ st.markdown("""
 
     /* --- 7. Tab Styling (Larger & Clearer) --- */
     button[data-baseweb="tab"] {
-        font-size: 1.25rem !important; /* Larger text ~20px */
+        font-size: 1.5rem !important; /* Larger text ~24px */
         font-weight: 600 !important;
-        padding: 12px 24px !important;
-        gap: 8px;
-        border-radius: 8px !important;
+        padding: 16px 32px !important;
+        gap: 10px;
+        border-radius: 10px !important;
         color: #86868b !important; /* Default Gray */
         background-color: transparent !important;
     }
@@ -203,19 +206,24 @@ st.markdown("""
     button[data-baseweb="tab"][aria-selected="true"] {
         color: #0A84FF !important; /* Active Blue */
         background-color: rgba(10, 132, 255, 0.1) !important;
-        border-bottom: 2px solid #0A84FF !important;
+        border-bottom: 3px solid #0A84FF !important;
     }
     .stTabs [data-baseweb="tab-list"] {
-        gap: 10px;
-        padding-bottom: 5px;
+        gap: 12px;
+        padding-bottom: 8px;
     }
 
     /* ENLARGE INPUTS for Mobile */
     div[data-testid="stNumberInput"] input {
-        font-size: 20px !important;
-        height: 50px !important;
+        font-size: 28px !important;
+        height: 60px !important;
+        padding-top: 10px !important;
+        padding-bottom: 10px !important;
     }
-</style>
+    /* Enlarge Metric Labels */
+    label[data-testid="stWidgetLabel"] p {
+        font-size: 1.3rem !important;
+    }
 """, unsafe_allow_html=True)
 
 # --- Inject JS for Mobile Keypad ---
@@ -244,7 +252,7 @@ if df.empty:
 # --- Mode Selection ---
 # [Refactor]
 st.sidebar.title("🔧 巡檢系統")
-st.sidebar.caption("v.20250204.10-clean") # Version Tag
+st.sidebar.caption("v.20250204.11-large-font") # Version Tag
 mode = st.sidebar.radio("功能選擇", ["📝 巡檢輸入", "📊 數據戰情室"], index=0)
 
 # --- Sidebar Footer ---
