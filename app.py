@@ -508,66 +508,83 @@ if mode == "📝 巡檢輸入":
             user_inputs = {}
             # Input Loop
             for idx, sp in enumerate(specs):
-                # Construct Hint Label
-                std_hint = ""
-                # Weight Hint
-                w_std_val = sp.get('std')
-                w_min = sp.get('min')
-                w_max = sp.get('max')
-                
-                w_label_extra = ""
-                if w_std_val is not None:
-                     w_str = f"{w_std_val:g}" if isinstance(w_std_val, (float, int)) else str(w_std_val)
-                     w_label_extra += f" [Std: {w_str}"
-                     if w_min is not None and w_max is not None:
-                         w_label_extra += f" | {w_min:g}~{w_max:g}"
-                     w_label_extra += "]"
-                
-                st.markdown(f"**{sp['label'].strip(' ()') or '規格'}**")
-
-                # Weight Input
-                if quick_log_mode:
-                     w_input = 0.0
-                else:
-                     w_input = st.number_input(f"重量 (g){w_label_extra}", min_value=0.0, step=0.1, format="%.1f", key=f"w_in_{idx}")
-                
-                # Length Input
-                l_input = None
-                len_std_val = sp.get('len_std')
-                if len_std_val is not None and len_std_val > 0:
-                    l_label_extra = ""
-                    l_str = f"{len_std_val:g}" if isinstance(len_std_val, (float, int)) else str(len_std_val)
-                    l_label_extra += f" [Std: {l_str}"
-                    l_min = sp.get('len_min')
-                    l_max = sp.get('len_max')
-                    if l_min is not None and l_max is not None:
-                         l_label_extra += f" | {l_min:g}~{l_max:g}"
-                    l_label_extra += "]"
-
-                    if quick_log_mode:
-                        l_input = 0.0
-                    else:
-                        l_input = st.number_input(f"長度 (mm){l_label_extra}", min_value=0.0, step=0.1, format="%.1f", key=f"l_in_{idx}")
+                # [UI Polish] Clean Input Layout
+                with st.container():
+                    # Header for the specific cavity
+                    st.markdown(f"#### 🟢 穴號: {sp['suffix'] or '單穴'}")
                     
-                user_inputs[idx] = {'weight': w_input, 'length': l_input}
+                    c1, c2 = st.columns(2)
+                    with c1:
+                        # Weight Input
+                        w_std_val = sp.get('std', '-')
+                        w_min = sp.get('min', '-')
+                        w_max = sp.get('max', '-')
+                        
+                        w_label = "重量 (g)"
+                        w_help = f"標準: {w_std_val} | 規格: {w_min} ~ {w_max}"
+                        
+                        # Show spec hint locally
+                        st.caption(f"🎯 標準: {w_std_val} | 📏範圍: {w_min} ~ {w_max}")
+                        
+                        if quick_log_mode:
+                             w_input = 0.0
+                        else:
+                             w_input = st.number_input(
+                                w_label,
+                                min_value=0.0,
+                                max_value=200.0,
+                                step=0.01,
+                                format="%.2f",
+                                key=f"w_in_{idx}",
+                                help=w_help
+                            )
 
-                # Validation Msg
-                msg_cols = st.columns([1, 1])
-                # Weight Msg
-                if w_input > 0:
-                    if sp['min'] is not None and sp['max'] is not None:
-                            if not (sp['min'] <= w_input <= sp['max']):
-                                st.error(f"⚠️ 重量NG")
-                            else:
-                                st.success("重量 OK")
-                # Length Msg
-                if l_input is not None and l_input > 0:
-                    if sp['len_min'] is not None and sp['len_max'] is not None:
-                            if not (sp['len_min'] <= l_input <= sp['len_max']):
-                                st.error(f"⚠️ 長度NG")
-                            else:
-                                st.success("長度 OK")
-                st.markdown("---")
+                    with c2:
+                        # Length Input
+                        len_std_val = sp.get('len_std')
+                        l_label = "長度 (mm)"
+                        l_help = "選填欄位"
+                        l_caption = "📏 選填"
+                        
+                        if len_std_val is not None:
+                             l_min = sp.get('len_min')
+                             l_max = sp.get('len_max')
+                             l_help = f"標準: {len_std_val} | 規格: {l_min} ~ {l_max}"
+                             l_caption = f"🎯 標準: {len_std_val} | 範圍: {l_min} ~ {l_max}"
+                        
+                        st.caption(l_caption)
+                        
+                        if quick_log_mode:
+                            l_input = 0.0
+                        else:
+                            l_input = st.number_input(
+                                l_label,
+                                min_value=0.0,
+                                max_value=500.0,
+                                step=0.01,
+                                format="%.2f",
+                                key=f"l_in_{idx}",
+                                help=l_help,
+                                value=None
+                            )
+
+                    user_inputs[idx] = {'weight': w_input, 'length': l_input}
+
+                    # Validation Msg
+                    if w_input > 0:
+                         if sp['min'] is not None and sp['max'] is not None:
+                             if not (sp['min'] <= w_input <= sp['max']):
+                                 st.error(f"⚠️ 重量 NG")
+                             else:
+                                 st.success("重量 OK")
+                    if l_input is not None and l_input > 0:
+                          if sp['len_min'] is not None and sp['len_max'] is not None:
+                               if not (sp['len_min'] <= l_input <= sp['len_max']):
+                                   st.error(f"⚠️ 長度 NG")
+                               else:
+                                   st.success("長度 OK")
+                    
+                    st.divider()
 
             # Material Check (Moved to Top)
             # Placeholder for deleted block
@@ -935,7 +952,8 @@ elif mode == "📊 數據戰情室":
                      parts_dash = ["全部"] + list(df_dash[df_dash['model'] == filter_model]['part_no'].unique())
                  else:
                      parts_dash = ["全部"] + list(df_dash['part_no'].unique())
-                 filter_part = st.selectbox("篩選品番", parts_dash)
+                 # [Fix] Add Key for Interaction
+                 filter_part = st.selectbox("篩選品番", parts_dash, key="dash_part_select")
                  
                  # Show small product image if filtered
                  if filter_part != "全部":
@@ -975,20 +993,39 @@ elif mode == "📊 數據戰情室":
                 df_view['image'] = df_view['image'].apply(make_drive_link)
 
             # [View] Revert to showing all columns (User Request)
-            st.dataframe(
+            # [View] Interactive Table with Click-to-Filter
+            event = st.dataframe(
                 df_view, 
                 use_container_width=True,
                 column_config={
                     "image": st.column_config.LinkColumn("巡檢照片", display_text="📸 查看"),
                     "timestamp": st.column_config.DatetimeColumn("時間", format="MM/DD HH:mm"),
                     "weight": st.column_config.NumberColumn("重量 (g)", format="%.2f")
-                }
+                },
+                on_select="rerun",
+                selection_mode="single-row"
             )
+            
+            # [Interaction] Click Row to Filter Part
+            if len(event.selection.rows) > 0:
+                s_idx = event.selection.rows[0]
+                # Map back to original dataframe row
+                target_p = df_view.iloc[s_idx]['part_no']
+                
+                # Check current filter
+                if target_p != st.session_state.get('dash_part_select'):
+                     st.session_state['dash_part_select'] = target_p
+                     st.toast(f"🔍 已篩選: {target_p}")
+                     st.rerun()
             
             if not df_view.empty:
                 st.subheader("📈 重量趨勢圖")
                 
-                chart_df = df_view.copy() # Already filtered weight > 0
+                # [Fix] Hide Chart if "All" is selected
+                if filter_part == "全部":
+                    st.info("👈 請在左側選單選擇單一品番，或在下方表格點選，以查看趨勢圖。")
+                else:
+                    chart_df = df_view.copy() # Already filtered weight > 0
                 
                 if not chart_df.empty:
                     y_cols = ['weight']
@@ -1066,6 +1103,7 @@ elif mode == "📊 數據戰情室":
                     parts_cp = ["全部"] + list(df_cp[df_cp['model'] == filter_cp_model]['part_no'].unique())
                 else:
                     parts_cp = ["全部"] + list(df_cp['part_no'].unique())
+                # [Fix] Added key for dashboard interaction
                 filter_cp_part = st.selectbox("品番 (Part No)", parts_cp, key="cp_part_filter")
             with f_col4:
                 status_opts = ["未審核", "審核中", "結案", "Closed", "無異常"]
