@@ -253,7 +253,7 @@ if df.empty:
 # --- Mode Selection ---
 # [Refactor]
 st.sidebar.title("🔧 巡檢系統")
-st.sidebar.caption("v.20250204.46-hide-header") # Version Tag
+st.sidebar.caption("v.20250204.47-header-fix") # Version Tag
 mode = st.sidebar.radio("功能選擇", ["📝 巡檢輸入", "📊 數據戰情室"], index=0)
 
 # --- Sidebar Footer ---
@@ -513,7 +513,8 @@ if mode == "📝 巡檢輸入":
                     # Header for the specific cavity
                     # [UI Polish] Hide header if single cavity (User Request: "單穴" is ugly)
                     if sp['suffix']:
-                        st.markdown(f"#### 🟢 穴號: {sp['suffix']}")
+                        # [User Request] Header: PartNo + " " + Suffix
+                        st.markdown(f"#### 🟢 {target_part} {sp['suffix']}")
                     
                     # Check if Length Spec exists (Robust)
                     len_std_val = sp.get('len_std')
