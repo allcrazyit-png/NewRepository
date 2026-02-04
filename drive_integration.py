@@ -168,7 +168,7 @@ def fetch_all_data():
         print(f"Error fetching dashboard data: {e}")
         return []
 
-def update_status(timestamp, status, comment, part_no="", apply_all=True, change_point=None):
+def update_status_v2(timestamp, status, comment, part_no="", apply_all=True, change_point=None):
     """
     Updates status. 
     apply_all=True -> Update all rows with same timestamp (Batch).

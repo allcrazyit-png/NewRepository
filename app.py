@@ -253,7 +253,7 @@ if df.empty:
 # --- Mode Selection ---
 # [Refactor]
 st.sidebar.title("🔧 巡檢系統")
-st.sidebar.caption("v.20250204.29-indent-fix") # Version Tag
+st.sidebar.caption("v.20250204.30-cache-bust") # Version Tag
 mode = st.sidebar.radio("功能選擇", ["📝 巡檢輸入", "📊 數據戰情室"], index=0)
 
 # --- Sidebar Footer ---
@@ -1103,7 +1103,7 @@ elif mode == "📊 數據戰情室":
                             ts_str_for_api = row['timestamp'].strftime('%Y-%m-%dT%H:%M:%S')
                             target_part = row['part_no']
                             with st.spinner("更新中..."):
-                                success, msg = drive_integration.update_status(
+                                success, msg = drive_integration.update_status_v2(
                                     ts_str_for_api, 
                                     new_status, 
                                     new_comment, 
