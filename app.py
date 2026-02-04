@@ -253,7 +253,7 @@ if df.empty:
 # --- Mode Selection ---
 # [Refactor]
 st.sidebar.title("🔧 巡檢系統")
-st.sidebar.caption("v.20250204.41-force-refresh") # Version Tag
+st.sidebar.caption("v.20250204.42-sync-fix") # Version Tag
 mode = st.sidebar.radio("功能選擇", ["📝 巡檢輸入", "📊 數據戰情室"], index=0)
 
 # --- Sidebar Footer ---
@@ -1042,6 +1042,8 @@ elif mode == "📊 數據戰情室":
                 # Update Source of Truth
                 if target_p != st.session_state.get('dash_target_part'):
                      st.session_state['dash_target_part'] = target_p
+                     # [Fix] Force Widget State Update (Widget Key Precedence)
+                     st.session_state['_dash_part_ui'] = target_p
                      st.toast(f"🔍 已篩選: {target_p}")
                      st.rerun()
             
