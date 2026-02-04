@@ -880,14 +880,9 @@ elif mode == "📊 數據戰情室":
                     return f"https://drive.google.com/file/d/{val_str}/preview"
                 df_view['image'] = df_view['image'].apply(make_drive_link)
 
-            # [View] Select only relevant columns for Weight Tracking (Hide CP info)
-            cols_to_show = ['timestamp', 'model', 'part_no', 'inspection_type', 'weight', 'result', 'image']
-            # intersection to avoid KeyErrors if columns missing
-            final_cols = [c for c in cols_to_show if c in df_view.columns]
-            df_view_final = df_view[final_cols]
-            
+            # [View] Revert to showing all columns (User Request)
             st.dataframe(
-                df_view_final, 
+                df_view, 
                 use_container_width=True,
                 column_config={
                     "image": st.column_config.LinkColumn("巡檢照片", display_text="📸 查看"),
@@ -947,6 +942,10 @@ elif mode == "📊 數據戰情室":
                     st.altair_chart((line_w + line_limits).interactive(), use_container_width=True)
                 else:
                     st.info("尚無有效數據 (已隱藏快速記錄的 CP 資料)")
+        
+        # [Legacy/Duplicate Code Removed]
+        # Previous versions had a fallback block here that caused "Change Point Board" to appear twice.
+        # It has been deleted.
 
         # ==========================================
         # 2. Change Point Management Center
