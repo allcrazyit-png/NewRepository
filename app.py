@@ -241,7 +241,10 @@ if df.empty:
     st.stop()
 
 # --- Mode Selection ---
-# [Refactor] 3-Page Split
+# --- Mode Selection ---
+# [Refactor]
+st.sidebar.title("🔧 巡檢系統")
+st.sidebar.caption("v.20250204.02") # Version Tag
 mode = st.sidebar.radio("功能選擇", ["📝 巡檢輸入", "📊 數據戰情室"], index=0)
 
 # --- Sidebar Footer ---
