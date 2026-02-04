@@ -244,7 +244,7 @@ if df.empty:
 # --- Mode Selection ---
 # [Refactor]
 st.sidebar.title("🔧 巡檢系統")
-st.sidebar.caption("v.20250204.07") # Version Tag
+st.sidebar.caption("v.20250204.08-color") # Version Tag
 mode = st.sidebar.radio("功能選擇", ["📝 巡檢輸入", "📊 數據戰情室"], index=0)
 
 # --- Sidebar Footer ---
@@ -432,6 +432,34 @@ if mode == "📝 巡檢輸入":
                 else:
                     st.warning(f"找不到圖片檔案或檔案損壞: {product_img_filename}")
 
+            # [Restored & Moved] Key Control Points (重點管制 1~3+)
+            # Moved below Product Image as requested
+            kcp_list = []
+            
+            # 1. Check single column "重點管制"
+            val_single = current_part_data.get('重點管制')
+            if pd.notna(val_single) and str(val_single).strip():
+                kcp_list.append(str(val_single).strip())
+
+            # 2. Check numbered columns "重點管制1" ~ "重點管制3"
+            for i in range(1, 6): # Check up to 5 just in case
+                col_name = f"重點管制{i}"
+                val = current_part_data.get(col_name)
+                if pd.notna(val) and str(val).strip():
+                    kcp_list.append(str(val).strip())
+            
+            # 3. Fallback to "重點管理項目"
+            if not kcp_list:
+                val_legacy = current_part_data.get('重點管理項目')
+                if pd.notna(val_legacy) and str(val_legacy).strip():
+                    kcp_list.append(str(val_legacy).strip())
+
+            # Display with Warning Color (Orange/Yellow) for Attention
+            if kcp_list:
+                with st.expander("⭐ 重點管制項目 (Key Control Points)", expanded=True):
+                    for item in kcp_list:
+                        st.warning(f"• {item}", icon="⚠️")
+
         # [Refactor] Tabs for Inspection
         tab1, tab2, tab3 = st.tabs(["📝 輸入作業", "🛡️ 該品變化點", "📊 趨勢與履歷"])
 
@@ -464,33 +492,6 @@ if mode == "📝 巡檢輸入":
                 material_ok = True # Auto pass in Quick Mode
 
             st.divider()
-
-            # [Restore] Key Control Points (重點管制 1~3+)
-            kcp_list = []
-            
-            # 1. Check single column "重點管制"
-            val_single = current_part_data.get('重點管制')
-            if pd.notna(val_single) and str(val_single).strip():
-                kcp_list.append(str(val_single).strip())
-
-            # 2. Check numbered columns "重點管制1" ~ "重點管制3"
-            for i in range(1, 6): # Check up to 5 just in case
-                col_name = f"重點管制{i}"
-                val = current_part_data.get(col_name)
-                if pd.notna(val) and str(val).strip():
-                    kcp_list.append(str(val).strip())
-            
-            # 3. Fallback to "重點管理項目" if absolutely nothing found
-            if not kcp_list:
-                val_legacy = current_part_data.get('重點管理項目')
-                if pd.notna(val_legacy) and str(val_legacy).strip():
-                    kcp_list.append(str(val_legacy).strip())
-
-            # Display
-            if kcp_list:
-                with st.expander("⭐ 重點管制項目 (Key Control Points)", expanded=True):
-                    for item in kcp_list:
-                        st.info(f"• {item}")
 
             user_inputs = {}
             # Input Loop
