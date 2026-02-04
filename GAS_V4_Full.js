@@ -125,20 +125,24 @@ function doPost(e) {
             var newCP = jsonData.change_point; // [Feature] Allow updating Change Point content
             var applyAll = jsonData.apply_all; // [Feature] Batch Update Flag
 
-            var rows = sheet.getDataRange().getValues();
+            var rows = sheet.getDataRange().getDisplayValues(); // [Fix] Use DisplayValues to get "Visual String" directly
             var updatedCount = 0;
 
             for (var i = 1; i < rows.length; i++) {
-                var sheetDate = new Date(rows[i][0]);
+                var sheetDateStr = rows[i][0]; // This is now "YYYY-MM-DD HH:MM:SS" (or whatever format Sheet uses)
                 var sheetPart = rows[i][2];
-                // var targetDate = new Date(targetTs); // [Deprecated] causing TZ issues
 
-                // [Fix] Convert Sheet Date to String (GMT+8) to match input string directly
-                // This avoids "8 hour shift" issues if Script TZ matches expected input
-                var sheetDateStr = Utilities.formatDate(sheetDate, "GMT+8", "yyyy-MM-dd HH:mm:ss");
+                // We assume the Sheet is formatted as YYYY-MM-DD HH:MM:SS. 
+                // If not, this might fail if precision differs. 
+                // But Python sends YYYY-MM-DD HH:MM:SS.
+                // We should try to match substring if seconds are an issue, but let's try strict first.
 
-                // Input targetTs should be "yyyy-MM-dd HH:mm:ss"
+                // [Fix] compare visual strings directly
                 var isTimeMatch = (sheetDateStr == targetTs);
+                // Fallback: If Sheet shows "19:54:40", but targetTs is "19:54:40", good.
+                // If Sheet format is different (e.g. M/D/YYYY), this will fail.
+                // But we define the format in Upload. user likely hasn't changed it.
+
                 var isPartMatch = (sheetPart == targetPart);
 
                 // Condition: 
