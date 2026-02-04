@@ -253,7 +253,7 @@ if df.empty:
 # --- Mode Selection ---
 # [Refactor]
 st.sidebar.title("🔧 巡檢系統")
-st.sidebar.caption("v.20250204.32-insp-merge") # Version Tag
+st.sidebar.caption("v.20250204.33-final-polish") # Version Tag
 mode = st.sidebar.radio("功能選擇", ["📝 巡檢輸入", "📊 數據戰情室"], index=0)
 
 # --- Sidebar Footer ---
@@ -707,7 +707,8 @@ if mode == "📝 巡檢輸入":
                     df_local_cp = df_local_cp[df_local_cp['change_point'].ne("") & df_local_cp['change_point'].notna()]
                 
                 if 'timestamp' in df_local_cp.columns:
-                    df_local_cp['timestamp'] = pd.to_datetime(df_local_cp['timestamp'], errors='coerce')
+                    # [Fix] Force conversion to Taipei Time because GAS returns UTC ISO strings
+                    df_local_cp['timestamp'] = pd.to_datetime(df_local_cp['timestamp'], errors='coerce', utc=True).dt.tz_convert('Asia/Taipei')
                     df_local_cp = df_local_cp.sort_values(by='timestamp', ascending=False)
                 
                 # Split Open / Closed
@@ -1148,7 +1149,7 @@ elif mode == "📊 數據戰情室":
                          # [Feature] Manager Comment
                          current_comment = row.get('manager_comment', '')
                          if pd.isna(current_comment): current_comment = ""
-                         new_comment = st.text_area("主管留言 / 處理對策", value=str(current_comment), height=100, key=f"comm_{u_key}")
+                         new_comment = st.text_area("👨‍💼 主管留言 / 處理對策", value=str(current_comment), height=100, key=f"comm_{u_key}")
                          
                          # [Feature] Batch Update Checkbox
                          batch_label = "同步更新同批次 (一模多穴)"
