@@ -448,6 +448,20 @@ if mode == "📝 巡檢輸入":
             else:
                 inspection_type = st.radio("巡檢階段", ["首件", "中件", "末件"], horizontal=True)
 
+            # --- Material Check (Moved to Top) ---
+            if not quick_log_mode:
+                mat_name = current_part_data.get('原料名稱')
+                if pd.isna(mat_name) or str(mat_name).strip() == "":
+                    mat_name = current_part_data.get('原料編號', 'N/A')
+                
+                # Combined Label (No Header)
+                material_check = st.radio(f"原料確認 (標準: {mat_name})", ["OK", "NG"], horizontal=True, key="mat_check_radio")
+                material_ok = (material_check == "OK")
+            else:
+                material_ok = True # Auto pass in Quick Mode
+
+            st.divider()
+
             user_inputs = {}
             # Input Loop
             for idx, sp in enumerate(specs):
@@ -512,18 +526,8 @@ if mode == "📝 巡檢輸入":
                                 st.success("長度 OK")
                 st.markdown("---")
 
-            # Material Check with Hint
-            if not quick_log_mode:
-                mat_name = current_part_data.get('原料名稱')
-                if pd.isna(mat_name) or str(mat_name).strip() == "":
-                    mat_name = current_part_data.get('原料編號', 'N/A')
-                
-                st.markdown("##### 📦 原料確認")
-                # Combined Label
-                material_check = st.radio(f"原料狀態 (標準: {mat_name})", ["OK", "NG"], horizontal=True, key="mat_check_radio")
-                material_ok = (material_check == "OK")
-            else:
-                material_ok = True # Auto pass in Quick Mode
+            # Material Check (Moved to Top)
+            # Placeholder for deleted block
 
             st.markdown("##### 📝 變化點說明")
             
@@ -621,6 +625,178 @@ if mode == "📝 巡檢輸入":
                                 
                         except Exception as e:
                             st.error(f"系統錯誤: {str(e)}")
+
+        with tab2:
+            st.subheader(f"🛡️ {selected_part_no} - 變化點記錄")
+            
+            # Fetch and Organize History
+            target_suffixes = [s['suffix'] for s in specs]
+            all_cp_rows = []
+            
+            for s in specs:
+                h_target = f"{selected_part_no}{s['suffix']}"
+                h_data = drive_integration.fetch_history(h_target)
+                
+                # [Debug] Show query status
+                # st.caption(f"🔍 Debug: Querying '{h_target}'... Found {len(h_data) if h_data else 0} records")
+                
+                if h_data:
+                    for r in h_data:
+                        r['part_no'] = h_target # Ensure key
+                        all_cp_rows.append(r)
+                        
+            if all_cp_rows:
+                df_local_cp = pd.DataFrame(all_cp_rows)
+                
+                # Filter useful CP
+                if 'change_point' in df_local_cp.columns:
+                    df_local_cp = df_local_cp[df_local_cp['change_point'].ne("") & df_local_cp['change_point'].notna()]
+                
+                if 'timestamp' in df_local_cp.columns:
+                    df_local_cp['timestamp'] = pd.to_datetime(df_local_cp['timestamp'], errors='coerce')
+                    df_local_cp = df_local_cp.sort_values(by='timestamp', ascending=False)
+                
+                # Split Open / Closed
+                if 'status' not in df_local_cp.columns: df_local_cp['status'] = '未審核'
+                df_local_cp['status'] = df_local_cp['status'].fillna("未審核")
+                
+                open_issues = df_local_cp[~df_local_cp['status'].isin(["結案", "Closed", "無異常"])]
+                closed_issues = df_local_cp[df_local_cp['status'].isin(["結案", "Closed", "無異常"])]
+                
+                # 1. Open Issues Section
+                if not open_issues.empty:
+                    st.error(f"⚠️ 尚有 {len(open_issues)} 筆未結案異常！")
+                    for _, row in open_issues.iterrows():
+                        stat = row.get('status', '未審核')
+                        s_icon = "🔴" if stat == "未審核" else "🟡"
+                        ts_str = row['timestamp'].strftime('%Y-%m-%d %H:%M') if pd.notna(row['timestamp']) else "N/A"
+                        
+                        st.markdown(f"#### {s_icon} [{stat}] {row.get('change_point')}")
+                        st.caption(f"📅 {ts_str} | Part: {row.get('part_no')}")
+                        if row.get('manager_comment'):
+                            st.info(f"👨‍💼 主管: {row.get('manager_comment')}")
+                        st.divider()
+                else:
+                    st.success("✅ 目前無未結案異常")
+
+                # 2. History Section
+                st.subheader("📜 歷史記錄 (已結案)")
+                if not closed_issues.empty:
+                    with st.expander("查看已結案記錄", expanded=False):
+                        for _, row in closed_issues.iterrows():
+                            stat = row.get('status', '結案')
+                            ts_str = row['timestamp'].strftime('%Y-%m-%d') if pd.notna(row['timestamp']) else "N/A"
+                            st.markdown(f"🟢 **{row.get('change_point')}**")
+                            st.caption(f"[{stat}] {ts_str}")
+                            st.divider()
+                else:
+                    st.caption("無已結案記錄")
+            else:
+                st.info("此產品目前無相關變化點記錄。")
+
+        with tab3:
+            st.subheader(f"📊 {selected_part_no} - 趨勢與履歷")
+            
+            # [Trend Chart Logic]
+            chart_cols = st.columns(len(specs))
+            
+            for idx, sp in enumerate(specs):
+                with chart_cols[idx]:
+                    chart_title = f"{selected_part_no}{sp['label']}"
+                    suffix = sp['suffix']
+                    history_target_no = f"{selected_part_no}{suffix}"
+                    
+                    st.markdown(f"**{chart_title}**")
+                    
+                    # Fetch
+                    history_data = drive_integration.fetch_history(history_target_no)
+                    
+                    # [Debug] Check data
+                    valid_chart_data = False
+                    if history_data:
+                        chart_df = pd.DataFrame(history_data)
+                        
+                        # Data Cleaning
+                        if 'weight' in chart_df.columns and 'timestamp' in chart_df.columns:
+                            chart_df['weight'] = pd.to_numeric(chart_df['weight'], errors='coerce')
+                            chart_df['timestamp'] = pd.to_datetime(chart_df['timestamp'], errors='coerce')
+                            chart_df = chart_df.dropna(subset=['weight', 'timestamp'])
+                            
+                            # Filter: Only show real measurements (>0)
+                            chart_df = chart_df[chart_df['weight'] > 0]
+                            
+                            if not chart_df.empty:
+                                valid_chart_data = True
+                                
+                                # Add Limits
+                                w_max_limit = sp['max']
+                                w_min_limit = sp['min']
+                                y_cols = ['weight']
+                                if w_max_limit is not None:
+                                    chart_df['Limit H'] = float(w_max_limit)
+                                    y_cols.append('Limit H')
+                                if w_min_limit is not None:
+                                    chart_df['Limit L'] = float(w_min_limit)
+                                    y_cols.append('Limit L')
+                                
+                                # Convert to Local Time for Display
+                                if chart_df['timestamp'].dt.tz is None:
+                                     chart_df['timestamp'] = chart_df['timestamp'].dt.tz_localize('UTC')
+                                chart_df['timestamp'] = chart_df['timestamp'].dt.tz_convert('Asia/Taipei')
+
+                                chart_long = chart_df.melt('timestamp', value_vars=y_cols, var_name='MetricType', value_name='Value')
+                                
+                                # Scaling
+                                y_min_val = chart_long['Value'].min()
+                                y_max_val = chart_long['Value'].max()
+                                padding = (y_max_val - y_min_val) * 0.2 if y_max_val != y_min_val else 1.0
+                                
+                                color_domain = ['Limit H', 'Limit L', 'weight']
+                                color_range = ['#FF6C6C', '#FF6C6C', '#457B9D'] 
+                                
+                                base = alt.Chart(chart_long).encode(
+                                    x=alt.X('timestamp', title=None, axis=alt.Axis(format='%m/%d', ticks=False)),
+                                    y=alt.Y('Value', title='g', scale=alt.Scale(domain=[y_min_val - padding, y_max_val + padding])),
+                                    color=alt.Color('MetricType', legend=None, scale=alt.Scale(domain=color_domain, range=color_range)),
+                                    tooltip=['timestamp', 'Value', 'MetricType']
+                                )
+                                
+                                line_w = base.transform_filter(alt.datum.MetricType == 'weight').mark_line(strokeWidth=3, point=True)
+                                line_limits = base.transform_filter((alt.datum.MetricType == 'Limit H') | (alt.datum.MetricType == 'Limit L')).mark_line(strokeDash=[5, 5], opacity=0.8)
+
+                                st.altair_chart((line_w + line_limits).interactive(), use_container_width=True)
+                    
+                    if not valid_chart_data:
+                         st.info("尚無有效量測數據 (僅顯示重量 > 0 之記錄)")
+            
+            st.divider()
+            
+            # [Defect Images Logic]
+            st.subheader("⚠️ 過去異常履歷 (Reference)")
+            defect_images = []
+            d1 = current_part_data.get('異常履歷寫真')
+            if pd.notna(d1) and str(d1).strip(): defect_images.append(("1", str(d1).strip()))
+            for i in range(2, 4):
+                col = f"異常履歷寫真{i}"
+                val = current_part_data.get(col)
+                if pd.notna(val) and str(val).strip():
+                    defect_images.append((str(i), str(val).strip()))
+
+            if defect_images:
+                dh_cols = st.columns(5)
+                for idx, (label, fname) in enumerate(defect_images):
+                    col_idx = idx % 5
+                    img_path = os.path.join("quality_images", fname)
+                    valid_img_path = check_image_availability(img_path)
+                    
+                    with dh_cols[col_idx]:
+                        if valid_img_path:
+                            st.image(valid_img_path, caption=f"履歷-{label}", use_container_width=True)
+                        else:
+                            st.caption(f"履歷{label} 讀取失敗")
+            else:
+                st.caption("無異常履歷照片")
+
 
 elif mode == "📊 數據戰情室":
     st.header("📊 生產品質戰情室")
