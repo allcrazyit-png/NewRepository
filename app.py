@@ -253,7 +253,7 @@ if df.empty:
 # --- Mode Selection ---
 # [Refactor]
 st.sidebar.title("🔧 巡檢系統")
-st.sidebar.caption("v.20250204.43-dynamic-key") # Version Tag
+st.sidebar.caption("v.20250204.44-revert-label") # Version Tag
 mode = st.sidebar.radio("功能選擇", ["📝 巡檢輸入", "📊 數據戰情室"], index=0)
 
 # --- Sidebar Footer ---
@@ -520,11 +520,15 @@ if mode == "📝 巡檢輸入":
                         w_min = sp.get('min', '-')
                         w_max = sp.get('max', '-')
                         
-                        w_label = "重量 (g)"
-                        w_help = f"標準: {w_std_val} | 規格: {w_min} ~ {w_max}"
-                        
-                        # Show spec hint locally
-                        st.caption(f"🎯 標準: {w_std_val} | 📏範圍: {w_min} ~ {w_max}")
+                        w_label_extra = ""
+                        if w_std_val != '-':
+                             w_str = f"{w_std_val:g}" if isinstance(w_std_val, (float, int)) else str(w_std_val)
+                             w_label_extra += f" [Std: {w_str}"
+                             if w_min != '-' and w_max != '-':
+                                 w_label_extra += f" | {w_min:g}~{w_max:g}"
+                             w_label_extra += "]"
+
+                        w_label = f"重量 (g){w_label_extra}"
                         
                         if quick_log_mode:
                              w_input = 0.0
@@ -535,24 +539,26 @@ if mode == "📝 巡檢輸入":
                                 max_value=200.0,
                                 step=0.01,
                                 format="%.2f",
-                                key=f"w_in_{idx}",
-                                help=w_help
+                                key=f"w_in_{idx}"
                             )
 
                     with c2:
                         # Length Input
                         len_std_val = sp.get('len_std')
                         l_label = "長度 (mm)"
-                        l_help = "選填欄位"
-                        l_caption = "📏 選填"
                         
                         if len_std_val is not None:
                              l_min = sp.get('len_min')
                              l_max = sp.get('len_max')
-                             l_help = f"標準: {len_std_val} | 規格: {l_min} ~ {l_max}"
-                             l_caption = f"🎯 標準: {len_std_val} | 範圍: {l_min} ~ {l_max}"
-                        
-                        st.caption(l_caption)
+                             
+                             l_str = f"{len_std_val:g}" if isinstance(len_std_val, (float, int)) else str(len_std_val)
+                             l_extra = f" [Std: {l_str}"
+                             if l_min is not None and l_max is not None:
+                                  l_extra += f" | {l_min:g}~{l_max:g}"
+                             l_extra += "]"
+                             l_label += l_extra
+                        else:
+                             l_label += " [選填]"
                         
                         if quick_log_mode:
                             l_input = 0.0
@@ -564,7 +570,6 @@ if mode == "📝 巡檢輸入":
                                 step=0.01,
                                 format="%.2f",
                                 key=f"l_in_{idx}",
-                                help=l_help,
                                 value=None
                             )
 
