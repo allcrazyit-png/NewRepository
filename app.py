@@ -858,6 +858,10 @@ elif mode == "📊 數據戰情室":
             if filter_part != "全部": df_view = df_view[df_view['part_no'] == filter_part]
             if filter_result != "全部": df_view = df_view[df_view['result'] == filter_result]
             
+            # [Filter] Hide Change Point records in Weight Dashboard
+            if 'result' in df_view.columns:
+                 df_view = df_view[df_view['result'] != 'CP']
+
             # Sort by Newest
             if 'timestamp' in df_view.columns:
                  df_view = df_view.sort_values(by='timestamp', ascending=False)
@@ -885,8 +889,6 @@ elif mode == "📊 數據戰情室":
                 st.subheader("📈 重量趨勢圖")
                 
                 chart_df = df_view.copy()
-                if 'result' in chart_df.columns:
-                    chart_df = chart_df[chart_df['result'] != 'CP']
                 if 'weight' in chart_df.columns:
                     chart_df['weight'] = pd.to_numeric(chart_df['weight'], errors='coerce')
                     chart_df = chart_df[chart_df['weight'] > 0]
@@ -916,25 +918,6 @@ elif mode == "📊 數據戰情室":
                             if limit_l is not None:
                                  chart_df['Limit L'] = float(limit_l)
                                  y_cols.append('Limit L')
-                             
-                            # Show Defect History Images Logic
-                            st.subheader("⚠️ 過去異常履歷 (Reference)")
-                            defect_images = []
-                            d1 = spec_row.get('異常履歷寫真')
-                            if pd.notna(d1) and str(d1).strip(): defect_images.append(("1", str(d1).strip()))
-                            for i in range(2, 4):
-                                col_n = f"異常履歷寫真{i}"
-                                val = spec_row.get(col_n)
-                                if pd.notna(val) and str(val).strip(): defect_images.append((str(i), str(val).strip()))
-                            
-                            if defect_images:
-                                 dh_cols = st.columns(5)
-                                 for idx, (label, fname) in enumerate(defect_images):
-                                     col_idx = idx % 5
-                                     img_path = os.path.join("quality_images", fname)
-                                     if check_image_availability(img_path):
-                                         dh_cols[col_idx].image(img_path, caption=f"履歷-{label}", use_container_width=True)
-
 
                     chart_long = chart_df.melt('timestamp', value_vars=y_cols, var_name='MetricType', value_name='Value')
                     y_min_val = chart_long['Value'].min(); y_max_val = chart_long['Value'].max()
