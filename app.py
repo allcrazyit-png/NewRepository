@@ -858,10 +858,15 @@ elif mode == "📊 數據戰情室":
             if filter_part != "全部": df_view = df_view[df_view['part_no'] == filter_part]
             if filter_result != "全部": df_view = df_view[df_view['result'] == filter_result]
             
-            # [Filter] Hide Change Point records in Weight Dashboard
+            # [Filter] Hide Change Point records (Pure CP has weight=0)
+            if 'weight' in df_view.columns:
+                 df_view['weight'] = pd.to_numeric(df_view['weight'], errors='coerce')
+                 df_view = df_view[df_view['weight'] > 0]
+            
+            # [Double Check] Explicitly hide 'CP' result if any leaked
             if 'result' in df_view.columns:
                  df_view = df_view[df_view['result'] != 'CP']
-
+                 
             # Sort by Newest
             if 'timestamp' in df_view.columns:
                  df_view = df_view.sort_values(by='timestamp', ascending=False)
@@ -888,11 +893,8 @@ elif mode == "📊 數據戰情室":
             if not df_view.empty:
                 st.subheader("📈 重量趨勢圖")
                 
-                chart_df = df_view.copy()
-                if 'weight' in chart_df.columns:
-                    chart_df['weight'] = pd.to_numeric(chart_df['weight'], errors='coerce')
-                    chart_df = chart_df[chart_df['weight'] > 0]
-
+                chart_df = df_view.copy() # Already filtered weight > 0
+                
                 if not chart_df.empty:
                     y_cols = ['weight']
                     if filter_part != "全部":
