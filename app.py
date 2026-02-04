@@ -253,7 +253,7 @@ if df.empty:
 # --- Mode Selection ---
 # [Refactor]
 st.sidebar.title("🔧 巡檢系統")
-st.sidebar.caption("v.20250204.47-header-fix") # Version Tag
+st.sidebar.caption("v.20250204.48-nameerror-fix") # Version Tag
 mode = st.sidebar.radio("功能選擇", ["📝 巡檢輸入", "📊 數據戰情室"], index=0)
 
 # --- Sidebar Footer ---
@@ -514,7 +514,7 @@ if mode == "📝 巡檢輸入":
                     # [UI Polish] Hide header if single cavity (User Request: "單穴" is ugly)
                     if sp['suffix']:
                         # [User Request] Header: PartNo + " " + Suffix
-                        st.markdown(f"#### 🟢 {target_part} {sp['suffix']}")
+                        st.markdown(f"#### 🟢 {selected_part_no} {sp['suffix']}")
                     
                     # Check if Length Spec exists (Robust)
                     len_std_val = sp.get('len_std')
