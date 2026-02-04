@@ -253,7 +253,7 @@ if df.empty:
 # --- Mode Selection ---
 # [Refactor]
 st.sidebar.title("🔧 巡檢系統")
-st.sidebar.caption("v.20250204.18-img-cache-fix") # Version Tag
+st.sidebar.caption("v.20250204.19-sync-key-fix") # Version Tag
 mode = st.sidebar.radio("功能選擇", ["📝 巡檢輸入", "📊 數據戰情室"], index=0)
 
 # --- Sidebar Footer ---
@@ -496,7 +496,7 @@ if mode == "📝 巡檢輸入":
                     mat_name = current_part_data.get('原料編號', 'N/A')
                 
                 # Combined Label (No Header)
-                material_check = st.radio(f"原料確認 (標準: {mat_name})", ["OK", "NG"], horizontal=True, index=None, key="mat_check_radio")
+                material_check = st.radio(f"原料確認 (標準: {mat_name})", ["OK", "NG"], horizontal=True, index=0, key="mat_check_radio")
                 
                 # Validation Logic handled at Submit
                 material_ok = (material_check == "OK")
@@ -643,7 +643,7 @@ if mode == "📝 巡檢輸入":
                                     "part_no": f"{selected_part_no}{sp['suffix']}",
                                     "part_name": current_part_data.get('品名', ''),
                                     "inspection_type": inspection_type,
-                                    "material_check": "OK" if material_ok else "NG",
+                                    "material_ok": "OK" if material_ok else "NG", # Fix: Key must match GAS expectation
                                     "weight": final_weight,
                                     "width": "", 
                                     "length": final_len,
