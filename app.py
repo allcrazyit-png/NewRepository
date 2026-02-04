@@ -244,7 +244,7 @@ if df.empty:
 # --- Mode Selection ---
 # [Refactor]
 st.sidebar.title("🔧 巡檢系統")
-st.sidebar.caption("v.20250204.05-fix") # Version Tag
+st.sidebar.caption("v.20250204.06") # Version Tag
 mode = st.sidebar.radio("功能選擇", ["📝 巡檢輸入", "📊 數據戰情室"], index=0)
 
 # --- Sidebar Footer ---
@@ -466,15 +466,19 @@ if mode == "📝 巡檢輸入":
             st.divider()
 
             # [Restore] Key Control Points (重點管制)
-            kcp = current_part_data.get('重點管制')
+            kcp_val = current_part_data.get('重點管制')
             
-            # Fallback check (Just in case)
-            if pd.isna(kcp) or str(kcp).strip() == "":
-                 kcp = current_part_data.get('重點管理項目')
-            
-            if pd.notna(kcp) and str(kcp).strip():
-                with st.expander("⭐ 重點管制項目 (Key Control Points)", expanded=True):
-                    st.info(str(kcp).strip())
+            # Fallback
+            if pd.isna(kcp_val) or str(kcp_val).strip() == "":
+                 kcp_val = current_part_data.get('重點管理項目')
+
+            # [Debug V6] Always show block to confirm update
+            with st.expander(f"⭐ 重點管制項目 (Debug v.06)", expanded=True):
+                if pd.notna(kcp_val) and str(kcp_val).strip():
+                    st.info(str(kcp_val).strip())
+                else:
+                    st.warning("⚠️ 此產品目前無設定「重點管制」內容 (Data is empty)")
+                    st.caption(f"欄位偵測: 重點管制={current_part_data.get('重點管制')} | 重點管理項目={current_part_data.get('重點管理項目')}")
 
             user_inputs = {}
             # Input Loop
