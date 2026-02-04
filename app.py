@@ -253,7 +253,7 @@ if df.empty:
 # --- Mode Selection ---
 # [Refactor]
 st.sidebar.title("🔧 巡檢系統")
-st.sidebar.caption("v.20250204.28-cp-edit") # Version Tag
+st.sidebar.caption("v.20250204.29-indent-fix") # Version Tag
 mode = st.sidebar.radio("功能選擇", ["📝 巡檢輸入", "📊 數據戰情室"], index=0)
 
 # --- Sidebar Footer ---
@@ -1082,7 +1082,6 @@ elif mode == "📊 數據戰情室":
                         if current_stat in opts: target_index = opts.index(current_stat)
                         new_status = st.selectbox("審核狀態", opts, index=target_index, key=f"stat_{u_key}")
                     
-                    with m_col2:
                     with m_col2:
                          # [Feature] Change Point Description (Editable)
                          current_cp_desc = row.get('change_point', '')
