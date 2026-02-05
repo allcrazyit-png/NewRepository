@@ -9,7 +9,7 @@ function doPost(e) {
 
         // --- Action 1: Upload Data & Image ---
         if (action == "upload") {
-            var folderId = "root"; // 預設 root，或填入您的資料夾 ID
+            var folderId = jsonData.folder_id || "root"; // Use provided ID or default to root
             var imageUrl = "";
 
             // 1. Handle Image Upload (if exists)
