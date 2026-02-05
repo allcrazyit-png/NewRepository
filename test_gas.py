@@ -1,7 +1,7 @@
 import requests
 import json
 
-GAS_URL = "https://script.google.com/macros/s/AKfycbwBe1pCD1yudWMojDUI-PqXxn5XueZrq8xBNjWKmE7YAdjkP5t83aWkLrbvnFpnArOJYA/exec"
+GAS_URL = "https://script.google.com/macros/s/AKfycbyUXAjO4vOCmhOBWMT6svzpTXJzcVWO-jD4NQeEygB1-dyhCXb1m-gRC8_mkazIesTt/exec"
 
 payload = {
     "action": "get_history",
