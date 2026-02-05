@@ -262,7 +262,7 @@ if df.empty:
 # --- Mode Selection ---
 # [Refactor]
 st.sidebar.title("🔧 巡檢系統")
-st.sidebar.caption("v.20250204.60-show-part-name") # Version Tag
+st.sidebar.caption("v.20250204.61-fix-timezone") # Version Tag
 mode = st.sidebar.radio("功能選擇", ["📝 巡檢輸入", "📊 數據戰情室"], index=0)
 
 # --- Sidebar Footer ---
@@ -943,8 +943,9 @@ if mode == "📝 巡檢輸入":
                              if not chart_df_len.empty:
                                  # Convert Time
                                  if chart_df_len['timestamp'].dt.tz is None:
-                                     chart_df_len['timestamp'] = chart_df_len['timestamp'].dt.tz_localize('UTC')
-                                 chart_df_len['timestamp'] = chart_df_len['timestamp'].dt.tz_convert('Asia/Taipei')
+                                     chart_df_len['timestamp'] = chart_df_len['timestamp'].dt.tz_localize('Asia/Taipei')
+                                 else:
+                                     chart_df_len['timestamp'] = chart_df_len['timestamp'].dt.tz_convert('Asia/Taipei')
 
                                  # Limits
                                  l_max_limit = sp.get('len_max')
@@ -1027,9 +1028,11 @@ elif mode == "📊 數據戰情室":
         # --- Timezone Fix ---
         if 'timestamp' in df_dash.columns:
             df_dash['timestamp'] = pd.to_datetime(df_dash['timestamp'], errors='coerce')
+            # Fix: Assume string is already in Local Time, so just localize to Taipei directly
             if df_dash['timestamp'].dt.tz is None:
-                 df_dash['timestamp'] = df_dash['timestamp'].dt.tz_localize('UTC')
-            df_dash['timestamp'] = df_dash['timestamp'].dt.tz_convert('Asia/Taipei')
+                 df_dash['timestamp'] = df_dash['timestamp'].dt.tz_localize('Asia/Taipei')
+            else:
+                 df_dash['timestamp'] = df_dash['timestamp'].dt.tz_convert('Asia/Taipei')
 
         # --- Schema Safety Check (Fix for Cache/Legacy Data) ---
         if 'status' not in df_dash.columns: df_dash['status'] = "未審核"
@@ -1263,8 +1266,9 @@ elif mode == "📊 數據戰情室":
 
                           # Timezone
                           if chart_df_len['timestamp'].dt.tz is None:
-                               chart_df_len['timestamp'] = chart_df_len['timestamp'].dt.tz_localize('UTC')
-                          chart_df_len['timestamp'] = chart_df_len['timestamp'].dt.tz_convert('Asia/Taipei')
+                               chart_df_len['timestamp'] = chart_df_len['timestamp'].dt.tz_localize('Asia/Taipei')
+                          else:
+                               chart_df_len['timestamp'] = chart_df_len['timestamp'].dt.tz_convert('Asia/Taipei')
 
                           chart_long_len = chart_df_len.melt('timestamp', value_vars=y_cols_len, var_name='MetricType', value_name='Value')
                           
