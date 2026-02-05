@@ -262,7 +262,7 @@ if df.empty:
 # --- Mode Selection ---
 # [Refactor]
 st.sidebar.title("🔧 巡檢系統")
-st.sidebar.caption("v.20250204.56-stay-on-page") # Version Tag
+st.sidebar.caption("v.20250204.57-add-length-chart") # Version Tag
 mode = st.sidebar.radio("功能選擇", ["📝 巡檢輸入", "📊 數據戰情室"], index=0)
 
 # --- Sidebar Footer ---
@@ -930,7 +930,54 @@ if mode == "📝 巡檢輸入":
 
                                 st.altair_chart((line_w + line_limits).interactive(), use_container_width=True)
                     
-                    if not valid_chart_data:
+                    # [Feature] Length Chart for Inspection Page
+                    if history_data:
+                        chart_df_len = pd.DataFrame(history_data)
+                        if 'length' in chart_df_len.columns:
+                             # Convert
+                             chart_df_len['length'] = pd.to_numeric(chart_df_len['length'], errors='coerce')
+                             chart_df_len['timestamp'] = pd.to_datetime(chart_df_len['timestamp'], errors='coerce')
+                             chart_df_len = chart_df_len.dropna(subset=['length', 'timestamp'])
+                             chart_df_len = chart_df_len[chart_df_len['length'] > 0]
+                             
+                             if not chart_df_len.empty:
+                                 # Convert Time
+                                 if chart_df_len['timestamp'].dt.tz is None:
+                                     chart_df_len['timestamp'] = chart_df_len['timestamp'].dt.tz_localize('UTC')
+                                 chart_df_len['timestamp'] = chart_df_len['timestamp'].dt.tz_convert('Asia/Taipei')
+
+                                 # Limits
+                                 l_max_limit = sp.get('len_max')
+                                 l_min_limit = sp.get('len_min')
+                                 y_cols_l = ['length']
+                                 if l_max_limit is not None:
+                                     chart_df_len['Limit H'] = float(l_max_limit)
+                                     y_cols_l.append('Limit H')
+                                 if l_min_limit is not None:
+                                     chart_df_len['Limit L'] = float(l_min_limit)
+                                     y_cols_l.append('Limit L')
+
+                                 st.markdown(f"**📏 長度 ({suffix})**")
+                                 chart_long_l = chart_df_len.melt('timestamp', value_vars=y_cols_l, var_name='MetricType', value_name='Value')
+                                 
+                                 y_min_l = chart_long_l['Value'].min()
+                                 y_max_l = chart_long_l['Value'].max()
+                                 pad_l = (y_max_l - y_min_l) * 0.1 if y_max_l != y_min_l else 1.0
+                                 
+                                 color_domain_l = ['Limit H', 'Limit L', 'length']
+                                 color_range_l = ['#FF6C6C', '#FF6C6C', '#2A9D8F']
+
+                                 base_l = alt.Chart(chart_long_l).encode(
+                                    x=alt.X('timestamp', title=None, axis=alt.Axis(format='%m/%d', ticks=False)),
+                                    y=alt.Y('Value', title='mm', scale=alt.Scale(domain=[y_min_l - pad_l, y_max_l + pad_l])),
+                                    color=alt.Color('MetricType', legend=None, scale=alt.Scale(domain=color_domain_l, range=color_range_l)),
+                                    tooltip=['timestamp', 'Value', 'MetricType']
+                                 )
+                                 line_l = base_l.transform_filter(alt.datum.MetricType == 'length').mark_line(strokeWidth=3, point=True)
+                                 line_limits_l = base_l.transform_filter((alt.datum.MetricType == 'Limit H') | (alt.datum.MetricType == 'Limit L')).mark_line(strokeDash=[5, 5], opacity=0.8)
+                                 st.altair_chart((line_l + line_limits_l).interactive(), use_container_width=True)
+
+                    if not valid_chart_data and (not history_data): # Update info msg criteria
                          st.info("尚無有效量測數據 (僅顯示重量 > 0 之記錄)")
             
             st.divider()
@@ -1172,7 +1219,71 @@ elif mode == "📊 數據戰情室":
                     if filter_part != "全部":
                         st.info(f"ℹ️ 產品 [{filter_part}] 目前無「重量數據」。(記錄可能均為快速模式/CP，重量=0)")
                     else:
-                        st.write("") # Should be covered above, but safe fallback
+                        pass
+
+                # [Feature] Length Trend Chart (User Request)
+                # Re-use df_view but filter for Length
+                if not df_view.empty and 'length' in df_view.columns:
+                     chart_df_len = df_view.copy()
+                     # Convert to numeric
+                     chart_df_len['length'] = pd.to_numeric(chart_df_len['length'], errors='coerce')
+                     chart_df_len = chart_df_len[chart_df_len['length'] > 0]
+                     
+                     if not chart_df_len.empty:
+                          st.subheader("📏 長度趨勢圖")
+                          y_cols_len = ['length']
+                          
+                          # Spec Limits for Length
+                          if filter_part != "全部":
+                                # Re-fetch spec (logic copied from above)
+                                part_spec = df[df['品番'] == filter_part]
+                                if part_spec.empty:
+                                    if '_' in filter_part:
+                                        base_part_underscore = filter_part.rsplit('_', 1)[0]
+                                        part_spec = df[df['品番'] == base_part_underscore]
+                                if part_spec.empty:
+                                     base_part_space = filter_part.split(' ')[0]
+                                     part_spec = df[df['品番'] == base_part_space]
+                                
+                                if not part_spec.empty:
+                                    spec_row = part_spec.iloc[0]
+                                    l_h = spec_row.get('clean_長度上限')
+                                    l_l = spec_row.get('clean_長度下限')
+                                    if isinstance(l_h, list): l_h = l_h[0]
+                                    if isinstance(l_l, list): l_l = l_l[0]
+                                    
+                                    if l_h is not None:
+                                        chart_df_len['Limit H'] = float(l_h)
+                                        y_cols_len.append('Limit H')
+                                    if l_l is not None:
+                                        chart_df_len['Limit L'] = float(l_l)
+                                        y_cols_len.append('Limit L')
+
+                          # Timezone
+                          if chart_df_len['timestamp'].dt.tz is None:
+                               chart_df_len['timestamp'] = chart_df_len['timestamp'].dt.tz_localize('UTC')
+                          chart_df_len['timestamp'] = chart_df_len['timestamp'].dt.tz_convert('Asia/Taipei')
+
+                          chart_long_len = chart_df_len.melt('timestamp', value_vars=y_cols_len, var_name='MetricType', value_name='Value')
+                          
+                          y_min_l = chart_long_len['Value'].min()
+                          y_max_l = chart_long_len['Value'].max()
+                          pad_l = (y_max_l - y_min_l) * 0.1 if y_max_l != y_min_l else 1.0
+
+                          color_domain_l = ['Limit H', 'Limit L', 'length']
+                          color_range_l = ['#FF6C6C', '#FF6C6C', '#2A9D8F'] # Green for Length
+
+                          base_l = alt.Chart(chart_long_len).encode(
+                                x=alt.X('timestamp', title=None, axis=alt.Axis(format='%m/%d', ticks=False)),
+                                y=alt.Y('Value', title='mm', scale=alt.Scale(domain=[y_min_l - pad_l, y_max_l + pad_l])),
+                                color=alt.Color('MetricType', legend=None, scale=alt.Scale(domain=color_domain_l, range=color_range_l)),
+                                tooltip=['timestamp', 'Value', 'MetricType']
+                          )
+
+                          line_l = base_l.transform_filter(alt.datum.MetricType == 'length').mark_line(strokeWidth=3, point=True)
+                          line_limits_l = base_l.transform_filter((alt.datum.MetricType == 'Limit H') | (alt.datum.MetricType == 'Limit L')).mark_line(strokeDash=[5, 5], opacity=0.8)
+                          
+                          st.altair_chart((line_l + line_limits_l).interactive(), use_container_width=True)
         
         # [Legacy/Duplicate Code Removed]
         # Previous versions had a fallback block here that caused "Change Point Board" to appear twice.
