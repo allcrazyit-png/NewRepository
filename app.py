@@ -262,7 +262,7 @@ if df.empty:
 # --- Mode Selection ---
 # [Refactor]
 st.sidebar.title("🔧 巡檢系統")
-st.sidebar.caption("v.20250204.59-add-part-name") # Version Tag
+st.sidebar.caption("v.20250204.60-show-part-name") # Version Tag
 mode = st.sidebar.radio("功能選擇", ["📝 巡檢輸入", "📊 數據戰情室"], index=0)
 
 # --- Sidebar Footer ---
@@ -1132,6 +1132,8 @@ elif mode == "📊 數據戰情室":
                 column_config={
                     "image": st.column_config.LinkColumn("巡檢照片", display_text="📸 查看"),
                     "timestamp": st.column_config.DatetimeColumn("時間", format="MM/DD HH:mm"),
+                    "part_name": st.column_config.TextColumn("品名", width="medium"), # [Feature] Part Name
+                    "part_no": st.column_config.TextColumn("品番", width="medium"),
                     "weight": st.column_config.NumberColumn("重量 (g)", format="%.2f")
                 },
                 on_select="rerun",

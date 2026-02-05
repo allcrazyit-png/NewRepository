@@ -28,11 +28,12 @@ function doPost(e) {
             var status = jsonData.status || "未審核";
 
             // 3. Append to Sheet
-            // Order: [Timestamp, Model, PartNo, Type, Weight, Length, Material, ChangePoint, Status, Comment, Result, Image]
+            // Order: [Timestamp, Model, PartNo, PartName, Type, Weight, Length, Material, ChangePoint, Status, Comment, Result, Image]
             sheet.appendRow([
                 jsonData.timestamp,
                 jsonData.model,
                 jsonData.part_no,
+                jsonData.part_name,    // <--- [New] Part Name (Index 3)
                 jsonData.inspection_type,
                 jsonData.weight,
                 jsonData.length,
@@ -53,26 +54,26 @@ function doPost(e) {
 
         // --- Action 2: Get All Data ---
         else if (action == "get_all_data") {
-            var rows = sheet.getDataRange().getValues();
-            var headers = rows[0];
+            var rows = sheet.getDataRange().getDisplayValues(); // Use getDisplayValues for strings
             var data = [];
 
             for (var i = 1; i < rows.length; i++) {
                 var row = rows[i];
                 var record = {};
-                // Map columns correctly based on your schema
+                // Map columns correctly based on your schema (Shifted by +1 for PartName)
                 record['timestamp'] = row[0];
                 record['model'] = row[1];
                 record['part_no'] = row[2];
-                record['inspection_type'] = row[3];
-                record['weight'] = row[4];
-                record['length'] = row[5];
-                record['material_ok'] = row[6];
-                record['change_point'] = row[7];
-                record['status'] = row[8];          // Column I
-                record['manager_comment'] = row[9]; // Column J
-                record['result'] = row[10];         // Column K
-                record['image'] = row[11];          // Column L
+                record['part_name'] = row[3]; // [Feature] Return Part Name
+                record['inspection_type'] = row[4];
+                record['weight'] = row[5];
+                record['length'] = row[6];
+                record['material_ok'] = row[7];
+                record['change_point'] = row[8];
+                record['status'] = row[9];          // Column J
+                record['manager_comment'] = row[10]; // Column K
+                record['result'] = row[11];         // Column L
+                record['image'] = row[12];          // Column M
                 data.push(record);
             }
 
@@ -86,7 +87,7 @@ function doPost(e) {
         // --- Action 4: Get History (Filtered by Part No) ---
         else if (action == "get_history") {
             var targetPart = jsonData.part_no;
-            var rows = sheet.getDataRange().getValues();
+            var rows = sheet.getDataRange().getDisplayValues(); // Use DisplayValues for consistency
             var data = [];
 
             for (var i = 1; i < rows.length; i++) {
@@ -97,15 +98,15 @@ function doPost(e) {
                     record['timestamp'] = row[0];
                     record['model'] = row[1];
                     record['part_no'] = row[2];
-                    record['inspection_type'] = row[3];
-                    record['weight'] = row[4];
-                    record['length'] = row[5];
-                    record['material_ok'] = row[6];
-                    record['change_point'] = row[7];
-                    record['status'] = row[8];
-                    record['manager_comment'] = row[9];
-                    record['result'] = row[10];
-                    record['image'] = row[11];
+                    // Skip PartName (row[3]) for local history object unless needed
+                    record['inspection_type'] = row[4];
+                    record['weight'] = row[5];
+                    record['length'] = row[6];
+                    record['change_point'] = row[8];
+                    record['status'] = row[9];
+                    record['manager_comment'] = row[10];
+                    record['result'] = row[11];
+                    record['image'] = row[12];
                     data.push(record);
                 }
             }
@@ -132,31 +133,22 @@ function doPost(e) {
                 var sheetDateStr = rows[i][0]; // This is now "YYYY-MM-DD HH:MM:SS" (or whatever format Sheet uses)
                 var sheetPart = rows[i][2];
 
-                // We assume the Sheet is formatted as YYYY-MM-DD HH:MM:SS. 
-                // If not, this might fail if precision differs. 
-                // But Python sends YYYY-MM-DD HH:MM:SS.
-                // We should try to match substring if seconds are an issue, but let's try strict first.
-
                 // [Fix] compare visual strings directly
                 var isTimeMatch = (sheetDateStr == targetTs);
-                // Fallback: If Sheet shows "19:54:40", but targetTs is "19:54:40", good.
-                // If Sheet format is different (e.g. M/D/YYYY), this will fail.
-                // But we define the format in Upload. user likely hasn't changed it.
-
                 var isPartMatch = (sheetPart == targetPart);
 
                 // Condition: 
                 // 1. If applyAll is true -> Only Time Match required
                 // 2. If applyAll is false -> Time AND Part Match required
                 if (isTimeMatch && (applyAll || isPartMatch)) {
-                    // Update Change Point (Col H -> index 7) if provided
+                    // Update Change Point (Col I -> index 8) if provided (Shifted +1)
                     if (newCP !== undefined) {
-                        sheet.getRange(i + 1, 8).setValue(newCP);
+                        sheet.getRange(i + 1, 9).setValue(newCP);
                     }
-                    // Update Status (Col I -> index 8)
-                    sheet.getRange(i + 1, 9).setValue(newStatus);
-                    // Update Comment (Col J -> index 9)
-                    sheet.getRange(i + 1, 10).setValue(newComment);
+                    // Update Status (Col J -> index 9)
+                    sheet.getRange(i + 1, 10).setValue(newStatus);
+                    // Update Comment (Col K -> index 10)
+                    sheet.getRange(i + 1, 11).setValue(newComment);
                     updatedCount++;
 
                     if (!applyAll) break; // Stop if strictly one
