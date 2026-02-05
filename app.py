@@ -262,7 +262,7 @@ if df.empty:
 # --- Mode Selection ---
 # [Refactor]
 st.sidebar.title("🔧 巡檢系統")
-st.sidebar.caption("v.20250204.51-model-radio") # Version Tag
+st.sidebar.caption("v.20250204.52-fix-radio") # Version Tag
 mode = st.sidebar.radio("功能選擇", ["📝 巡檢輸入", "📊 數據戰情室"], index=0)
 
 # --- Sidebar Footer ---
@@ -314,7 +314,6 @@ if mode == "📝 巡檢輸入":
                     "車型", 
                     car_models, 
                     index=default_model_idx, 
-                    isHorizontal=True, # Streamlit < 1.4 uses 'horizontal', checking api... horizontal=True
                     horizontal=True,
                     key="landing_model",
                     label_visibility="collapsed" # Hide duplicate label as Subheader exists
