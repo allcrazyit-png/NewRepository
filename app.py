@@ -262,7 +262,7 @@ if df.empty:
 # --- Mode Selection ---
 # [Refactor]
 st.sidebar.title("🔧 巡檢系統")
-st.sidebar.caption("v.20250204.57-add-length-chart") # Version Tag
+st.sidebar.caption("v.20250204.58-hide-len-chart-all") # Version Tag
 mode = st.sidebar.radio("功能選擇", ["📝 巡檢輸入", "📊 數據戰情室"], index=0)
 
 # --- Sidebar Footer ---
@@ -1223,7 +1223,7 @@ elif mode == "📊 數據戰情室":
 
                 # [Feature] Length Trend Chart (User Request)
                 # Re-use df_view but filter for Length
-                if not df_view.empty and 'length' in df_view.columns:
+                if filter_part != "全部" and not df_view.empty and 'length' in df_view.columns:
                      chart_df_len = df_view.copy()
                      # Convert to numeric
                      chart_df_len['length'] = pd.to_numeric(chart_df_len['length'], errors='coerce')
