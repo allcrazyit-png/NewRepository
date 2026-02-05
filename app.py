@@ -262,7 +262,7 @@ if df.empty:
 # --- Mode Selection ---
 # [Refactor]
 st.sidebar.title("🔧 巡檢系統")
-st.sidebar.caption("v.20250204.52-fix-radio") # Version Tag
+st.sidebar.caption("v.20250204.53-fix-dup-key") # Version Tag
 mode = st.sidebar.radio("功能選擇", ["📝 巡檢輸入", "📊 數據戰情室"], index=0)
 
 # --- Sidebar Footer ---
@@ -345,7 +345,10 @@ if mode == "📝 巡檢輸入":
         # Increased to 5 columns for smaller images as requested
         cols = st.columns(5)
         
-        for idx, row in filtered_df.iterrows():
+        # [Fix] Deduplicate parts to prevent duplicate keys in grid
+        deduplicated_df = filtered_df.drop_duplicates(subset=['品番'])
+        
+        for idx, row in deduplicated_df.iterrows():
             part_no = row['品番']
             part_name = row.get('品名', 'N/A')
             img_name = row.get('產品圖片')
