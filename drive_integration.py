@@ -96,6 +96,7 @@ def upload_and_append(image_file, filename, row_data):
             "timestamp": row_data.get("timestamp"),
             "model": row_data.get("model"),
             "part_no": row_data.get("part_no"),
+            "part_name": row_data.get("part_name"), # [Feature] Add Part Name
             "inspection_type": row_data.get("inspection_type"),
             "weight": row_data.get("weight"),
             "length": row_data.get("length"),
