@@ -332,12 +332,12 @@ if mode == "📝 巡檢輸入":
         # [Fix] Deduplicate parts to prevent duplicate keys in grid
         deduplicated_df = filtered_df.drop_duplicates(subset=['品番'])
         
-        for idx, row in deduplicated_df.iterrows():
+        for i, (idx, row) in enumerate(deduplicated_df.iterrows()):
             part_no = row['品番']
             part_name = row.get('品名', 'N/A')
             img_name = row.get('產品圖片')
             
-            with cols[idx % 5]:
+            with cols[i % 5]:
                 with st.container():
                     # Image
                     if pd.notna(img_name) and str(img_name).strip():
