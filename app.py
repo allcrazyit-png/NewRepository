@@ -262,7 +262,7 @@ if df.empty:
 # --- Mode Selection ---
 # [Refactor]
 st.sidebar.title("🔧 巡檢系統")
-st.sidebar.caption("v.20250204.54-fix-format") # Version Tag
+st.sidebar.caption("v.20250204.55-input-limit") # Version Tag
 mode = st.sidebar.radio("功能選擇", ["📝 巡檢輸入", "📊 數據戰情室"], index=0)
 
 # --- Sidebar Footer ---
@@ -578,7 +578,7 @@ if mode == "📝 巡檢輸入":
                              w_input = st.number_input(
                                 w_label,
                                 min_value=0.0,
-                                max_value=200.0,
+                                max_value=10000.0,
                                 step=0.01,
                                 format="%.2f",
                                 key=f"w_in_{idx}"
@@ -605,7 +605,7 @@ if mode == "📝 巡檢輸入":
                                 l_input = st.number_input(
                                     l_label,
                                     min_value=0.0,
-                                    max_value=500.0,
+                                    max_value=5000.0,
                                     step=0.01,
                                     format="%.2f",
                                     key=f"l_in_{idx}",
