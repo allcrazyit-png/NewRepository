@@ -272,6 +272,10 @@ if mode == "📝 巡檢輸入":
     if 'inspection_started' not in st.session_state:
         st.session_state['inspection_started'] = False
     
+    # [Fix] Dynamic ID for resetting upload widgets
+    if 'uploader_id' not in st.session_state:
+        st.session_state['uploader_id'] = 0
+    
     # --- State 1: Landing Page (Selection) ---
     if not st.session_state['inspection_started']:
         # Title
@@ -636,10 +640,10 @@ if mode == "📝 巡檢輸入":
             input_method = st.radio("影像輸入", ["📸 網頁相機", "📂 上傳照片"], index=1, horizontal=True)
             img_files = []
             if input_method == "📸 網頁相機":
-                cam_file = st.camera_input("拍照", key="cam_input")
+                cam_file = st.camera_input("拍照", key=f"cam_input_{st.session_state['uploader_id']}")
                 if cam_file: img_files = [cam_file]
             else:
-                uploaded_files = st.file_uploader("上傳照片", type=["jpg", "png"], accept_multiple_files=True, key="file_uploader")
+                uploaded_files = st.file_uploader("上傳照片", type=["jpg", "png"], accept_multiple_files=True, key=f"file_uploader_{st.session_state['uploader_id']}")
                 if uploaded_files: img_files = uploaded_files
 
             # --- Submit Button ---
@@ -724,10 +728,13 @@ if mode == "📝 巡檢輸入":
                                 time.sleep(1)
                                 
                                 # [Fix] Stay on page (User Request) and Clear Inputs
-                                # Clear Number Inputs and File Uploaders
-                                keys_to_clear = [k for k in st.session_state.keys() if k.startswith("w_in_") or k.startswith("l_in_") or k in ["cp_input", "cam_input", "file_uploader", "issue_checkbox", "mat_check_radio"]]
+                                # 1. Clear text/number inputs by deleting keys
+                                keys_to_clear = [k for k in st.session_state.keys() if k.startswith("w_in_") or k.startswith("l_in_") or k in ["cp_input", "issue_checkbox", "mat_check_radio"]]
                                 for k in keys_to_clear:
                                     del st.session_state[k]
+                                
+                                # 2. Reset Uploaders by incrementing dynamic ID
+                                st.session_state['uploader_id'] += 1
                                 
                                 # st.session_state['inspection_started'] = False # Removed to stay on page
                                 st.session_state['inspection_started'] = True
@@ -765,8 +772,16 @@ if mode == "📝 巡檢輸入":
                     df_local_cp = df_local_cp[df_local_cp['change_point'].ne("") & df_local_cp['change_point'].notna()]
                 
                 if 'timestamp' in df_local_cp.columns:
-                    # [Fix] Force conversion to Taipei Time because GAS returns UTC ISO strings
-                    df_local_cp['timestamp'] = pd.to_datetime(df_local_cp['timestamp'], errors='coerce', utc=True).dt.tz_convert('Asia/Taipei')
+                    # [Fix] Force conversion to Taipei Time (Source string is ALREADY Taipei Time)
+                    # Do NOT use utc=True which assumes input is UTC
+                    if pd.api.types.is_datetime64_any_dtype(df_local_cp['timestamp']):
+                         df_local_cp['timestamp'] = df_local_cp['timestamp'].dt.tz_localize('Asia/Taipei') if df_local_cp['timestamp'].dt.tz is None else df_local_cp['timestamp'].dt.tz_convert('Asia/Taipei')
+                    else:
+                         df_local_cp['timestamp'] = pd.to_datetime(df_local_cp['timestamp'], errors='coerce')
+                         if df_local_cp['timestamp'].dt.tz is None:
+                              df_local_cp['timestamp'] = df_local_cp['timestamp'].dt.tz_localize('Asia/Taipei')
+                         else:
+                              df_local_cp['timestamp'] = df_local_cp['timestamp'].dt.tz_convert('Asia/Taipei')
                     df_local_cp = df_local_cp.sort_values(by='timestamp', ascending=False)
                 
                 # Split Open / Closed
@@ -889,9 +904,11 @@ if mode == "📝 巡檢輸入":
                                     y_cols.append('Limit L')
                                 
                                 # Convert to Local Time for Display
+                                # [Fix] Source is Taipei Time string -> Localize to Taipei directly
                                 if chart_df['timestamp'].dt.tz is None:
-                                     chart_df['timestamp'] = chart_df['timestamp'].dt.tz_localize('UTC')
-                                chart_df['timestamp'] = chart_df['timestamp'].dt.tz_convert('Asia/Taipei')
+                                     chart_df['timestamp'] = chart_df['timestamp'].dt.tz_localize('Asia/Taipei')
+                                else:
+                                     chart_df['timestamp'] = chart_df['timestamp'].dt.tz_convert('Asia/Taipei')
 
                                 chart_long = chart_df.melt('timestamp', value_vars=y_cols, var_name='MetricType', value_name='Value')
                                 
