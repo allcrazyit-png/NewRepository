@@ -504,7 +504,7 @@ if mode == "📝 巡檢輸入":
                     mat_name = current_part_data.get('原料編號', 'N/A')
                 
                 # Combined Label (No Header)
-                material_check = st.radio(f"原料確認 (標準: {mat_name})", ["OK", "NG"], horizontal=True, index=0, key="mat_check_radio")
+                material_check = st.radio(f"原料確認 (標準: {mat_name})", ["OK", "NG"], horizontal=True, index=0, key=f"mat_check_radio_{st.session_state['uploader_id']}")
                 
                 # Validation Logic handled at Submit
                 material_ok = (material_check == "OK")
@@ -569,7 +569,7 @@ if mode == "📝 巡檢輸入":
                                 max_value=10000.0,
                                 step=0.01,
                                 format="%.2f",
-                                key=f"w_in_{idx}"
+                                key=f"w_in_{idx}_{st.session_state['uploader_id']}"
                             )
 
                     l_input = None
@@ -596,7 +596,7 @@ if mode == "📝 巡檢輸入":
                                     max_value=5000.0,
                                     step=0.01,
                                     format="%.2f",
-                                    key=f"l_in_{idx}",
+                                    key=f"l_in_{idx}_{st.session_state['uploader_id']}",
                                     value=None
                                 )
 
@@ -625,11 +625,11 @@ if mode == "📝 巡檢輸入":
             st.markdown("##### 📝 變化點說明")
             
             # [Design] Simplified to Checkbox
-            is_issue = st.checkbox("⚠️ 回報異常 (Report Issue)", value=quick_log_mode, key="issue_checkbox")
+            is_issue = st.checkbox("⚠️ 回報異常 (Report Issue)", value=quick_log_mode, key=f"issue_checkbox_{st.session_state['uploader_id']}")
             
             change_point = ""
             if is_issue:
-                change_point = st.text_area("請輸入異常說明", placeholder="例如: 模具損傷、原料更換...", height=100, key="cp_input")
+                change_point = st.text_area("請輸入異常說明", placeholder="例如: 模具損傷、原料更換...", height=100, key=f"cp_input_{st.session_state['uploader_id']}")
                 if not change_point.strip():
                     st.caption("⚠️ 請輸入說明，若空白將視為無異常")
             else:
@@ -728,8 +728,11 @@ if mode == "📝 巡檢輸入":
                                 time.sleep(1)
                                 
                                 # [Fix] Stay on page (User Request) and Clear Inputs
-                                # 1. Clear text/number inputs by deleting keys
-                                keys_to_clear = [k for k in st.session_state.keys() if k.startswith("w_in_") or k.startswith("l_in_") or k in ["cp_input", "issue_checkbox", "mat_check_radio"]]
+                                # 1. Clear OLD keys to prevent session state bloat (Optional but good)
+                                # Since we increment uploader_id, the new widgets will have new keys.
+                                # We can just delete keys ending with the CURRENT ID before incrementing.
+                                current_uid_suffix = f"_{st.session_state['uploader_id']}"
+                                keys_to_clear = [k for k in st.session_state.keys() if str(k).endswith(current_uid_suffix)]
                                 for k in keys_to_clear:
                                     del st.session_state[k]
                                 
