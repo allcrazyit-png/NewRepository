@@ -621,7 +621,7 @@ if mode == "📝 巡檢輸入":
             st.markdown("##### 📝 變化點說明")
             
             # [Design] Simplified to Checkbox
-            is_issue = st.checkbox("⚠️ 回報異常 (Report Issue)", value=quick_log_mode)
+            is_issue = st.checkbox("⚠️ 回報異常 (Report Issue)", value=quick_log_mode, key="issue_checkbox")
             
             change_point = ""
             if is_issue:
@@ -636,10 +636,10 @@ if mode == "📝 巡檢輸入":
             input_method = st.radio("影像輸入", ["📸 網頁相機", "📂 上傳照片"], index=1, horizontal=True)
             img_files = []
             if input_method == "📸 網頁相機":
-                cam_file = st.camera_input("拍照")
+                cam_file = st.camera_input("拍照", key="cam_input")
                 if cam_file: img_files = [cam_file]
             else:
-                uploaded_files = st.file_uploader("上傳照片", type=["jpg", "png"], accept_multiple_files=True)
+                uploaded_files = st.file_uploader("上傳照片", type=["jpg", "png"], accept_multiple_files=True, key="file_uploader")
                 if uploaded_files: img_files = uploaded_files
 
             # --- Submit Button ---
@@ -724,10 +724,10 @@ if mode == "📝 巡檢輸入":
                                 time.sleep(1)
                                 
                                 # [Fix] Stay on page (User Request) and Clear Inputs
-                                # Clear Number Inputs
-                                for k in list(st.session_state.keys()):
-                                    if k.startswith("w_in_") or k.startswith("l_in_") or k == "cp_input":
-                                        del st.session_state[k]
+                                # Clear Number Inputs and File Uploaders
+                                keys_to_clear = [k for k in st.session_state.keys() if k.startswith("w_in_") or k.startswith("l_in_") or k in ["cp_input", "cam_input", "file_uploader", "issue_checkbox", "mat_check_radio"]]
+                                for k in keys_to_clear:
+                                    del st.session_state[k]
                                 
                                 # st.session_state['inspection_started'] = False # Removed to stay on page
                                 st.session_state['inspection_started'] = True
