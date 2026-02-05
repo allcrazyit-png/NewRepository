@@ -262,7 +262,7 @@ if df.empty:
 # --- Mode Selection ---
 # [Refactor]
 st.sidebar.title("🔧 巡檢系統")
-st.sidebar.caption("v.20250204.53-fix-dup-key") # Version Tag
+st.sidebar.caption("v.20250204.54-fix-format") # Version Tag
 mode = st.sidebar.radio("功能選擇", ["📝 巡檢輸入", "📊 數據戰情室"], index=0)
 
 # --- Sidebar Footer ---
@@ -550,6 +550,12 @@ if mode == "📝 巡檢輸入":
                         c1 = st.container()
                         c2 = None
 
+                    # Helper for robust formatting
+                    def safe_fmt(val):
+                        if isinstance(val, (float, int)):
+                            return f"{val:g}"
+                        return str(val)
+
                     with c1:
                         # Weight Input
                         w_std_val = sp.get('std', '-')
@@ -558,10 +564,10 @@ if mode == "📝 巡檢輸入":
                         
                         w_label_extra = ""
                         if w_std_val != '-':
-                             w_str = f"{w_std_val:g}" if isinstance(w_std_val, (float, int)) else str(w_std_val)
+                             w_str = safe_fmt(w_std_val)
                              w_label_extra += f" [Std: {w_str}"
                              if w_min != '-' and w_max != '-':
-                                 w_label_extra += f" | {w_min:g}~{w_max:g}"
+                                 w_label_extra += f" | {safe_fmt(w_min)}~{safe_fmt(w_max)}"
                              w_label_extra += "]"
 
                         w_label = f"重量 (g){w_label_extra}"
@@ -586,10 +592,10 @@ if mode == "📝 巡檢輸入":
                             l_min = sp.get('len_min')
                             l_max = sp.get('len_max')
                              
-                            l_str = f"{len_std_val:g}" if isinstance(len_std_val, (float, int)) else str(len_std_val)
+                            l_str = safe_fmt(len_std_val)
                             l_extra = f" [Std: {l_str}"
                             if l_min is not None and l_max is not None:
-                                  l_extra += f" | {l_min:g}~{l_max:g}"
+                                  l_extra += f" | {safe_fmt(l_min)}~{safe_fmt(l_max)}"
                             l_extra += "]"
                             l_label += l_extra
                             
