@@ -262,7 +262,7 @@ if df.empty:
 # --- Mode Selection ---
 # [Refactor]
 st.sidebar.title("🔧 巡檢系統")
-st.sidebar.caption("v.20250204.55-input-limit") # Version Tag
+st.sidebar.caption("v.20250204.56-stay-on-page") # Version Tag
 mode = st.sidebar.radio("功能選擇", ["📝 巡檢輸入", "📊 數據戰情室"], index=0)
 
 # --- Sidebar Footer ---
@@ -641,7 +641,7 @@ if mode == "📝 巡檢輸入":
             
             change_point = ""
             if is_issue:
-                change_point = st.text_area("請輸入異常說明", placeholder="例如: 模具損傷、原料更換...", height=100)
+                change_point = st.text_area("請輸入異常說明", placeholder="例如: 模具損傷、原料更換...", height=100, key="cp_input")
                 if not change_point.strip():
                     st.caption("⚠️ 請輸入說明，若空白將視為無異常")
             else:
@@ -737,7 +737,15 @@ if mode == "📝 巡檢輸入":
                                 drive_integration.fetch_history.clear()
                                 drive_integration.fetch_all_data.clear()
                                 time.sleep(1)
-                                st.session_state['inspection_started'] = False
+                                
+                                # [Fix] Stay on page (User Request) and Clear Inputs
+                                # Clear Number Inputs
+                                for k in list(st.session_state.keys()):
+                                    if k.startswith("w_in_") or k.startswith("l_in_") or k == "cp_input":
+                                        del st.session_state[k]
+                                
+                                # st.session_state['inspection_started'] = False # Removed to stay on page
+                                st.session_state['inspection_started'] = True
                                 st.rerun()
                             else:
                                 st.error("部份資料上傳失敗，請重試")
