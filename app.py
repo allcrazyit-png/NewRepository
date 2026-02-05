@@ -262,26 +262,10 @@ if df.empty:
 # --- Mode Selection ---
 # [Refactor]
 st.sidebar.title("🔧 巡檢系統")
-st.sidebar.caption("v.20250204.61-fix-timezone") # Version Tag
+st.sidebar.caption("v.20250204.62-move-sidebar-footer") # Version Tag
 mode = st.sidebar.radio("功能選擇", ["📝 巡檢輸入", "📊 數據戰情室"], index=0)
 
-# --- Sidebar Footer ---
-st.sidebar.markdown("---")
-if st.sidebar.button("🔄 手動更新數據 (Refresh)", use_container_width=True):
-    drive_integration.fetch_history.clear()
-    drive_integration.fetch_all_data.clear()
-    data_manager.load_data.clear() # Fix: Also clear CSV cache
-    st.toast("已強制更新與 Google Sheet 同步", icon="✅")
-    st.rerun()
 
-st.sidebar.markdown(
-    """
-    <div style='text-align: center; color: #666; font-size: 0.8em;'>
-        Designed by 何常豪
-    </div>
-    """, 
-    unsafe_allow_html=True
-)
 
 if mode == "📝 巡檢輸入":
     # --- Session State Management ---
@@ -1436,3 +1420,21 @@ elif mode == "📊 數據戰情室":
                                     st.rerun()
                                 else:
                                     st.error(f"更新失敗: {msg}")
+
+# --- Sidebar Footer (Moved to Bottom) ---
+st.sidebar.markdown("---")
+if st.sidebar.button("🔄 手動更新數據 (Refresh)", use_container_width=True):
+    drive_integration.fetch_history.clear()
+    drive_integration.fetch_all_data.clear()
+    data_manager.load_data.clear()
+    st.toast("已強制更新與 Google Sheet 同步", icon="✅")
+    st.rerun()
+
+st.sidebar.markdown(
+    """
+    <div style='text-align: center; color: #666; font-size: 0.8em;'>
+        Designed by 何常豪
+    </div>
+    """, 
+    unsafe_allow_html=True
+)
