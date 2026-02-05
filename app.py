@@ -718,6 +718,7 @@ if mode == "📝 巡檢輸入":
                                 
                             if success_count == len(specs):
                                 st.success("✅ 提交成功!")
+                                st.balloons()
                                 drive_integration.fetch_history.clear()
                                 drive_integration.fetch_all_data.clear()
                                 time.sleep(1)
