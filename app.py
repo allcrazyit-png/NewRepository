@@ -1414,8 +1414,18 @@ elif mode == "📊 數據戰情室":
                 
                 # Display Title
                 part_display = row['part_no']
+                # [Feature] Show Part Name in Title
+                part_name_cp = part_name_map_cp.get(row['part_no'], "")
+                if not part_name_cp and 'df' in globals():
+                     match = df[df['品番'] == row['part_no']]
+                     if not match.empty: part_name_cp = match.iloc[0]['品名']
+                
+                if part_name_cp:
+                     part_display = f"{part_display} | {part_name_cp}"
+
                 if is_multi:
-                    part_display = f"{row['part_no'].split('_')[0]} (共{cavity_count}穴)"
+                    base_part = row['part_no'].split('_')[0]
+                    part_display = f"{base_part} (共{cavity_count}穴) | {part_name_cp}"
                 
                 with st.expander(f"{stat_icon} :{stat_color}[{row['status']}] {row['timestamp'].strftime('%Y-%m-%d %H:%M')} - {row['model']} {part_display}", expanded=True):
                     c1, c2 = st.columns([2, 1])
@@ -1424,8 +1434,9 @@ elif mode == "📊 數據戰情室":
                         st.error(row['change_point'])
                         st.caption(f"巡檢結果: {row['result']}")
                     with c2:
-                        prod_img_path = f"quality_images/{row['part_no']}_main.jpg"
-                        if check_image_availability(prod_img_path): st.image(prod_img_path, width=120, caption="產品示意圖")
+                        # [User Request] Removed Product Schematic Image
+                        # prod_img_path = f"quality_images/{row['part_no']}_main.jpg"
+                        # if check_image_availability(prod_img_path): st.image(prod_img_path, width=120, caption="產品示意圖")
                         
                         raw_img = str(row.get('image', '')).strip().replace('"', '').replace("'", "")
                         if raw_img and raw_img.lower() != "nan":
