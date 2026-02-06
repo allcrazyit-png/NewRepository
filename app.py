@@ -311,9 +311,18 @@ if mode == "📝 巡檢輸入":
             model_filtered_df = data_manager.get_filtered_data(df, car_model=selected_model_landing)
             available_parts = ["全部"] + list(model_filtered_df['品番'].unique())
             
+            # [Feature] Show Part Name in Dropdown
+            part_name_map = dict(zip(model_filtered_df['品番'], model_filtered_df['品名']))
+            def format_part_landing(option):
+                if option == "全部": return "全部 (All)"
+                name = part_name_map.get(option, "")
+                if pd.notna(name) and str(name).strip():
+                    return f"{option} | {name}"
+                return option
+
             with col_part:
                 st.subheader("2️⃣ 選擇品番 (可選)")
-                selected_part_filter = st.selectbox("品番篩選", available_parts, key="landing_part_filter")
+                selected_part_filter = st.selectbox("品番篩選", available_parts, format_func=format_part_landing, key="landing_part_filter")
 
         # Apply Part Filter to Grid Data
         if selected_part_filter != "全部":
@@ -1080,7 +1089,25 @@ elif mode == "📊 數據戰情室":
                  # Render Widget with Dynamic Key
                  # This forces widget to reset when dash_ui_rev changes
                  dynamic_key = f"dash_part_ui_{st.session_state['dash_ui_rev']}"
-                 filter_part_ui = st.selectbox("篩選品番", parts_dash, index=f_index, key=dynamic_key)
+                 
+                 # [Feature] Show Part Name
+                 part_name_map_dash = {}
+                 if 'part_no' in df_dash.columns and 'part_name' in df_dash.columns:
+                     part_name_map_dash = dict(zip(df_dash['part_no'], df_dash['part_name']))
+                 
+                 def format_func_dash(option):
+                     if option == "全部": return "全部 (All)"
+                     name = part_name_map_dash.get(option, "")
+                     # Fallback to Master Data if available
+                     if (pd.isna(name) or not str(name).strip()) and 'df' in globals():
+                         match = df[df['品番'] == option]
+                         if not match.empty: name = match.iloc[0]['品名']
+                     
+                     if pd.notna(name) and str(name).strip():
+                         return f"{option} | {name}"
+                     return option
+
+                 filter_part_ui = st.selectbox("篩選品番", parts_dash, index=f_index, key=dynamic_key, format_func=format_func_dash)
                  
                  # Sync UI -> State (Only if User Changed Sidebar directly)
                  if filter_part_ui != st.session_state['dash_target_part']:
@@ -1326,7 +1353,24 @@ elif mode == "📊 數據戰情室":
                 else:
                     parts_cp = ["全部"] + list(df_cp['part_no'].unique())
                 # [Fix] Added key for dashboard interaction
-                filter_cp_part = st.selectbox("品番 (Part No)", parts_cp, key="cp_part_filter")
+                # [Feature] Show Part Name
+                part_name_map_cp = {}
+                if 'part_no' in df_cp.columns and 'part_name' in df_cp.columns:
+                     part_name_map_cp = dict(zip(df_cp['part_no'], df_cp['part_name']))
+
+                def format_func_cp(option):
+                     if option == "全部": return "全部 (All)"
+                     name = part_name_map_cp.get(option, "")
+                     # Fallback
+                     if (pd.isna(name) or not str(name).strip()) and 'df' in globals():
+                         match = df[df['品番'] == option]
+                         if not match.empty: name = match.iloc[0]['品名']
+                     
+                     if pd.notna(name) and str(name).strip():
+                         return f"{option} | {name}"
+                     return option
+
+                filter_cp_part = st.selectbox("品番 (Part No)", parts_cp, key="cp_part_filter", format_func=format_func_cp)
             with f_col4:
                 status_opts = ["未審核", "審核中", "結案", "Closed", "無異常"]
                 filter_cp_status = st.multiselect("狀態 (Status)", status_opts, default=["未審核", "審核中"])
