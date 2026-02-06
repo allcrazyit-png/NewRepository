@@ -380,7 +380,7 @@ if mode == "📝 巡檢輸入":
                     if pd.notna(img_name) and str(img_name).strip():
                         img_path = os.path.join("quality_images", str(img_name).strip())
                         # [Fix] Resize image to square for consistent layout
-                        cropped_img = load_and_crop_image(img_path, target_size=(300, 300))
+                        cropped_img = load_and_crop_image(img_path, target_size=(800, 800))
                         
                         if cropped_img:
                             st.image(cropped_img, use_container_width=True)
