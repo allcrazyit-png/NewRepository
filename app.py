@@ -8,6 +8,7 @@ import drive_integration
 import streamlit.components.v1 as components
 import os
 import time
+from PIL import Image, ImageOps
 
 # --- Helper: Image Integrity Check ---
 # Helper: Image Integrity Check
@@ -31,6 +32,28 @@ def check_image_availability(image_path):
         return None
         
     return image_path
+
+# [Feature] Helper to resize/crop images for consistent grid layout
+@st.cache_data(show_spinner=False)
+def load_and_crop_image(image_path, target_size=(300, 300)):
+    """
+    Loads an image, performs a center crop to fit the target size (Square),
+    and returns the PIL Image object.
+    Using cache to improve performance.
+    """
+    try:
+        if not os.path.exists(image_path): return None
+        img = Image.open(image_path)
+        # Convert to RGB if RGBA (to avoid issues with JPEG saving if needed, though we return PIL)
+        if img.mode == 'RGBA':
+            img = img.convert('RGB')
+        
+        # Center Crop using ImageOps.fit (Smart cropping)
+        img_cropped = ImageOps.fit(img, target_size, method=Image.Resampling.LANCZOS)
+        return img_cropped
+    except Exception as e:
+        print(f"Error processing image {image_path}: {e}")
+        return None
 
 # --- Page Config ---
 st.set_page_config(
@@ -355,13 +378,15 @@ if mode == "📝 巡檢輸入":
                     # Image
                     if pd.notna(img_name) and str(img_name).strip():
                         img_path = os.path.join("quality_images", str(img_name).strip())
-                        valid_img = check_image_availability(img_path)
-                        if valid_img:
-                            st.image(valid_img, use_container_width=True)
+                        # [Fix] Resize image to square for consistent layout
+                        cropped_img = load_and_crop_image(img_path, target_size=(300, 300))
+                        
+                        if cropped_img:
+                            st.image(cropped_img, use_container_width=True)
                         else:
-                            st.image("https://via.placeholder.com/300x200?text=No+Image", use_container_width=True)
+                            st.image("https://via.placeholder.com/300x300?text=No+Image", use_container_width=True)
                     else:
-                         st.image("https://via.placeholder.com/300x200?text=No+Image", use_container_width=True)
+                         st.image("https://via.placeholder.com/300x300?text=No+Image", use_container_width=True)
                     
                     # Label
                     st.markdown(f"**{part_no}**")
