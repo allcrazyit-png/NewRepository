@@ -48,8 +48,9 @@ def load_and_crop_image(image_path, target_size=(300, 300)):
         if img.mode == 'RGBA':
             img = img.convert('RGB')
         
-        # Center Crop using ImageOps.fit (Smart cropping)
-        img_cropped = ImageOps.fit(img, target_size, method=Image.Resampling.LANCZOS)
+        # [Update] Use ImageOps.pad instead of fit to PRESERVE aspect ratio
+        # This will contain the image within the target size and pad the rest with black
+        img_cropped = ImageOps.pad(img, target_size, method=Image.Resampling.LANCZOS, color='#000000')
         return img_cropped
     except Exception as e:
         print(f"Error processing image {image_path}: {e}")
