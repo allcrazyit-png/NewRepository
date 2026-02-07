@@ -736,7 +736,7 @@ if mode == "📝 巡檢輸入":
                                     "width": "", 
                                     "length": final_len,
                                     "result": final_res,
-                                    "change_point": change_point if idx == 0 else "", 
+                                    "change_point": change_point, # [Fix] Log CP for ALL parts in batch, not just the first one
                                     "status": initial_status,
                                     "manager_comment": ""
                                 }
