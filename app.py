@@ -1067,6 +1067,9 @@ elif mode == "📊 數據戰情室":
         
         # --- Timezone Fix ---
         if 'timestamp' in df_dash.columns:
+            # [Fix] Keep raw timestamp string for API matching (GAS string comparison is strict)
+            df_dash['timestamp_orig'] = df_dash['timestamp']
+            
             df_dash['timestamp'] = pd.to_datetime(df_dash['timestamp'], errors='coerce')
             # Fix: Assume string is already in Local Time, so just localize to Taipei directly
             if df_dash['timestamp'].dt.tz is None:
@@ -1504,8 +1507,8 @@ elif mode == "📊 數據戰情室":
                     with m_col3:
                         st.write("") 
                         if st.button("💾 更新", key=f"btn_upd_{u_key}", use_container_width=True):
-                            # [Fix] Use simple String format "YYYY-MM-DD HH:MM:SS" to match Sheet display / GAS formatting
-                            ts_str_for_api = row['timestamp'].strftime('%Y-%m-%d %H:%M:%S')
+                            # [Fix] Use ORIGINAL string from GAS to ensure exact match (handle '9:00' vs '09:00')
+                            ts_str_for_api = row.get('timestamp_orig', row['timestamp'].strftime('%Y-%m-%d %H:%M:%S'))
                             target_part = row['part_no']
                             with st.spinner("更新中..."):
                                 success, msg = drive_integration.update_status_v2(
