@@ -909,33 +909,7 @@ if mode == "📝 巡檢輸入":
             else:
                 st.info("無歷史記錄")
             
-            st.divider()
-            
-            # [Defect Images Logic]
-            st.subheader("⚠️ 過去異常履歷 (Reference)")
-            defect_images = []
-            d1 = current_part_data.get('異常履歷寫真')
-            if pd.notna(d1) and str(d1).strip(): defect_images.append(("1", str(d1).strip()))
-            for i in range(2, 4):
-                col = f"異常履歷寫真{i}"
-                val = current_part_data.get(col)
-                if pd.notna(val) and str(val).strip():
-                    defect_images.append((str(i), str(val).strip()))
 
-            if defect_images:
-                dh_cols = st.columns(5)
-                for idx, (label, fname) in enumerate(defect_images):
-                    col_idx = idx % 5
-                    img_path = os.path.join("quality_images", fname)
-                    valid_img_path = check_image_availability(img_path)
-                    
-                    with dh_cols[col_idx]:
-                        if valid_img_path:
-                            st.image(valid_img_path, caption=f"履歷-{label}", use_container_width=True)
-                        else:
-                            st.caption(f"履歷{label} 讀取失敗")
-            else:
-                st.caption("無異常履歷照片")
 
 
         with tab3:
