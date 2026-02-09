@@ -77,6 +77,8 @@ def load_data():
     """
     try:
         df = pd.read_csv(DATA_PATH)
+        # [Fix] Remove potential BOM or whitespace from column headers
+        df.columns = df.columns.str.strip()
     except FileNotFoundError:
         st.error(f"Cannot find {DATA_PATH}. Please ensure the file exists.")
         return pd.DataFrame()
@@ -96,6 +98,10 @@ def load_data():
     # Ensure required columns exist
     if '原料編號' not in df.columns:
         df['原料編號'] = '' # Default empty if missing
+        
+    # [Fix] Ensure Cavity Config is treated as string
+    if '穴號顯示' in df.columns:
+        df['穴號顯示'] = df['穴號顯示'].astype(str).str.strip()
     
     # Columns that need cleaning
     numeric_cols = ['重量', '重量上限', '重量下限', '標準長度', '長度上限', '長度下限']
