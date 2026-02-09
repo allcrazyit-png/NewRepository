@@ -435,8 +435,16 @@ if mode == "📝 巡檢輸入":
         current_part_data = filtered_df[filtered_df['品番'] == selected_part_no].iloc[0]
 
         # --- Pre-process Dual Mode Logic ---
+        # [Feature] Custom Cavity Labeling & Dual Mode Enforcement
+        cavity_config = str(current_part_data.get('穴號顯示', '')).strip()
+        force_dual = cavity_config in ['1/2', '1,2', '#1/#2']
+
         raw_weight_clean = current_part_data['clean_重量']
-        is_dual = isinstance(raw_weight_clean, list)
+        is_dual = isinstance(raw_weight_clean, list) or force_dual
+
+        # If forced dual but weight is scalar, duplicate it for both cavities
+        if is_dual and not isinstance(raw_weight_clean, list):
+             raw_weight_clean = [raw_weight_clean, raw_weight_clean]
 
         # Helper to get specific limit (Left/Right) or shared limit
         def get_spec_val(col_name, idx):
@@ -447,8 +455,7 @@ if mode == "📝 巡檢輸入":
 
         # Prepare Specifications for 1 or 2 items
         specs = [] # List of dicts: {suffix, label, std, max, min, len_std, len_max, len_min ...}
-        # [Feature] Custom Cavity Labeling (e.g. 1/2 vs R/L)
-        cavity_config = str(current_part_data.get('穴號顯示', '')).strip()
+        
         label_1, label_2 = " (右/R)", " (左/L)" # Default
         header_1, header_2 = "R", "L" # Default headers
 
