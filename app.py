@@ -597,6 +597,9 @@ if mode == "📝 巡檢輸入":
 
                     # Helper for robust formatting
                     def safe_fmt(val):
+                        if isinstance(val, (list, tuple)):
+                            val = val[0] if len(val) > 0 else None
+                            
                         if isinstance(val, (float, int)):
                             return f"{val:g}"
                         return str(val)
