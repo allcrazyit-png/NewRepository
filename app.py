@@ -289,13 +289,7 @@ st.sidebar.title("🔧 巡檢系統")
 st.sidebar.caption("v.20250204.62-move-sidebar-footer") # Version Tag
 mode = st.sidebar.radio("功能選擇", ["📝 巡檢輸入", "📊 數據戰情室"], index=0)
 
-# [Debug] Show CSV Structure if things go wrong
-with st.sidebar.expander("🛠️ Debug Info (Temporary)"):
-    st.write("Columns:", df.columns.tolist())
-    if 'saved_part' in st.session_state and st.session_state['saved_part'] and not df[df['品番'] == st.session_state['saved_part']].empty:
-        part_debug = df[df['品番'] == st.session_state['saved_part']].iloc[0]
-        st.write(f"Part: {st.session_state['saved_part']}")
-        st.write(f"穴號顯示 (Raw): '{part_debug.get('穴號顯示', 'N/A')}'")
+
 
 
 if mode == "📝 巡檢輸入":
