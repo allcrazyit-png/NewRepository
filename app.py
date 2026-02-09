@@ -1221,7 +1221,8 @@ elif mode == "📊 數據戰情室":
             # [Interaction] Click Row to Filter Part
             if len(event.selection.rows) > 0:
                 s_idx = event.selection.rows[0]
-                target_p = df_view.iloc[s_idx]['part_no']
+                if s_idx < len(df_view):
+                    target_p = df_view.iloc[s_idx]['part_no']
                 
                 # st.write(f"Clicked Row {s_idx} -> {target_p}")
                 
