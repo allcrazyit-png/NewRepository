@@ -827,7 +827,7 @@ if mode == "📝 巡檢輸入":
                     for r in h_data:
                         r['part_no'] = h_target # Ensure key
                         all_cp_rows.append(r)
-                        
+            
             if all_cp_rows:
                 df_local_cp = pd.DataFrame(all_cp_rows)
                 
@@ -836,8 +836,7 @@ if mode == "📝 巡檢輸入":
                     df_local_cp = df_local_cp[df_local_cp['change_point'].ne("") & df_local_cp['change_point'].notna()]
                 
                 if 'timestamp' in df_local_cp.columns:
-                    # [Fix] Force conversion to Taipei Time (Source string is ALREADY Taipei Time)
-                    # Do NOT use utc=True which assumes input is UTC
+                    # [Fix] Force conversion to Taipei Time
                     if pd.api.types.is_datetime64_any_dtype(df_local_cp['timestamp']):
                          df_local_cp['timestamp'] = df_local_cp['timestamp'].dt.tz_localize('Asia/Taipei') if df_local_cp['timestamp'].dt.tz is None else df_local_cp['timestamp'].dt.tz_convert('Asia/Taipei')
                     else:
@@ -857,17 +856,16 @@ if mode == "📝 巡檢輸入":
                 
                 # 1. Open Issues Section
                 if not open_issues.empty:
-                    st.error(f"⚠️ 尚有 {len(open_issues)} 筆未結案異常！")
+                    # Group by timestamp AND change_point to deduplicate same event on multiple cavities
+                    grouped_open = open_issues.groupby(['timestamp', 'change_point'], sort=False)
+                    unique_open_count = len(grouped_open)
                     
-                    # Group by timestamp for display
-                    # Use a list of (ts, group_df) sorted by ts descending
-                    grouped_open = open_issues.groupby('timestamp', sort=False) 
-                    # sort=False because we already sorted df_local_cp
+                    st.error(f"⚠️ 尚有 {unique_open_count} 筆未結案異常！")
                     
-                    for ts, group in grouped_open:
+                    for (ts, cp), group in grouped_open:
                         cavity_count = len(group)
                         
-                        # Find best row (prioritize one with Manager Comment)
+                        # Find best row
                         best_row = group.iloc[0]
                         rows_with_cmt = group[group['manager_comment'].astype(str).str.strip() != ""]
                         if not rows_with_cmt.empty:
@@ -882,7 +880,7 @@ if mode == "📝 巡檢輸入":
                         if cavity_count > 1:
                             part_display = f"{str(part_display).split('_')[0]} (共{cavity_count}穴)"
 
-                        st.markdown(f"#### {s_icon} [{stat}] {row.get('change_point')}")
+                        st.markdown(f"#### {s_icon} [{stat}] {cp}")
                         st.caption(f"📅 {ts_str} | Part: {part_display}")
                         
                         # Manager Comment
@@ -897,17 +895,31 @@ if mode == "📝 巡檢輸入":
                 st.subheader("📜 歷史記錄 (已結案)")
                 if not closed_issues.empty:
                     with st.expander("查看已結案記錄", expanded=False):
-                        grouped_closed = closed_issues.groupby('timestamp', sort=False)
-                        for ts, group in grouped_closed:
+                        grouped_closed = closed_issues.groupby(['timestamp', 'change_point'], sort=False)
+                        for (ts, cp), group in grouped_closed:
                             row = group.iloc[0]
                             cavity_count = len(group)
                             
                             stat = row.get('status', '結案')
-                        st.info("目前無未結案之變化點")
+                            ts_str = row['timestamp'].strftime('%Y-%m-%d') if pd.notna(row['timestamp']) else "N/A"
+                            
+                            part_display = row.get('part_no')
+                            if cavity_count > 1:
+                                part_display = f"{str(part_display).split('_')[0]} (共{cavity_count}穴)"
+                                
+                            st.markdown(f"🟢 **{cp}**")
+                            st.caption(f"[{stat}] {ts_str} | {part_display}")
+                            
+                            mgr_cmt = row.get('manager_comment')
+                            if pd.notna(mgr_cmt) and str(mgr_cmt).strip():
+                                st.caption(f"👨‍💼 主管: {str(mgr_cmt).strip()}")
+                                
+                            st.divider()
                 else:
-                    st.info("無變化點資料")
+                    st.caption("無已結案記錄")
             else:
                 st.info("無歷史記錄")
+                        
             
 
 
