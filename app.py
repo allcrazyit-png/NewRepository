@@ -556,10 +556,10 @@ if mode == "📝 巡檢輸入":
                     # Header for the specific cavity
                     # [UI Polish] Hide header if single cavity (User Request: "單穴" is ugly)
                     if sp['suffix']:
-                        # [User Request] Header: PartNo + " " + Suffix (Map _1/_2 to R/L)
-                        display_suffix = sp['suffix']
-                        if display_suffix == "_1": display_suffix = "R"
-                        elif display_suffix == "_2": display_suffix = "L"
+                        # [User Request] Header: PartNo + " " + Suffix (Map _1/_2 to R/L or #1/#2)
+                        display_suffix = sp.get('header', sp['suffix'])
+                        if not display_suffix: # Fallback
+                             display_suffix = "R" if sp['suffix'] == "_1" else "L"
                         
                         st.markdown(f"#### {selected_part_no} {display_suffix}")
                     
