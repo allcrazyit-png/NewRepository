@@ -438,10 +438,21 @@ if mode == "📝 巡檢輸入":
 
         # Prepare Specifications for 1 or 2 items
         specs = [] # List of dicts: {suffix, label, std, max, min, len_std, len_max, len_min ...}
+        # [Feature] Custom Cavity Labeling (e.g. 1/2 vs R/L)
+        cavity_config = str(current_part_data.get('穴號顯示', '')).strip()
+        label_1, label_2 = " (右/R)", " (左/L)" # Default
+        header_1, header_2 = "R", "L" # Default headers
+
+        if cavity_config in ['1/2', '1,2', '#1/#2']:
+             label_1, label_2 = " (#1)", " (#2)"
+             header_1, header_2 = "#1", "#2"
+
         if is_dual:
             specs.append({
-                "suffix": "_1", "label": " (右/R)", 
-                "std": raw_weight_clean[0],
+                "suffix": "_1", 
+                "label": label_1,
+                "header": header_1,
+                "std": raw_weight_clean[0], 
                 "max": get_spec_val('clean_重量上限', 0),
                 "min": get_spec_val('clean_重量下限', 0),
                 "len_std": get_spec_val('clean_標準長度', 0),
@@ -449,7 +460,9 @@ if mode == "📝 巡檢輸入":
                 "len_min": get_spec_val('clean_長度下限', 0)
             })
             specs.append({
-                "suffix": "_2", "label": " (左/L)", 
+                "suffix": "_2", 
+                "label": label_2, 
+                "header": header_2,
                 "std": raw_weight_clean[1], 
                 "max": get_spec_val('clean_重量上限', 1),
                 "min": get_spec_val('clean_重量下限', 1),
@@ -459,7 +472,7 @@ if mode == "📝 巡檢輸入":
             })
         else:
             specs.append({
-                "suffix": "", "label": "",
+                "suffix": "", "label": "", "header": "",
                 "std": raw_weight_clean,
                 "max": current_part_data.get('clean_重量上限'),
                 "min": current_part_data.get('clean_重量下限'),
@@ -556,10 +569,10 @@ if mode == "📝 巡檢輸入":
                     # Header for the specific cavity
                     # [UI Polish] Hide header if single cavity (User Request: "單穴" is ugly)
                     if sp['suffix']:
-                        # [User Request] Header: PartNo + " " + Suffix (Map _1/_2 to R/L)
-                        display_suffix = sp['suffix']
-                        if display_suffix == "_1": display_suffix = "R"
-                        elif display_suffix == "_2": display_suffix = "L"
+                        # [User Request] Header: PartNo + " " + Suffix (Map _1/_2 to R/L or #1/#2)
+                        display_suffix = sp.get('header', sp['suffix'])
+                        if not display_suffix: # Fallback
+                             display_suffix = "R" if sp['suffix'] == "_1" else "L"
                         
                         st.markdown(f"#### {selected_part_no} {display_suffix}")
                     
