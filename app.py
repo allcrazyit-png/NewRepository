@@ -452,14 +452,16 @@ if mode == "📝 巡檢輸入":
         
         label_1, label_2 = " (右/R)", " (左/L)" # Default
         header_1, header_2 = "R", "L" # Default headers
+        suffix_1, suffix_2 = "_R", "_L" # Default suffixes for R/L
 
         if cavity_config in ['1/2', '1,2', '#1/#2']:
              label_1, label_2 = " (#1)", " (#2)"
              header_1, header_2 = "#1", "#2"
+             suffix_1, suffix_2 = "_1", "_2"
 
         if is_dual:
             specs.append({
-                "suffix": "_1", 
+                "suffix": suffix_1, 
                 "label": label_1,
                 "header": header_1,
                 "std": raw_weight_clean[0], 
@@ -470,7 +472,7 @@ if mode == "📝 巡檢輸入":
                 "len_min": get_spec_val('clean_長度下限', 0)
             })
             specs.append({
-                "suffix": "_2", 
+                "suffix": suffix_2, 
                 "label": label_2, 
                 "header": header_2,
                 "std": raw_weight_clean[1], 
