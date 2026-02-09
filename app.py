@@ -382,15 +382,16 @@ if mode == "📝 巡檢輸入":
                     # Image
                     if pd.notna(img_name) and str(img_name).strip():
                         img_path = os.path.join("quality_images", str(img_name).strip())
-                        # [Fix] Resize image to square for consistent layout
-                        cropped_img = load_and_crop_image(img_path, target_size=(800, 800))
+                        # [Fix] Resize image to prevent vertical images from taking too much space
+                        # Use 4:3 ratio (e.g. 800x600) to keep size consistent with landscape
+                        display_img = load_and_crop_image(img_path, target_size=(800, 600))
                         
-                        if cropped_img:
-                            st.image(cropped_img, use_container_width=True)
+                        if display_img:
+                            st.image(display_img, use_container_width=True)
                         else:
-                            st.image("https://via.placeholder.com/300x300?text=No+Image", use_container_width=True)
+                            st.image("https://via.placeholder.com/400x300?text=No+Image", use_container_width=True)
                     else:
-                         st.image("https://via.placeholder.com/300x300?text=No+Image", use_container_width=True)
+                         st.image("https://via.placeholder.com/400x300?text=No+Image", use_container_width=True)
                     
                     # Label
                     st.markdown(f"**{part_no}**")
@@ -506,7 +507,12 @@ if mode == "📝 巡檢輸入":
                     # Compressed view
                     c1, c2, c3 = st.columns([1, 2, 1])
                     with c2:
-                        st.image(valid_img_path, caption=f"標準圖: {product_img_filename}", use_container_width=True)
+                        # [Fix] Resize to 4:3 ratio to avoid vertical images taking too much space
+                        display_img = load_and_crop_image(valid_img_path, target_size=(800, 600))
+                        if display_img:
+                             st.image(display_img, caption=f"標準圖: {product_img_filename}", use_container_width=True)
+                        else:
+                             st.image(valid_img_path, caption=f"標準圖: {product_img_filename}", use_container_width=True)
                 else:
                     st.warning(f"找不到圖片檔案或檔案損壞: {product_img_filename}")
 
