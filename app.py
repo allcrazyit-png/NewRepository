@@ -955,13 +955,24 @@ if mode == "📝 巡檢輸入":
                                 # Add Limits
                                 w_max_limit = sp['max']
                                 w_min_limit = sp['min']
+                                
+                                # [Fix] Handle list limits (extract first valid)
+                                if isinstance(w_max_limit, list): 
+                                    w_max_limit = w_max_limit[0] if w_max_limit else None
+                                if isinstance(w_min_limit, list):
+                                    w_min_limit = w_min_limit[0] if w_min_limit else None
+
                                 y_cols = ['weight']
                                 if w_max_limit is not None:
-                                    chart_df['Limit H'] = float(w_max_limit)
-                                    y_cols.append('Limit H')
+                                    try:
+                                        chart_df['Limit H'] = float(w_max_limit)
+                                        y_cols.append('Limit H')
+                                    except: pass # Skip if invalid
                                 if w_min_limit is not None:
-                                    chart_df['Limit L'] = float(w_min_limit)
-                                    y_cols.append('Limit L')
+                                    try:
+                                        chart_df['Limit L'] = float(w_min_limit)
+                                        y_cols.append('Limit L')
+                                    except: pass
                                 
                                 # Convert to Local Time for Display
                                 # [Fix] Source is Taipei Time string -> Localize to Taipei directly
