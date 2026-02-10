@@ -42,7 +42,10 @@ def load_and_resize_image_v2(image_path, target_size=(800, 600)):
     Renamed to v2 to force cache invalidation.
     """
     try:
-        if not os.path.exists(image_path): return None
+        if not os.path.exists(image_path):
+            print(f"[Debug] Image not found: {image_path}")
+            return None
+        print(f"[Debug] Loading image: {image_path}")
         img = Image.open(image_path)
         
         # Handle Orientation (EXIF)
@@ -408,6 +411,9 @@ if mode == "📝 巡檢輸入":
                         
                         if display_img:
                             st.image(display_img, use_container_width=True)
+                        elif os.path.exists(img_path):
+                            # Fallback: If resize fails (e.g. PIL issue), show original
+                            st.image(img_path, use_container_width=True)
                         else:
                             st.image("https://via.placeholder.com/400x300?text=No+Image", use_container_width=True)
                     else:
