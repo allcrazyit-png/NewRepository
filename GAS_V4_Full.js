@@ -60,20 +60,50 @@ function doPost(e) {
             for (var i = 1; i < rows.length; i++) {
                 var row = rows[i];
                 var record = {};
-                // Map columns correctly based on your schema (Shifted by +1 for PartName)
-                record['timestamp'] = row[0];
-                record['model'] = row[1];
-                record['part_no'] = row[2];
-                record['part_name'] = row[3]; // [Feature] Return Part Name
-                record['inspection_type'] = row[4];
-                record['weight'] = row[5];
-                record['length'] = row[6];
-                record['material_ok'] = row[7];
-                record['change_point'] = row[8];
-                record['status'] = row[9];          // Column J
-                record['manager_comment'] = row[10]; // Column K
-                record['result'] = row[11];         // Column L
-                record['image'] = row[12];          // Column M
+
+                // [Fix] Schema Compatibility Check
+                // New Schema (13 cols): ..., Comment(10), Result(11), Image(12)
+                // Old Schema (12 cols): ..., Comment(9), Result(10), Image(11)
+                // Heuristic: If row[11] (New Result) looks like a URL, and row[12] is empty/undefined, it's Old Schema.
+                var isOldSchema = false;
+                var val11 = row[11] ? row[11].toString() : "";
+                var val12 = row[12] ? row[12].toString() : "";
+
+                if (val11.startsWith("http") && val12 === "") {
+                    isOldSchema = true;
+                }
+
+                if (isOldSchema) {
+                    // Map using Old Indices
+                    record['timestamp'] = row[0];
+                    record['model'] = row[1];
+                    record['part_no'] = row[2];
+                    record['part_name'] = ""; // No name in old data
+                    record['inspection_type'] = row[3];
+                    record['weight'] = row[4];
+                    record['length'] = row[5];
+                    record['material_ok'] = row[6];
+                    record['change_point'] = row[7];
+                    record['status'] = row[8];
+                    record['manager_comment'] = row[9];
+                    record['result'] = row[10];
+                    record['image'] = row[11];
+                } else {
+                    // Map using New Indices (Standard)
+                    record['timestamp'] = row[0];
+                    record['model'] = row[1];
+                    record['part_no'] = row[2];
+                    record['part_name'] = row[3];
+                    record['inspection_type'] = row[4];
+                    record['weight'] = row[5];
+                    record['length'] = row[6];
+                    record['material_ok'] = row[7];
+                    record['change_point'] = row[8];
+                    record['status'] = row[9];
+                    record['manager_comment'] = row[10];
+                    record['result'] = row[11];
+                    record['image'] = row[12];
+                }
                 data.push(record);
             }
 
