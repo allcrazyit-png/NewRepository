@@ -1226,9 +1226,18 @@ elif mode == "📊 數據戰情室":
                  #     img_path = f"quality_images/{filter_part}_main.jpg"
                  #     if check_image_availability(img_path):
                  #         st.image(img_path, width=200, caption=filter_part)
+                 if filter_part != "全部":
+                      if st.button("❌ 清除品番篩選", key="reset_part_filter", help="點擊顯示所有品番"):
+                          st.session_state['dash_target_part'] = "全部"
+                          st.rerun()
+
             with col_d3:
                  results_dash = ["全部"] + list(df_dash['result'].unique())
                  filter_result = st.selectbox("篩選結果", results_dash)
+                 
+                 # Hint for user
+                 if filter_result != "全部" and filter_part != "全部":
+                     st.caption(f"💡 目前只顯示 **{filter_part}** 的 {filter_result}。若要看全部，請點擊左側「❌ 清除品番篩選」。")
             
             # Apply filters
             df_view = df_dash.copy()
