@@ -1282,54 +1282,69 @@ elif mode == "📊 數據戰情室":
                     "part_no": st.column_config.TextColumn("品番", width="medium"),
                     "weight": st.column_config.NumberColumn("重量 (g)", format="%.2f")
                 },
-                # [Simplification] Remove click-to-filter behavior
-                # on_select="rerun",
-                # selection_mode="single-row",
-                key="dash_table_v41" # [Fix] Bump key to force re-render
+                on_select="rerun",
+                selection_mode="single-row",
+                key="dash_table_v42" # [Fix] Bump key to force re-render
             )
             
-            # [Simplification] Removed implicit filtering logic
-            # if len(event.selection.rows) > 0: ...
-            
+            # [Interaction] Click Row to View Chart (WITHOUT Filtering Table)
+            if len(event.selection.rows) > 0:
+                s_idx = event.selection.rows[0]
+                if s_idx < len(df_view):
+                    target_p = df_view.iloc[s_idx]['part_no']
+                    # Only update the CHART target, not the FILTER target
+                    if target_p != st.session_state.get('dash_chart_target'):
+                         st.session_state['dash_chart_target'] = target_p
+                         st.rerun()
+
             if not df_view.empty:
                 st.subheader("📈 重量趨勢圖")
                 
-                # [Fix] Hide Chart if "All" is selected
-                current_filter = st.session_state.get('dash_target_part', '全部')
-                if current_filter == "全部":
+                # Determine which part to show in chart
+                # Priority: 1. Clicked Row (dash_chart_target) 2. Sidebar Filter (dash_target_part)
+                chart_part = st.session_state.get('dash_chart_target')
+                filter_part_global = st.session_state.get('dash_target_part', '全部')
+                
+                # If sidebar filter changes, it should override/reset the chart selection
+                # (Logic: If I explicitly filter for Part A, I expect to see Part A's chart)
+                if filter_part_global != "全部" and filter_part_global != chart_part:
+                     chart_part = filter_part_global
+                     st.session_state['dash_chart_target'] = chart_part
+
+                if not chart_part or chart_part == "全部":
                     st.info("👈 請在左側選單選擇單一品番，或在下方表格點選，以查看趨勢圖。")
                     chart_df = pd.DataFrame()
                 else:
-                    chart_df = df_view.copy() 
+                    st.caption(f"📊 目前顯示: **{chart_part}** 的趨勢")
+                    chart_df = df_dash[df_dash['part_no'] == chart_part].copy()
                     # Filter for Chart Only (Hide 0 weight)
                     if 'weight' in chart_df.columns:
                         chart_df = chart_df[chart_df['weight'] > 0]
                 
                 if not chart_df.empty:
                     y_cols = ['weight']
-                    if filter_part != "全部":
-                        # [Fix] Fuzzy Match for Suffixes (e.g., Part_1, Part_2)
-                        part_spec = df[df['品番'] == filter_part]
-                        if part_spec.empty:
-                            if '_' in filter_part:
-                                base_part_underscore = filter_part.rsplit('_', 1)[0]
-                                part_spec = df[df['品番'] == base_part_underscore]
-                        if part_spec.empty:
-                             base_part_space = filter_part.split(' ')[0]
-                             part_spec = df[df['品番'] == base_part_space]
-                        
-                        if not part_spec.empty:
-                            spec_row = part_spec.iloc[0]
-                            limit_h = spec_row.get('clean_重量上限')
-                            limit_l = spec_row.get('clean_重量下限')
-                            if isinstance(limit_h, list): limit_h = limit_h[0]
-                            if isinstance(limit_l, list): limit_l = limit_l[0]
-                            if limit_h is not None:
-                                chart_df['Limit H'] = float(limit_h)
-                                y_cols.append('Limit H')
-                            if limit_l is not None:
-                                 chart_df['Limit L'] = float(limit_l)
-                                 y_cols.append('Limit L')
+                    # [Fix] Fuzzy Match for Suffixes (e.g., Part_1, Part_2)
+                    part_spec = df[df['品番'] == chart_part]
+                    if part_spec.empty:
+                        if '_' in chart_part:
+                            base_part_underscore = chart_part.rsplit('_', 1)[0]
+                            part_spec = df[df['品番'] == base_part_underscore]
+                    if part_spec.empty:
+                         base_part_space = chart_part.split(' ')[0]
+                         part_spec = df[df['品番'] == base_part_space]
+                    
+                    if not part_spec.empty:
+                        spec_row = part_spec.iloc[0]
+                        limit_h = spec_row.get('clean_重量上限')
+                        limit_l = spec_row.get('clean_重量下限')
+                        if isinstance(limit_h, list): limit_h = limit_h[0]
+                        if isinstance(limit_l, list): limit_l = limit_l[0]
+                        if limit_h is not None:
+                            chart_df['Limit H'] = float(limit_h)
+                            y_cols.append('Limit H')
+                        if limit_l is not None:
+                             chart_df['Limit L'] = float(limit_l)
+                             y_cols.append('Limit L')
 
                     chart_long = chart_df.melt('timestamp', value_vars=y_cols, var_name='MetricType', value_name='Value')
                     y_min_val = chart_long['Value'].min(); y_max_val = chart_long['Value'].max()
