@@ -35,23 +35,43 @@ def check_image_availability(image_path):
 
 # [Feature] Helper to resize/crop images for consistent grid layout
 @st.cache_data(show_spinner=False)
-def load_and_crop_image(image_path, target_size=(300, 300)):
+def load_and_resize_image_v2(image_path, target_size=(800, 600)):
     """
-    Loads an image, performs a center crop to fit the target size (Square),
-    and returns the PIL Image object.
-    Using cache to improve performance.
+    Loads an image and pads it to fit the target size (Maintain Aspect Ratio).
+    Returns a PIL Image object of exactly target_size.
+    Renamed to v2 to force cache invalidation.
     """
     try:
         if not os.path.exists(image_path): return None
         img = Image.open(image_path)
-        # Convert to RGB if RGBA (to avoid issues with JPEG saving if needed, though we return PIL)
-        if img.mode == 'RGBA':
+        
+        # Handle Orientation (EXIF)
+        try:
+             img = ImageOps.exif_transpose(img)
+        except:
+             pass
+
+        if img.mode != 'RGB':
             img = img.convert('RGB')
         
-        # [Update] Use ImageOps.pad instead of fit to PRESERVE aspect ratio
-        # This will contain the image within the target size and pad the rest with black
-        img_cropped = ImageOps.pad(img, target_size, method=Image.Resampling.LANCZOS, color='#000000')
-        return img_cropped
+        # Calculate aspect ratios
+        target_w, target_h = target_size
+        img_w, img_h = img.size
+        
+        scale = min(target_w / img_w, target_h / img_h)
+        new_w = int(img_w * scale)
+        new_h = int(img_h * scale)
+        
+        img_resized = img.resize((new_w, new_h), Image.Resampling.LANCZOS)
+        
+        # Create new background image
+        new_img = Image.new("RGB", target_size, (0, 0, 0)) # Black background
+        paste_x = (target_w - new_w) // 2
+        paste_y = (target_h - new_h) // 2
+        
+        new_img.paste(img_resized, (paste_x, paste_y))
+        
+        return new_img
     except Exception as e:
         print(f"Error processing image {image_path}: {e}")
         return None
@@ -384,7 +404,7 @@ if mode == "📝 巡檢輸入":
                         img_path = os.path.join("quality_images", str(img_name).strip())
                         # [Fix] Resize image to prevent vertical images from taking too much space
                         # Use 4:3 ratio (e.g. 800x600) to keep size consistent with landscape
-                        display_img = load_and_crop_image(img_path, target_size=(800, 600))
+                        display_img = load_and_resize_image_v2(img_path, target_size=(800, 600))
                         
                         if display_img:
                             st.image(display_img, use_container_width=True)
@@ -508,7 +528,7 @@ if mode == "📝 巡檢輸入":
                     c1, c2, c3 = st.columns([1, 2, 1])
                     with c2:
                         # [Fix] Resize to 4:3 ratio to avoid vertical images taking too much space
-                        display_img = load_and_crop_image(valid_img_path, target_size=(800, 600))
+                        display_img = load_and_resize_image_v2(valid_img_path, target_size=(800, 600))
                         if display_img:
                              st.image(display_img, caption=f"標準圖: {product_img_filename}", use_container_width=True)
                         else:
