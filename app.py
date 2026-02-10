@@ -1319,6 +1319,9 @@ elif mode == "📊 數據戰情室":
                     chart_df = df_dash[df_dash['part_no'] == chart_part].copy()
                     # Filter for Chart Only (Hide 0 weight)
                     if 'weight' in chart_df.columns:
+                        # [Fix] Ensure weight is numeric (float) to avoid TypeError
+                        chart_df['weight'] = pd.to_numeric(chart_df['weight'], errors='coerce')
+                        chart_df = chart_df.dropna(subset=['weight'])
                         chart_df = chart_df[chart_df['weight'] > 0]
                 
                 if not chart_df.empty:
