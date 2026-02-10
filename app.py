@@ -1282,29 +1282,14 @@ elif mode == "📊 數據戰情室":
                     "part_no": st.column_config.TextColumn("品番", width="medium"),
                     "weight": st.column_config.NumberColumn("重量 (g)", format="%.2f")
                 },
-                on_select="rerun",
-                selection_mode="single-row",
-                key="dash_table_v40" # [Fix] Ensure State Persistence
+                # [Simplification] Remove click-to-filter behavior
+                # on_select="rerun",
+                # selection_mode="single-row",
+                key="dash_table_v41" # [Fix] Bump key to force re-render
             )
             
-            # [Interaction] Click Row to Filter Part
-            if len(event.selection.rows) > 0:
-                s_idx = event.selection.rows[0]
-                if s_idx < len(df_view):
-                    target_p = df_view.iloc[s_idx]['part_no']
-                    
-                    # st.write(f"Clicked Row {s_idx} -> {target_p}")
-                    
-                    # Update Source of Truth
-                    if target_p != st.session_state.get('dash_target_part'):
-                         st.session_state['dash_target_part'] = target_p
-                         
-                         # [Fix] Dynamic Key Reset Pattern
-                         # Increment revision to force side bar widget to re-mount with new default index
-                         st.session_state['dash_ui_rev'] = st.session_state.get('dash_ui_rev', 0) + 1
-                         
-                         st.toast(f"🔍 已篩選: {target_p}")
-                         st.rerun()
+            # [Simplification] Removed implicit filtering logic
+            # if len(event.selection.rows) > 0: ...
             
             if not df_view.empty:
                 st.subheader("📈 重量趨勢圖")
