@@ -1331,8 +1331,21 @@ elif mode == "📊 數據戰情室":
                         spec_row = part_spec.iloc[0]
                         limit_h = spec_row.get('clean_重量上限')
                         limit_l = spec_row.get('clean_重量下限')
-                        if isinstance(limit_h, list): limit_h = limit_h[0]
-                        if isinstance(limit_l, list): limit_l = limit_l[0]
+                        # Determine index based on suffix
+                        spec_idx = 0
+                        # Check for common 2nd cavity suffixes
+                        if str(chart_part).endswith('_L') or str(chart_part).endswith('_2') or str(chart_part).endswith('#2'):
+                            spec_idx = 1
+                        
+                        limit_h = spec_row.get('clean_重量上限')
+                        limit_l = spec_row.get('clean_重量下限')
+                        
+                        # [Fix] Select correct limit based on cavity index
+                        if isinstance(limit_h, list): 
+                            limit_h = limit_h[spec_idx] if len(limit_h) > spec_idx else limit_h[0]
+                        if isinstance(limit_l, list): 
+                            limit_l = limit_l[spec_idx] if len(limit_l) > spec_idx else limit_l[0]
+
                         if limit_h is not None:
                             chart_df['Limit H'] = float(limit_h)
                             y_cols.append('Limit H')
@@ -1392,8 +1405,16 @@ elif mode == "📊 數據戰情室":
                                     spec_row = part_spec.iloc[0]
                                     l_h = spec_row.get('clean_長度上限')
                                     l_l = spec_row.get('clean_長度下限')
-                                    if isinstance(l_h, list): l_h = l_h[0]
-                                    if isinstance(l_l, list): l_l = l_l[0]
+                                    
+                                    # Describe index again (re-use logic or check filter_part)
+                                    spec_idx_len = 0
+                                    if str(filter_part).endswith('_L') or str(filter_part).endswith('_2') or str(filter_part).endswith('#2'):
+                                        spec_idx_len = 1
+
+                                    if isinstance(l_h, list): 
+                                        l_h = l_h[spec_idx_len] if len(l_h) > spec_idx_len else l_h[0]
+                                    if isinstance(l_l, list): 
+                                        l_l = l_l[spec_idx_len] if len(l_l) > spec_idx_len else l_l[0]
                                     
                                     if l_h is not None:
                                         chart_df_len['Limit H'] = float(l_h)
