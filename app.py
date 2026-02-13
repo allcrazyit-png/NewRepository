@@ -1456,43 +1456,43 @@ elif mode == "📊 數據戰情室":
                           
                           st.altair_chart((line_l + line_limits_l).interactive(), use_container_width=True)
 
-                    # [Feature] History Table (Sorted Newest First)
-                    if history_data:
-                        st.subheader(f"📋 {suffix} 歷史數據列表")
-                        df_hist_table = pd.DataFrame(history_data)
-                        
-                        # Timezone
-                        if 'timestamp' in df_hist_table.columns:
-                            df_hist_table['timestamp'] = pd.to_datetime(df_hist_table['timestamp'], errors='coerce')
-                            if pd.api.types.is_datetime64_any_dtype(df_hist_table['timestamp']):
-                                if df_hist_table['timestamp'].dt.tz is None:
-                                    df_hist_table['timestamp'] = df_hist_table['timestamp'].dt.tz_localize('Asia/Taipei')
-                                else:
-                                    df_hist_table['timestamp'] = df_hist_table['timestamp'].dt.tz_convert('Asia/Taipei')
-                                df_hist_table = df_hist_table.sort_values(by='timestamp', ascending=False)
+                # [Feature] History Table (Sorted Newest First)
+                if history_data:
+                    st.subheader(f"📋 {suffix} 歷史數據列表")
+                    df_hist_table = pd.DataFrame(history_data)
+                    
+                    # Timezone
+                    if 'timestamp' in df_hist_table.columns:
+                        df_hist_table['timestamp'] = pd.to_datetime(df_hist_table['timestamp'], errors='coerce')
+                        if pd.api.types.is_datetime64_any_dtype(df_hist_table['timestamp']):
+                            if df_hist_table['timestamp'].dt.tz is None:
+                                df_hist_table['timestamp'] = df_hist_table['timestamp'].dt.tz_localize('Asia/Taipei')
+                            else:
+                                df_hist_table['timestamp'] = df_hist_table['timestamp'].dt.tz_convert('Asia/Taipei')
+                            df_hist_table = df_hist_table.sort_values(by='timestamp', ascending=False)
 
-                        # Columns to Show
-                        cols_to_show = ['timestamp', 'weight', 'result']
-                        if 'length' in df_hist_table.columns: cols_to_show.append('length')
-                        if 'change_point' in df_hist_table.columns: cols_to_show.append('change_point')
-                        if 'manager_comment' in df_hist_table.columns: cols_to_show.append('manager_comment')
+                    # Columns to Show
+                    cols_to_show = ['timestamp', 'weight', 'result']
+                    if 'length' in df_hist_table.columns: cols_to_show.append('length')
+                    if 'change_point' in df_hist_table.columns: cols_to_show.append('change_point')
+                    if 'manager_comment' in df_hist_table.columns: cols_to_show.append('manager_comment')
 
-                        # Filter existing cols
-                        cols_to_show = [c for c in cols_to_show if c in df_hist_table.columns]
-                        
-                        st.dataframe(
-                            df_hist_table[cols_to_show],
-                            use_container_width=True,
-                            column_config={
-                                "timestamp": st.column_config.DatetimeColumn("時間", format="MM/DD HH:mm"),
-                                "weight": st.column_config.NumberColumn("重量", format="%.2f"),
-                                "length": st.column_config.NumberColumn("長度", format="%.2f"),
-                                "result": "結果",
-                                "change_point": "變化點",
-                                "manager_comment": "主管備註"
-                            },
-                            hide_index=True
-                        )
+                    # Filter existing cols
+                    cols_to_show = [c for c in cols_to_show if c in df_hist_table.columns]
+                    
+                    st.dataframe(
+                        df_hist_table[cols_to_show],
+                        use_container_width=True,
+                        column_config={
+                            "timestamp": st.column_config.DatetimeColumn("時間", format="MM/DD HH:mm"),
+                            "weight": st.column_config.NumberColumn("重量", format="%.2f"),
+                            "length": st.column_config.NumberColumn("長度", format="%.2f"),
+                            "result": "結果",
+                            "change_point": "變化點",
+                            "manager_comment": "主管備註"
+                        },
+                        hide_index=True
+                    )
         
         # [Legacy/Duplicate Code Removed]
         # Previous versions had a fallback block here that caused "Change Point Board" to appear twice.
