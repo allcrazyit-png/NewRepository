@@ -727,7 +727,7 @@ if mode == "📝 巡檢輸入":
             action_taken = "" # [Feature] New Field
             if is_issue:
                 change_point = st.text_area("請輸入異常說明", placeholder="例如: 模具損傷、原料更換...", height=100, key=f"cp_input_{st.session_state['uploader_id']}")
-                action_taken = st.text_area("變化點對策執行說明 (Action Taken)", placeholder="例如: 已更換模具、調整參數...", height=100, key=f"action_input_{st.session_state['uploader_id']}")
+                action_taken = st.text_area("執行對策說明 (Action Taken)", placeholder="例如: 已更換模具、調整參數...", height=100, key=f"action_input_{st.session_state['uploader_id']}")
                 if not change_point.strip():
                     st.caption("⚠️ 請輸入說明，若空白將視為無異常")
             else:
