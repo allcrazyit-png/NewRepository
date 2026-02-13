@@ -1643,8 +1643,7 @@ elif mode == "📊 數據戰情室":
                 with st.expander(f"{stat_icon} :{stat_color}[{row['status']}] {row['timestamp'].strftime('%Y-%m-%d %H:%M')} - {row['model']} {part_display}", expanded=True):
                     c1, c2 = st.columns([2, 1])
                     with c1:
-                        st.markdown(f"**變化點內容:**")
-                        st.error(row['change_point'])
+
                         
                         # [Feature] Show Action Taken
                         st.markdown(f"**執行對策說明:**")
