@@ -1493,6 +1493,10 @@ elif mode == "📊 數據戰情室":
                           st.altair_chart((line_l + line_limits_l).interactive(), use_container_width=True)
 
                 # [Feature] History Table (Sorted Newest First)
+                # Fix NameError: Define history_data and suffix
+                history_data = df_view.to_dict('records') if 'df_view' in locals() and not df_view.empty else []
+                suffix = filter_part if 'filter_part' in locals() and filter_part != "全部" else "全部"
+                
                 if history_data:
                     st.subheader(f"📋 {suffix} 歷史數據列表")
                     df_hist_table = pd.DataFrame(history_data)
