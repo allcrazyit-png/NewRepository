@@ -927,14 +927,15 @@ if mode == "📝 巡檢輸入":
                         st.caption(f"📅 {ts_str} | Part: {part_display}")
                         
                         # Manager Comment
-                        mgr_cmt = row.get('manager_comment')
-                        if pd.notna(mgr_cmt) and str(mgr_cmt).strip():
-                            st.caption(f"👨‍💼 主管: {str(mgr_cmt).strip()}")
-                        
                         # [Feature] Show Action Taken
                         act_taken = row.get('action_taken')
                         if pd.notna(act_taken) and str(act_taken).strip():
                              st.info(f"🔧 對策: {str(act_taken).strip()}")
+
+                        # Manager Comment
+                        mgr_cmt = row.get('manager_comment')
+                        if pd.notna(mgr_cmt) and str(mgr_cmt).strip():
+                            st.caption(f"👨‍💼 主管: {str(mgr_cmt).strip()}")
                             
                         # [Feature] Image Link
                         img_link = None
@@ -970,13 +971,14 @@ if mode == "📝 巡檢輸入":
                             st.markdown(f"🟢 **{cp}**")
                             st.caption(f"[{stat}] {ts_str} | {part_display}")
                             
-                            if pd.notna(mgr_cmt) and str(mgr_cmt).strip():
-                                st.caption(f"👨‍💼 主管: {str(mgr_cmt).strip()}")
-
                             # [Feature] Show Action Taken
                             act_taken = row.get('action_taken')
                             if pd.notna(act_taken) and str(act_taken).strip():
                                  st.caption(f"🔧 對策: {str(act_taken).strip()}")
+
+                            mgr_cmt = row.get('manager_comment')
+                            if pd.notna(mgr_cmt) and str(mgr_cmt).strip():
+                                st.caption(f"👨‍💼 主管: {str(mgr_cmt).strip()}")
                                 
                             # [Feature] Image Link
                             img_link = None
