@@ -1469,7 +1469,7 @@ elif mode == "📊 數據戰情室":
                                 df_hist_table['timestamp'] = df_hist_table['timestamp'].dt.tz_localize('Asia/Taipei')
                             else:
                                 df_hist_table['timestamp'] = df_hist_table['timestamp'].dt.tz_convert('Asia/Taipei')
-                            df_hist_table = df_hist_table.sort_values(by='timestamp', ascending=False)
+                            df_hist_table = df_hist_table.sort_values(by='timestamp', ascending=False).reset_index(drop=True)
 
                     # Columns to Show
                     cols_to_show = ['timestamp', 'weight', 'result']
