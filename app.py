@@ -1022,11 +1022,16 @@ if mode == "📝 巡檢輸入":
                                 
                                 # Convert to Local Time for Display
                                 # [Fix] Source is Taipei Time string -> Localize to Taipei directly
+                                # Convert to Local Time for Display
+                                # [Fix] Source is Taipei Time string -> Localize to Taipei directly
                                 if chart_df['timestamp'].dt.tz is None:
                                      chart_df['timestamp'] = chart_df['timestamp'].dt.tz_localize('Asia/Taipei')
                                 else:
                                      chart_df['timestamp'] = chart_df['timestamp'].dt.tz_convert('Asia/Taipei')
-
+                                
+                                # [Fix] Sort Newest -> Oldest for Data View
+                                chart_df = chart_df.sort_values(by='timestamp', ascending=False)
+                                
                                 chart_long = chart_df.melt('timestamp', value_vars=y_cols, var_name='MetricType', value_name='Value')
                                 
                                 # Scaling
@@ -1041,6 +1046,7 @@ if mode == "📝 巡檢輸入":
                                     x=alt.X('timestamp', title=None, axis=alt.Axis(format='%m/%d', ticks=False)),
                                     y=alt.Y('Value', title='g', scale=alt.Scale(domain=[y_min_val - padding, y_max_val + padding])),
                                     color=alt.Color('MetricType', legend=None, scale=alt.Scale(domain=color_domain, range=color_range)),
+                                    order='timestamp', # [Fix] Ensure lines connect chronologically even if data is sorted Descending
                                     tooltip=['timestamp', 'Value', 'MetricType']
                                 )
                                 
@@ -1434,6 +1440,9 @@ elif mode == "📊 數據戰情室":
                                chart_df_len['timestamp'] = chart_df_len['timestamp'].dt.tz_localize('Asia/Taipei')
                           else:
                                chart_df_len['timestamp'] = chart_df_len['timestamp'].dt.tz_convert('Asia/Taipei')
+                          
+                          # [Fix] Sort Newest -> Oldest
+                          chart_df_len = chart_df_len.sort_values(by='timestamp', ascending=False)
 
                           chart_long_len = chart_df_len.melt('timestamp', value_vars=y_cols_len, var_name='MetricType', value_name='Value')
                           
@@ -1448,6 +1457,7 @@ elif mode == "📊 數據戰情室":
                                 x=alt.X('timestamp', title=None, axis=alt.Axis(format='%m/%d', ticks=False)),
                                 y=alt.Y('Value', title='mm', scale=alt.Scale(domain=[y_min_l - pad_l, y_max_l + pad_l])),
                                 color=alt.Color('MetricType', legend=None, scale=alt.Scale(domain=color_domain_l, range=color_range_l)),
+                                order='timestamp', # [Fix] Ensure chronological lines
                                 tooltip=['timestamp', 'Value', 'MetricType']
                           )
 
