@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-import data_manager
+import utils as data_manager
 import datetime
 import altair as alt
 import json
