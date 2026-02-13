@@ -1515,6 +1515,7 @@ elif mode == "📊 數據戰情室":
                     cols_to_show = ['timestamp', 'weight', 'result']
                     if 'length' in df_hist_table.columns: cols_to_show.append('length')
                     if 'change_point' in df_hist_table.columns: cols_to_show.append('change_point')
+                    if 'action_taken' in df_hist_table.columns: cols_to_show.append('action_taken') # [Feature] Show Action Taken
                     if 'manager_comment' in df_hist_table.columns: cols_to_show.append('manager_comment')
 
                     # Filter existing cols
@@ -1529,6 +1530,7 @@ elif mode == "📊 數據戰情室":
                             "length": st.column_config.NumberColumn("長度", format="%.2f"),
                             "result": "結果",
                             "change_point": "變化點",
+                            "action_taken": "執行對策說明", # [Feature] Column Config
                             "manager_comment": "主管備註"
                         },
                         hide_index=True
@@ -1643,6 +1645,15 @@ elif mode == "📊 數據戰情室":
                     with c1:
                         st.markdown(f"**變化點內容:**")
                         st.error(row['change_point'])
+                        
+                        # [Feature] Show Action Taken
+                        st.markdown(f"**執行對策說明:**")
+                        act_taken = row.get('action_taken')
+                        if act_taken and str(act_taken).strip():
+                             st.info(act_taken)
+                        else:
+                             st.caption("無對策說明")
+
                         st.caption(f"巡檢結果: {row['result']}")
                     with c2:
                         # [User Request] Removed Product Schematic Image
