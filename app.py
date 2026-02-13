@@ -664,7 +664,8 @@ if mode == "📝 巡檢輸入":
                                 max_value=10000.0,
                                 step=0.01,
                                 format="%.2f",
-                                key=f"w_in_{idx}_{st.session_state['uploader_id']}"
+                                key=f"w_in_{idx}_{st.session_state['uploader_id']}",
+                                value=None  # [Fix] Default to Empty
                             )
 
                     l_input = None
@@ -698,7 +699,7 @@ if mode == "📝 巡檢輸入":
                     user_inputs[idx] = {'weight': w_input, 'length': l_input}
 
                     # Validation Msg
-                    if w_input > 0:
+                    if w_input is not None and w_input > 0:
                          if sp['min'] is not None and sp['max'] is not None:
                              if not (sp['min'] <= w_input <= sp['max']):
                                  st.error(f"⚠️ 重量 NG")
@@ -747,7 +748,7 @@ if mode == "📝 巡檢輸入":
             if submit_btn:
                 any_missing_weight = False
                 if not quick_log_mode:
-                     any_missing_weight = any(user_inputs[i]['weight'] == 0 for i in user_inputs)
+                     any_missing_weight = any(user_inputs[i]['weight'] is None for i in user_inputs)
 
                 if (any_missing_weight) and not quick_log_mode:
                     st.warning("⚠️ 請填寫所有重量數據 (Quick Mode 可跳過)")
@@ -767,7 +768,12 @@ if mode == "📝 巡檢輸入":
                                 u_in = user_inputs[idx]
                                 
                                 # Prepare inputs
-                                final_weight = u_in['weight']
+                                final_weight = u_in['weight'] if u_in['weight'] is not None else 0.0 # Convert None to 0.0 for backend if needed, or handle as None?
+                                # GAS expects a value. If None, send empty string or 0? 
+                                # Current logic: weight column in sheet is number. 
+                                # If quick mode, weight is 0. If normal mode, we ensured it is not None.
+                                if final_weight is None: final_weight = 0.0
+                                
                                 final_len = u_in['length'] if u_in['length'] is not None else ""
                                 
                                 # Status Determination
@@ -1449,6 +1455,44 @@ elif mode == "📊 數據戰情室":
                           line_limits_l = base_l.transform_filter((alt.datum.MetricType == 'Limit H') | (alt.datum.MetricType == 'Limit L')).mark_line(strokeDash=[5, 5], opacity=0.8)
                           
                           st.altair_chart((line_l + line_limits_l).interactive(), use_container_width=True)
+
+                    # [Feature] History Table (Sorted Newest First)
+                    if history_data:
+                        st.subheader(f"📋 {suffix} 歷史數據列表")
+                        df_hist_table = pd.DataFrame(history_data)
+                        
+                        # Timezone
+                        if 'timestamp' in df_hist_table.columns:
+                            df_hist_table['timestamp'] = pd.to_datetime(df_hist_table['timestamp'], errors='coerce')
+                            if pd.api.types.is_datetime64_any_dtype(df_hist_table['timestamp']):
+                                if df_hist_table['timestamp'].dt.tz is None:
+                                    df_hist_table['timestamp'] = df_hist_table['timestamp'].dt.tz_localize('Asia/Taipei')
+                                else:
+                                    df_hist_table['timestamp'] = df_hist_table['timestamp'].dt.tz_convert('Asia/Taipei')
+                                df_hist_table = df_hist_table.sort_values(by='timestamp', ascending=False)
+
+                        # Columns to Show
+                        cols_to_show = ['timestamp', 'weight', 'result']
+                        if 'length' in df_hist_table.columns: cols_to_show.append('length')
+                        if 'change_point' in df_hist_table.columns: cols_to_show.append('change_point')
+                        if 'manager_comment' in df_hist_table.columns: cols_to_show.append('manager_comment')
+
+                        # Filter existing cols
+                        cols_to_show = [c for c in cols_to_show if c in df_hist_table.columns]
+                        
+                        st.dataframe(
+                            df_hist_table[cols_to_show],
+                            use_container_width=True,
+                            column_config={
+                                "timestamp": st.column_config.DatetimeColumn("時間", format="MM/DD HH:mm"),
+                                "weight": st.column_config.NumberColumn("重量", format="%.2f"),
+                                "length": st.column_config.NumberColumn("長度", format="%.2f"),
+                                "result": "結果",
+                                "change_point": "變化點",
+                                "manager_comment": "主管備註"
+                            },
+                            hide_index=True
+                        )
         
         # [Legacy/Duplicate Code Removed]
         # Previous versions had a fallback block here that caused "Change Point Board" to appear twice.
