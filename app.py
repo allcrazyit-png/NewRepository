@@ -927,6 +927,18 @@ if mode == "📝 巡檢輸入":
                         mgr_cmt = row.get('manager_comment')
                         if pd.notna(mgr_cmt) and str(mgr_cmt).strip():
                             st.info(f"👨‍💼 主管: {str(mgr_cmt).strip()}")
+                            
+                        # [Feature] Image Link
+                        img_link = None
+                        if 'image' in group.columns:
+                            valid_imgs = group['image'].dropna()
+                            valid_imgs = valid_imgs[valid_imgs != ""]
+                            if not valid_imgs.empty:
+                                img_link = valid_imgs.iloc[0]
+                        
+                        if img_link:
+                            st.markdown(f"[📸 查看照片]({img_link})")
+                            
                         st.divider()
                 else:
                     st.success("✅ 目前無未結案異常")
@@ -953,6 +965,17 @@ if mode == "📝 巡檢輸入":
                             mgr_cmt = row.get('manager_comment')
                             if pd.notna(mgr_cmt) and str(mgr_cmt).strip():
                                 st.caption(f"👨‍💼 主管: {str(mgr_cmt).strip()}")
+                                
+                            # [Feature] Image Link
+                            img_link = None
+                            if 'image' in group.columns:
+                                valid_imgs = group['image'].dropna()
+                                valid_imgs = valid_imgs[valid_imgs != ""]
+                                if not valid_imgs.empty:
+                                    img_link = valid_imgs.iloc[0]
+                            
+                            if img_link:
+                                st.caption(f"[📸 查看照片]({img_link})")
                                 
                             st.divider()
                 else:
