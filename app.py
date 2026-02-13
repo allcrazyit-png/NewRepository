@@ -1644,6 +1644,8 @@ elif mode == "📊 數據戰情室":
                     c1, c2 = st.columns([2, 1])
                     with c1:
 
+                        st.markdown(f"**變化點內容:**")
+                        st.error(row['change_point'])
                         
                         # [Feature] Show Action Taken
                         st.markdown(f"**執行對策說明:**")
