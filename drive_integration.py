@@ -4,6 +4,10 @@ import requests
 import base64
 import streamlit as st
 import json
+import pillow_heif # [Feature] HEIC Support
+
+# Register HEIF opener
+pillow_heif.register_heif_opener()
 
 # Google Apps Script Web App URL
 GAS_URL = "https://script.google.com/macros/s/AKfycbyUXAjO4vOCmhOBWMT6svzpTXJzcVWO-jD4NQeEygB1-dyhCXb1m-gRC8_mkazIesTt/exec"

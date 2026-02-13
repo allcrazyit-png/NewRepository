@@ -741,7 +741,7 @@ if mode == "📝 巡檢輸入":
                 cam_file = st.camera_input("拍照", key=f"cam_input_{st.session_state['uploader_id']}")
                 if cam_file: img_files = [cam_file]
             else:
-                uploaded_files = st.file_uploader("上傳照片", type=["jpg", "png"], accept_multiple_files=True, key=f"file_uploader_{st.session_state['uploader_id']}")
+                uploaded_files = st.file_uploader("上傳照片", type=["jpg", "png", "heic", "heif"], accept_multiple_files=True, key=f"file_uploader_{st.session_state['uploader_id']}")
                 if uploaded_files: img_files = uploaded_files
 
             # --- Submit Button ---
